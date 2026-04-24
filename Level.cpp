@@ -1,40 +1,47 @@
 #include "Level.h"
 
 Level::Level()
-    : lvl(nullptr), height(14), width(110), cell_size(64)
+    : lvl(nullptr)
+    , height(14)
+    , width(110)
+    , cell_size(64)
 {
-    lvl = new char* [height];
-
-    for (int i = 0; i < height; i += 1) {
-        lvl[i] = new char[width] {'\0'};
+    // WHY: Allocate 2D grid for level blocks using manual memory management
+    this->lvl = new char*[this->height];
+    for (int i = 0; i < this->height; i++) {
+        this->lvl[i] = new char[this->width]();  // Zero-initialize
     }
 
-  
-    lvl[11][5] = 'g';
-    lvl[11][6] = 'g';
-    lvl[11][7] = 'g';
-    lvl[11][8] = 'g';
-
-    wallTex1.loadFromFile("resources/Sprites/blocks/grass_block_side.png");
-    wallSprite1.setTexture(wallTex1);
-}
-
-Level::~Level()
-{
-    
-    for (int i = 0; i < height; i += 1) {
-        delete[] lvl[i];
+    // WHY: Place a simple ground platform for testing collision
+    for (int j = 5; j < 9; j++) {
+        this->lvl[11][j] = 'g';
     }
-    delete[] lvl;
+
+    // WHY: Load block texture; fallback handled by caller if missing
+    this->wallTex1.loadFromFile("resources/Sprites/blocks/grass_block_side.png");
+    this->wallSprite1.setTexture(this->wallTex1);
 }
 
-void Level::Draw(sf::RenderWindow& window)
-{
-    for (int i = 0; i < height; i += 1) {
-        for (int j = 0; j < width; j += 1) {
-            if (lvl[i][j] == 'g') {
-                wallSprite1.setPosition(j * cell_size, i * cell_size);
-                window.draw(wallSprite1);
+Level::~Level() {
+    // WHY: Clean up dynamically allocated 2D array to prevent memory leaks
+    for (int i = 0; i < this->height; i++) {
+        delete[] this->lvl[i];
+        this->lvl[i] = nullptr;
+    }
+    delete[] this->lvl;
+    this->lvl = nullptr;
+}
+
+void Level::Draw(sf::RenderWindow& window) {
+    // WHY: Iterate grid and draw only solid blocks ('g' = grass)
+    for (int i = 0; i < this->height; i++) {
+        for (int j = 0; j < this->width; j++) {
+            if (this->lvl[i][j] == 'g') {
+                this->wallSprite1.setPosition(
+                    static_cast<float>(j * this->cell_size),
+                    static_cast<float>(i * this->cell_size)
+                );
+                window.draw(this->wallSprite1);
             }
         }
     }

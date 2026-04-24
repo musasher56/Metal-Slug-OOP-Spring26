@@ -18,7 +18,7 @@ private:
 
     int Pheight;
     int Pwidth;
-
+    bool facingRight;
 
     sf::Texture playerTex;
     sf::Sprite playerSprite;
@@ -32,4 +32,5 @@ public:
     void Draw(sf::RenderWindow& window);
     float getX() const { return player_x; }
     float getY() const { return player_y; }
+    ~Player();
 };
