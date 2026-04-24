@@ -1,35 +1,53 @@
 #include <SFML/Graphics.hpp>
-#include <SFML/Window.hpp>
+#include "Level.h"
+#include "Player.h"
+
+
+using namespace sf;
+
+int screen_x = 1600;
+int screen_y = 900;
 
 int main()
 {
-    // Create a 1600x900 window titled "Metal Slug"
-    sf::RenderWindow window(sf::VideoMode(1600, 900), "Metal Slug");
-
-    // Limit to 60 frames per second
+    RenderWindow window(VideoMode(screen_x, screen_y), "Metal Slug", Style::Close);
+    window.setVerticalSyncEnabled(true);
     window.setFramerateLimit(60);
 
-    // Main game loop
+    Level  level;    
+    Player player;  
+
+    Event ev;
     while (window.isOpen())
     {
-        // Event handling
-        sf::Event event;
-        while (window.pollEvent(event))
+        while (window.pollEvent(ev))
         {
-            // Close window on X button or Escape
-            if (event.type == sf::Event::Closed)
-                window.close();
-            if (event.type == sf::Event::KeyPressed)
-                if (event.key.code == sf::Keyboard::Escape)
-                    window.close();
+            if (ev.type == Event::Closed) window.close();
         }
 
-        // Clear screen with black
-        window.clear(sf::Color::Black);
+        if (Keyboard::isKeyPressed(Keyboard::Escape))
+        {
+            window.close();
+        }
+        if (Keyboard::isKeyPressed(Keyboard::Right))
+        {
+            player.moveRight();
+        }
 
-        // Draw everything here later
+        else if (Keyboard::isKeyPressed(Keyboard::Left))
+        {
+            player.moveLeft();
+        }
+        else
+        {
+            player.Stop();
+        }
 
-        // Display the frame
+        player.Update();
+
+        window.clear();
+        level.Draw(window);
+        player.Draw(window);
         window.display();
     }
 
