@@ -13,25 +13,28 @@ public:
     void run();
 
 private:
-    RenderWindow window;
+    RenderWindow    window;
     TextureManager* texManager;
     AudioManager*   audManager;
     MainMenu*       mainMenu;
     Level*          level;
     Player*         player;
 
-    int   gameMode;
-    bool  running;
-    bool  inMenu;
+    sf::Texture bgTex;
+    sf::Sprite  bgSprite;
 
-    // WHY: track movement via events — isKeyPressed broken on macOS + SFML 2
-    bool  movingLeft;
-    bool  movingRight;
+    int  gameMode;
+    bool running;
+    bool inMenu;
+
+    // WHY: track key state via events — isKeyPressed unreliable on macOS
+    bool movingLeft;
+    bool movingRight;
 
     void initialize();
+    void startGame();
     void handleEvents();
     void update(float dt);
     void render();
     void cleanup();
-    void startGame();
 };

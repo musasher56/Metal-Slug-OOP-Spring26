@@ -1,36 +1,42 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include "Gravity.h"
 
 class Player {
-private:
-    float player_x ;
-    float player_y ;
-
-    float max_speed ;
-    float velocityX;
-    float acceleration;
-
-    float scale_x ;
-    float scale_y ;
-
-    int raw_img_x ;
-    int raw_img_y ;
-
-    int Pheight;
-    int Pwidth;
-    bool facingRight;
-
-    sf::Texture playerTex;
-    sf::Sprite playerSprite;
 public:
     Player();
+    ~Player();
 
     void moveLeft();
     void moveRight();
-    void Stop();
-    void Update();
-    void Draw(sf::RenderWindow& window);
-    float getX() const { return player_x; }
-    float getY() const { return player_y; }
-    ~Player();
+    void stop();         // WHY: renamed Stop -> stop (consistent lowercase)
+    void jump();
+    void update(char** lvl, int lvlH, int lvlW, int cellSize);
+    void draw(sf::RenderWindow& window);
+
+    float getX()       const { return this->x; }
+    float getY()       const { return this->y; }
+    bool  isOnGround() const { return this->onGround; }
+
+private:
+    float x;
+    float y;
+    float velX;
+    float velY;
+    bool  onGround;
+    bool  facingRight;
+
+    float maxSpeed;
+    float acceleration;
+
+    int   width;    // WHY: collision box width used by Gravity
+    int   height;   // WHY: collision box height used by Gravity
+
+    float scale_x;
+    float scale_y;
+
+    Gravity gravity; // WHY: composition — Player HAS-A Gravity, enemies can too
+
+    sf::Texture playerTex;
+    sf::Sprite  playerSprite;
 };

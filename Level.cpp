@@ -13,8 +13,8 @@ Level::Level()
     }
 
     // WHY: Place a simple ground platform for testing collision
-    for (int j = 5; j < 9; j++) {
-        this->lvl[11][j] = 'g';
+    for (int j = 0; j < this->width; j++) {
+        this->lvl[10][j] = 'g';  // row 10 * 64 = 640px — visible on screen
     }
 
     // WHY: Load block texture; fallback handled by caller if missing

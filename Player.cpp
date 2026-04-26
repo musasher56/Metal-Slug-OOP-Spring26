@@ -1,18 +1,19 @@
 #include "Player.h"
 
 Player::Player()
-    : player_x(380.f)
-    , player_y(500.f)      // WHY: moved up from 610 so player isn't inside ground
-    , max_speed(5.f)
-    , velocityX(0.f)
+    : x(380.f)
+    , y(300.f)
+    , velX(0.f)
+    , velY(0.f)
+    , onGround(false)
+    , facingRight(true)
+    , maxSpeed(5.f)
     , acceleration(0.5f)
+    , width(30)
+    , height(50)
     , scale_x(0.2f)
     , scale_y(0.2f)
-    , raw_img_x(593)
-    , raw_img_y(470)
-    , Pheight(94)
-    , Pwidth(119)
-    , facingRight(true)
+    , gravity(1.f, 20.f, -20.f)   // WHY: same values as tumblepop
 {
     this->playerTex.loadFromFile("resources/Sprites/Character.png");
     this->playerSprite.setTexture(this->playerTex);
@@ -22,41 +23,54 @@ Player::Player()
 Player::~Player() {}
 
 void Player::moveLeft() {
-    this->velocityX -= this->acceleration;
-    if (this->velocityX < -this->max_speed)
-        this->velocityX = -this->max_speed;
+    this->velX -= this->acceleration;
+    if (this->velX < -this->maxSpeed) this->velX = -this->maxSpeed;
     this->facingRight = false;
 }
 
 void Player::moveRight() {
-    this->velocityX += this->acceleration;
-    if (this->velocityX > this->max_speed)
-        this->velocityX = this->max_speed;
+    this->velX += this->acceleration;
+    if (this->velX > this->maxSpeed) this->velX = this->maxSpeed;
     this->facingRight = true;
 }
 
-void Player::Stop() {
-    // WHY: decelerate smoothly instead of snapping to 0
-    if (this->velocityX > 0.f) {
-        this->velocityX -= this->acceleration;
-        if (this->velocityX < 0.f) this->velocityX = 0.f;
-    } else if (this->velocityX < 0.f) {
-        this->velocityX += this->acceleration;
-        if (this->velocityX > 0.f) this->velocityX = 0.f;
+void Player::stop() {
+    // WHY: only decelerate when on ground — in the air we keep momentum
+    // This is what makes jump+move forward feel correct
+    if (this->onGround) {
+        if (this->velX > 0.f) {
+            this->velX -= this->acceleration;
+            if (this->velX < 0.f) this->velX = 0.f;
+        } else if (this->velX < 0.f) {
+            this->velX += this->acceleration;
+            if (this->velX > 0.f) this->velX = 0.f;
+        }
     }
+    // WHY: when airborne, velX carries naturally — no deceleration
+    // player just drifts forward, which feels like real jump physics
 }
 
-void Player::Update() {
-    this->player_x += this->velocityX;
+void Player::jump() {
+    this->gravity.jump(this->velY, this->onGround);
+}
 
-    // WHY: flip sprite horizontally based on direction
+void Player::update(char** lvl, int lvlH, int lvlW, int cellSize) {
+    // WHY: gravity handles vertical movement and collision
+    this->gravity.update(this->x, this->y, this->velY, this->onGround,
+                         lvl, lvlH, lvlW, cellSize,
+                         this->width, this->height);
+
+    // WHY: horizontal movement applied separately so gravity doesn't affect it
+    this->x += this->velX;
+
+    // WHY: flip sprite based on direction
     if (this->facingRight)
-        this->playerSprite.setScale(this->scale_x, this->scale_y);
+        this->playerSprite.setScale( this->scale_x, this->scale_y);
     else
         this->playerSprite.setScale(-this->scale_x, this->scale_y);
 }
 
-void Player::Draw(sf::RenderWindow& window) {
-    this->playerSprite.setPosition(this->player_x, this->player_y);
+void Player::draw(sf::RenderWindow& window) {
+    this->playerSprite.setPosition(this->x, this->y);
     window.draw(this->playerSprite);
 }

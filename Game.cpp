@@ -11,8 +11,8 @@ Game::Game()
     , gameMode(MODE_SURVIVAL)
     , running(true)
     , inMenu(true)
-    , movingLeft(false)   // WHY: track key state manually — isKeyPressed
-    , movingRight(false)  //      is broken on macOS with SFML 2.x
+    , movingLeft(false)
+    , movingRight(false)
 {
     this->window.setFramerateLimit(FRAMERATE_LIMIT);
     this->initialize();
@@ -23,18 +23,21 @@ Game::~Game() {
 }
 
 void Game::initialize() {
-    printf("[INFO] Initializing...\n");
     this->texManager = new TextureManager();
     this->audManager = new AudioManager();
     this->mainMenu   = new MainMenu(this->texManager, this->audManager);
-    printf("[INFO] Init done\n");
 }
 
 void Game::startGame() {
-    printf("[INFO] Starting game mode: %d\n", this->gameMode);
     this->level  = new Level();
     this->player = new Player();
     this->window.requestFocus();
+
+    this->bgTex.loadFromFile("resources/Sprites/tempbg.jpeg");
+    this->bgSprite.setTexture(this->bgTex);
+    float sx = (float)SCREEN_W / (float)this->bgTex.getSize().x;
+    float sy = (float)SCREEN_H / (float)this->bgTex.getSize().y;
+    this->bgSprite.setScale(sx, sy);
 }
 
 void Game::run() {
@@ -50,7 +53,6 @@ void Game::run() {
 void Game::handleEvents() {
     Event ev;
     while (this->window.pollEvent(ev)) {
-
         if (ev.type == Event::Closed) {
             this->running = false;
             this->window.close();
@@ -70,11 +72,11 @@ void Game::handleEvents() {
                 this->startGame();
             }
         } else {
-            // WHY: use KeyPressed/KeyReleased events to track movement state
-            // because Keyboard::isKeyPressed is unreliable on macOS + SFML 2
             if (ev.type == Event::KeyPressed) {
-                if (ev.key.code == Keyboard::Right) this->movingRight = true;
-                if (ev.key.code == Keyboard::Left)  this->movingLeft  = true;
+                if (ev.key.code == Keyboard::Right)  this->movingRight = true;
+                if (ev.key.code == Keyboard::Left)   this->movingLeft  = true;
+                if (ev.key.code == Keyboard::Space && this->player != nullptr)
+                    this->player->jump();
                 if (ev.key.code == Keyboard::Escape) {
                     this->running = false;
                     this->window.close();
@@ -87,11 +89,10 @@ void Game::handleEvents() {
         }
     }
 
-    // WHY: apply movement every frame based on tracked key state
     if (!this->inMenu && this->player != nullptr) {
-        if (this->movingRight)      this->player->moveRight();
-        else if (this->movingLeft)  this->player->moveLeft();
-        else                        this->player->Stop();
+        if (this->movingRight)     this->player->moveRight();
+        else if (this->movingLeft) this->player->moveLeft();
+        else                       this->player->stop();
     }
 }
 
@@ -100,28 +101,32 @@ void Game::update(float dt) {
         this->mainMenu->update(dt);
         return;
     }
-    if (this->player != nullptr) this->player->Update();
+    if (this->player != nullptr && this->level != nullptr) {
+        this->player->update(
+            this->level->getLvl(),
+            this->level->getHeight(),
+            this->level->getWidth(),
+            this->level->getCellSize()
+        );
+    }
 }
 
 void Game::render() {
     this->window.clear(Color::Black);
-
     if (this->inMenu && this->mainMenu != nullptr) {
         this->mainMenu->draw(this->window);
     } else {
+        this->window.draw(this->bgSprite);
         if (this->level  != nullptr) this->level->Draw(this->window);
-        if (this->player != nullptr) this->player->Draw(this->window);
+        if (this->player != nullptr) this->player->draw(this->window);
     }
-
     this->window.display();
 }
 
 void Game::cleanup() {
-    printf("[INFO] Cleaning up...\n");
     if (this->mainMenu  != nullptr) { delete this->mainMenu;  this->mainMenu  = nullptr; }
     if (this->player    != nullptr) { delete this->player;    this->player    = nullptr; }
     if (this->level     != nullptr) { delete this->level;     this->level     = nullptr; }
     if (this->audManager!= nullptr) { delete this->audManager;this->audManager= nullptr; }
     if (this->texManager!= nullptr) { delete this->texManager;this->texManager= nullptr; }
-    printf("[INFO] Done\n");
 }
