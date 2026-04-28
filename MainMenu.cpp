@@ -23,7 +23,11 @@ MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
         this->options[i][j] = '\0';
     }
 
-    this->fontLoaded = this->font.loadFromFile("/System/Library/Fonts/Helvetica.ttc");
+    this->fontLoaded = this->font.loadFromFile("C:/Windows/Fonts/segoeui.ttf");
+    if (!this->fontLoaded)
+        this->fontLoaded = this->font.loadFromFile("C:/Windows/Fonts/arial.ttf");
+    if (!this->fontLoaded)
+        this->fontLoaded = this->font.loadFromFile("/System/Library/Fonts/Helvetica.ttc");
     if (!this->fontLoaded)
         this->fontLoaded = this->font.loadFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
 
