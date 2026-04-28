@@ -1,38 +1,45 @@
 #include "MenuState.h"
 
 MenuState::MenuState(TextureManager* texMgr, AudioManager* audMgr) 
-    : selectedOption(0), gameMode(MODE_SURVIVAL), texManager(texMgr), audManager(audMgr) {
+    : mainMenu(nullptr), texManager(texMgr), audManager(audMgr) {
     this->id = STATE_MENU;
+    // WHY: Create MainMenu instance which handles video frames and menu rendering
+    this->mainMenu = new MainMenu(this->texManager, this->audManager);
 }
 
 MenuState::~MenuState() {
+    // WHY: MenuState owns the MainMenu instance, must delete it
+    if (this->mainMenu != nullptr) {
+        delete this->mainMenu;
+        this->mainMenu = nullptr;
+    }
     // WHY: MenuState doesn't own texManager/audManager, just references them
 }
 
 void MenuState::update(float dt) {
-    // WHY: Menu update logic (animations, hover effects) can go here
+    // WHY: Delegate update to MainMenu for video frame animations
+    if (this->mainMenu != nullptr) {
+        this->mainMenu->update(dt);
+    }
 }
 
 void MenuState::render(RenderWindow& window) {
-    // WHY: Render menu background and options
-    // TODO: Implement actual menu rendering with sprites
-    window.clear(Color::Black);
-    // Placeholder: draw simple text for menu options
+    // WHY: Delegate rendering to MainMenu which handles video frames and menu UI
+    if (this->mainMenu != nullptr) {
+        this->mainMenu->draw(window);
+    }
 }
 
 void MenuState::handleEvent(Event& event) {
-    if (event.type == Event::KeyPressed) {
-        if (event.key.code == Keyboard::Up) {
-            this->selectedOption--;
-            if (this->selectedOption < 0) this->selectedOption = 2;
-        } else if (event.key.code == Keyboard::Down) {
-            this->selectedOption++;
-            if (this->selectedOption > 2) this->selectedOption = 0;
-        } else if (event.key.code == Keyboard::Enter) {
-            this->gameMode = this->selectedOption;
-            // WHY: Signal state manager to change state (handled by Game class)
-        } else if (event.key.code == Keyboard::Escape) {
-            this->gameMode = 99;  // Special code for quit
+    // WHY: Delegate event handling to MainMenu, check for mode selection
+    if (this->mainMenu != nullptr) {
+        int result = this->mainMenu->handleEvent(event);
+        if (result == 99) {
+            // WHY: Signal exit request
+            this->gameMode = 99;
+        } else if (result >= 0 && result <= 2) {
+            // WHY: Signal mode selection (handled by Game class)
+            this->gameMode = result;
         }
     }
 }

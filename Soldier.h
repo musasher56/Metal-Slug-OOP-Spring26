@@ -35,6 +35,12 @@ public:
     void setTransformationState(TransformationState* newState);
     TransformationState* getTransformationState() const;
     
+    // WHY: Provide protected getters/setters for velocity to allow TransformationState access
+    float getBaseMaxVelocity() const { return this->baseMaxVelocity; }
+    void setBaseMaxVelocity(float val) { this->baseMaxVelocity = val; }
+    float getMaxVelocity() const { return this->maxVelocity; }
+    void setMaxVelocity(float val) { this->maxVelocity = val; }
+    
 protected:
     virtual void handleJump();
     virtual void applyGravity();
