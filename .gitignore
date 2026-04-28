@@ -1,0 +1,21 @@
+# Machine-specific CMake settings (each developer keeps their own local copy)
+CMakeSettings.json
+
+# Build output directories
+build/
+out/
+cmake-build-*/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+
+# CLion / JetBrains (already handled in .idea/.gitignore but listed here too)
+.idea/
+
+# macOS
+.DS_Store
+
+# Windows thumbnail cache
+Thumbs.db
