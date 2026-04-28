@@ -25,12 +25,17 @@ find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
 set(SOURCES
         main.cpp
         Game.cpp
-        MainMenu.cpp
+        GameState.cpp
+        GameStateManager.cpp
+        MenuState.cpp
+        PlayState.cpp
+        PausedState.cpp
+        GameOverState.cpp
         TextureManager.cpp
         AudioManager.cpp
         Level.cpp
-        Player.cpp
-        Gravity.cpp
+        Vector2d.cpp
+        Animation.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

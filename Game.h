@@ -2,9 +2,10 @@
 #include "Constants.h"
 #include "TextureManager.h"
 #include "AudioManager.h"
-#include "MainMenu.h"
+#include "GameStateManager.h"
+#include "MenuState.h"
+#include "PlayState.h"
 #include "Level.h"
-#include "Player.h"
 
 class Game {
 public:
@@ -13,26 +14,15 @@ public:
     void run();
 
 private:
-    RenderWindow    window;
+    RenderWindow window;
+    GameStateManager* stateManager;
     TextureManager* texManager;
-    AudioManager*   audManager;
-    MainMenu*       mainMenu;
-    Level*          level;
-    Player*         player;
-
-    sf::Texture bgTex;
-    sf::Sprite  bgSprite;
-
-    int  gameMode;
+    AudioManager* audManager;
+    
+    int gameMode;
     bool running;
-    bool inMenu;
-
-    // WHY: track key state via events — isKeyPressed unreliable on macOS
-    bool movingLeft;
-    bool movingRight;
 
     void initialize();
-    void startGame();
     void handleEvents();
     void update(float dt);
     void render();

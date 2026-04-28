@@ -1,21 +1,47 @@
-# Machine-specific CMake settings (each developer keeps their own local copy)
-CMakeSettings.json
+```
+# Compiled files
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.a
+*.out
 
-# Build output directories
+# Build artifacts
 build/
-out/
-cmake-build-*/
+dist/
+*.class
 
-# Visual Studio
-.vs/
-*.suo
-*.user
+# Dependencies
+venv/
+.venv/
+node_modules/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+.gradle/
+target/
 
-# CLion / JetBrains (already handled in .idea/.gitignore but listed here too)
+# Editor/IDE files
+.vscode/
 .idea/
+*.swp
+*.swo
+*.tmp
 
-# macOS
+# System files
 .DS_Store
-
-# Windows thumbnail cache
 Thumbs.db
+.env
+.env.local
+*.env.*
+
+# Logs
+*.log
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+```
