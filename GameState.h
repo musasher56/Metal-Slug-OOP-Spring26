@@ -7,8 +7,10 @@
 class GameState {
 protected:
     int id;  // GameStateID constant
+    int gameMode;  // Store selected game mode for state transitions
 
 public:
+    GameState();
     virtual ~GameState();
     
     virtual void update(float dt) = 0;

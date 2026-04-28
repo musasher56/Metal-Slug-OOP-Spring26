@@ -2,12 +2,12 @@
 #include "GameState.h"
 #include "TextureManager.h"
 #include "AudioManager.h"
+#include "MainMenu.h"
 
 // WHY: MenuState handles the main menu screen with game mode selection
 class MenuState : public GameState {
 private:
-    int selectedOption;
-    int gameMode;
+    MainMenu* mainMenu;
     TextureManager* texManager;
     AudioManager* audManager;
 

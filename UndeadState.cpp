@@ -10,8 +10,9 @@ UndeadState::UndeadState()
 void UndeadState::applyEffects(Soldier* s) {
     // WHY: Apply 50% walk-speed penalty to soldier
     if (s != nullptr) {
-        s->baseMaxVelocity *= this->speedMultiplier;
-        s->maxVelocity = s->baseMaxVelocity;
+        float newBase = s->getBaseMaxVelocity() * this->speedMultiplier;
+        s->setBaseMaxVelocity(newBase);
+        s->setMaxVelocity(newBase);
     }
 }
 

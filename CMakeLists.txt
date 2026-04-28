@@ -36,6 +36,17 @@ set(SOURCES
         Level.cpp
         Vector2d.cpp
         Animation.cpp
+        MainMenu.cpp
+        Entity.cpp
+        DamagableEntity.cpp
+        Soldier.cpp
+        Player.cpp
+        TransformationState.cpp
+        NormalState.cpp
+        UndeadState.cpp
+        MummyState.cpp
+        AimController.cpp
+        Gravity.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
