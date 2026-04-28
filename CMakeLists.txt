@@ -13,6 +13,7 @@ if(APPLE)
 elseif(WIN32)
     if(NOT DEFINED SFML_DIR AND NOT DEFINED ENV{SFML_DIR})
         message(WARNING "SFML_DIR not set. Pass -DSFML_DIR=<path>")
+
     endif()
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         set(CMAKE_WIN32_EXECUTABLE TRUE)
