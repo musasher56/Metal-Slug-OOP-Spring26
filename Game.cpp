@@ -64,7 +64,7 @@ void Game::handleEvents() {
                         // WHY: Transition from Menu to Play state
                         this->gameMode = mode;
                         this->stateManager->pop();
-                        PlayState* play = new PlayState(this->gameMode);
+                        PlayState* play = new PlayState(this->gameMode, this->texManager, this->audManager);
                         this->stateManager->push(play);
                     }
                 }
