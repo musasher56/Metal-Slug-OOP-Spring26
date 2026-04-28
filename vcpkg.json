@@ -1,0 +1,10 @@
+{
+  "name": "metal-slug",
+  "version": "1.0",
+  "dependencies": [
+    {
+      "name": "sfml",
+      "version>=": "2.6.1"
+    }
+  ]
+}
