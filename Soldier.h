@@ -44,8 +44,14 @@ public:
     float getMaxVelocity() const { return this->maxVelocity; }
     void setMaxVelocity(float val) { this->maxVelocity = val; }
     
+    // ROOT CAUSE 4 FIX: Helper methods for movement control from CharacterManager
+    void setDirectionAndVelocity(int dir);
+    void decelerate();
+    
+    // ROOT CAUSE 4 FIX: Make handleJump public so CharacterManager can call it
+    void handleJump();
+    
 protected:
-    virtual void handleJump();
     virtual void applyGravity();
     virtual void handleCollision(Level* lvl);
     virtual void applyMovement(float& scroll);
