@@ -3,16 +3,11 @@
 
 Game::Game()
     : window(VideoMode(SCREEN_W, SCREEN_H), "Metal Slug - OOP SP26")
+    , stateManager(nullptr)
     , texManager(nullptr)
     , audManager(nullptr)
-    , mainMenu(nullptr)
-    , level(nullptr)
-    , player(nullptr)
     , gameMode(MODE_SURVIVAL)
     , running(true)
-    , inMenu(true)
-    , movingLeft(false)
-    , movingRight(false)
 {
     this->window.setFramerateLimit(FRAMERATE_LIMIT);
     this->initialize();
@@ -25,19 +20,11 @@ Game::~Game() {
 void Game::initialize() {
     this->texManager = new TextureManager();
     this->audManager = new AudioManager();
-    this->mainMenu   = new MainMenu(this->texManager, this->audManager);
-}
-
-void Game::startGame() {
-    this->level  = new Level();
-    this->player = new Player();
-    this->window.requestFocus();
-
-    this->bgTex.loadFromFile("resources/Sprites/tempbg.jpeg");
-    this->bgSprite.setTexture(this->bgTex);
-    float sx = (float)SCREEN_W / (float)this->bgTex.getSize().x;
-    float sy = (float)SCREEN_H / (float)this->bgTex.getSize().y;
-    this->bgSprite.setScale(sx, sy);
+    this->stateManager = new GameStateManager();
+    
+    // WHY: Start with MenuState as the initial game state
+    MenuState* menu = new MenuState(this->texManager, this->audManager);
+    this->stateManager->push(menu);
 }
 
 void Game::run() {
@@ -59,74 +46,58 @@ void Game::handleEvents() {
             return;
         }
 
-        if (this->inMenu && this->mainMenu != nullptr) {
-            int result = this->mainMenu->handleEvent(ev);
-            if (result == 99) {
-                this->running = false;
-                this->window.close();
-            } else if (result >= 0) {
-                this->gameMode = result;
-                this->inMenu   = false;
-                delete this->mainMenu;
-                this->mainMenu = nullptr;
-                this->startGame();
-            }
-        } else {
-            if (ev.type == Event::KeyPressed) {
-                if (ev.key.code == Keyboard::Right)  this->movingRight = true;
-                if (ev.key.code == Keyboard::Left)   this->movingLeft  = true;
-                if (ev.key.code == Keyboard::Space && this->player != nullptr)
-                    this->player->jump();
-                if (ev.key.code == Keyboard::Escape) {
-                    this->running = false;
-                    this->window.close();
+        // WHY: Delegate event handling to current state via GameStateManager
+        if (this->stateManager != nullptr) {
+            this->stateManager->handleEvent(ev);
+            
+            // WHY: Check for state changes after event handling
+            GameState* current = this->stateManager->peek();
+            if (current != nullptr) {
+                if (current->getID() == STATE_MENU) {
+                    MenuState* menu = (MenuState*)current;
+                    int mode = menu->getSelectedMode();
+                    if (mode == 99) {
+                        this->running = false;
+                        this->window.close();
+                        return;
+                    } else if (mode >= 0 && mode <= 2) {
+                        // WHY: Transition from Menu to Play state
+                        this->gameMode = mode;
+                        this->stateManager->pop();
+                        PlayState* play = new PlayState(this->gameMode, this->texManager, this->audManager);
+                        this->stateManager->push(play);
+                    }
                 }
             }
-            if (ev.type == Event::KeyReleased) {
-                if (ev.key.code == Keyboard::Right) this->movingRight = false;
-                if (ev.key.code == Keyboard::Left)  this->movingLeft  = false;
-            }
         }
-    }
-
-    if (!this->inMenu && this->player != nullptr) {
-        if (this->movingRight)     this->player->moveRight();
-        else if (this->movingLeft) this->player->moveLeft();
-        else                       this->player->stop();
     }
 }
 
 void Game::update(float dt) {
-    if (this->inMenu && this->mainMenu != nullptr) {
-        this->mainMenu->update(dt);
-        return;
-    }
-    if (this->player != nullptr && this->level != nullptr) {
-        this->player->update(
-            this->level->getLvl(),
-            this->level->getHeight(),
-            this->level->getWidth(),
-            this->level->getCellSize()
-        );
+    if (this->stateManager != nullptr) {
+        this->stateManager->update(dt);
     }
 }
 
 void Game::render() {
     this->window.clear(Color::Black);
-    if (this->inMenu && this->mainMenu != nullptr) {
-        this->mainMenu->draw(this->window);
-    } else {
-        this->window.draw(this->bgSprite);
-        if (this->level  != nullptr) this->level->Draw(this->window);
-        if (this->player != nullptr) this->player->draw(this->window);
+    if (this->stateManager != nullptr) {
+        this->stateManager->render(this->window);
     }
     this->window.display();
 }
 
 void Game::cleanup() {
-    if (this->mainMenu  != nullptr) { delete this->mainMenu;  this->mainMenu  = nullptr; }
-    if (this->player    != nullptr) { delete this->player;    this->player    = nullptr; }
-    if (this->level     != nullptr) { delete this->level;     this->level     = nullptr; }
-    if (this->audManager!= nullptr) { delete this->audManager;this->audManager= nullptr; }
-    if (this->texManager!= nullptr) { delete this->texManager;this->texManager= nullptr; }
+    if (this->stateManager != nullptr) {
+        delete this->stateManager;
+        this->stateManager = nullptr;
+    }
+    if (this->audManager != nullptr) {
+        delete this->audManager;
+        this->audManager = nullptr;
+    }
+    if (this->texManager != nullptr) {
+        delete this->texManager;
+        this->texManager = nullptr;
+    }
 }

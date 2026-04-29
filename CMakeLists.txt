@@ -13,6 +13,7 @@ if(APPLE)
 elseif(WIN32)
     if(NOT DEFINED SFML_DIR AND NOT DEFINED ENV{SFML_DIR})
         message(WARNING "SFML_DIR not set. Pass -DSFML_DIR=<path>")
+
     endif()
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         set(CMAKE_WIN32_EXECUTABLE TRUE)
@@ -24,11 +25,27 @@ find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
 set(SOURCES
         main.cpp
         Game.cpp
-        MainMenu.cpp
+        GameState.cpp
+        GameStateManager.cpp
+        MenuState.cpp
+        PlayState.cpp
+        PausedState.cpp
+        GameOverState.cpp
         TextureManager.cpp
         AudioManager.cpp
         Level.cpp
+        Vector2d.cpp
+        Animation.cpp
+        MainMenu.cpp
+        Entity.cpp
+        DamagableEntity.cpp
+        Soldier.cpp
         Player.cpp
+        TransformationState.cpp
+        NormalState.cpp
+        UndeadState.cpp
+        MummyState.cpp
+        AimController.cpp
         Gravity.cpp
 )
 
