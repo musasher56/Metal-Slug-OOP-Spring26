@@ -34,8 +34,8 @@ void Soldier::update(float scroll, Level* lvl) {
 }
 
 void Soldier::draw(RenderWindow& window, float scroll) {
-    // ROOT CAUSE 2 FIX: applyToSprite sets texture rect if animation is set
-    this->animation.applyToSprite(this->sprite);
+    this->animation.update();                          // advance frame
+    this->animation.applyToSprite(this->sprite);       // apply to sprite
     this->sprite.setPosition(this->position.x - scroll, this->position.y);
     window.draw(this->sprite);
 }
@@ -131,11 +131,13 @@ void Soldier::handleCollision(Level* lvl) {
     // ROOT CAUSE 3 FIX: Null-guard handleCollision against null level
     if (lvl == nullptr) return;  // no collision without a level — safe to skip
     
-    // Get player bounding box
+    // Get player bounding box - use abs() on scale to handle flipped sprites
+    float scaleX = std::abs(this->sprite.getScale().x);
+    float scaleY = std::abs(this->sprite.getScale().y);
     float playerLeft = this->position.x;
-    float playerRight = this->position.x + 32.f * this->sprite.getScale().x;
+    float playerRight = this->position.x + 32.f * scaleX;
     float playerTop = this->position.y;
-    float playerBottom = this->position.y + 40.f * this->sprite.getScale().y;
+    float playerBottom = this->position.y + 40.f * scaleY;
     
     int cellSize = lvl->getCellSize();
     this->onGround = false;
@@ -199,11 +201,11 @@ void Soldier::handleCollision(Level* lvl) {
                     this->velocityY = 0.f;
                 }
                 
-                // Update player bounds after resolution
+                // Update player bounds after resolution - use abs() on scale
                 playerLeft = this->position.x;
-                playerRight = this->position.x + 32.f * this->sprite.getScale().x;
+                playerRight = this->position.x + 32.f * scaleX;
                 playerTop = this->position.y;
-                playerBottom = this->position.y + 40.f * this->sprite.getScale().y;
+                playerBottom = this->position.y + 40.f * scaleY;
             }
         }
     }
@@ -213,11 +215,13 @@ void Soldier::applyMovement(float& scroll) {
     this->position.x += this->velocityX;
     this->position.y += this->velocityY;
     
-    // Apply direction to sprite
+    // Apply direction to sprite - preserve existing scale magnitude, only flip X sign
+    float scaleX = std::abs(this->sprite.getScale().x);
+    float scaleY = this->sprite.getScale().y;
     if (this->direction == DIR_LEFT) {
-        this->sprite.setScale(-1.f, 1.f);
+        this->sprite.setScale(-scaleX, scaleY);
     } else {
-        this->sprite.setScale(1.f, 1.f);
+        this->sprite.setScale(scaleX, scaleY);
     }
 }
 

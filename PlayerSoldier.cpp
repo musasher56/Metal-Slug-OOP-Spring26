@@ -134,13 +134,12 @@ void PlayerSoldier::onDeath() {
 }
 
 void PlayerSoldier::updateBoundingBox() {
-    // WHY: Update bounding box based on sprite dimensions
-    // Actual implementation depends on sprite size
+    // WHY: Update bounding box based on sprite dimensions - use abs() on scale
     this->boundingBox = IntRect(
         static_cast<int>(this->position.x),
         static_cast<int>(this->position.y),
-        32,  // Default width
-        48   // Default height
+        static_cast<int>(32 * std::abs(this->sprite.getScale().x)),
+        static_cast<int>(48 * std::abs(this->sprite.getScale().y))
     );
 }
 
