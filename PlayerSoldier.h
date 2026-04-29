@@ -4,9 +4,7 @@
 #include "Weapon.h"
 #include "Grenade.h"
 #include "Vehicle.h"
-#include "ProjectileManager.h"
 
-// Forward declarations
 class ProjectileManager;
 
 // WHY: PlayerSoldier is the abstract base class for all player characters
@@ -45,8 +43,8 @@ protected:
 public:
     virtual void updateSprite() = 0;     // Pure virtual
     virtual void activatePowerUp() = 0;  // Pure virtual
-    void onDeath() override;
-    void updateBoundingBox() override;
+    void onDeath();
+    void updateBoundingBox();
 };
 
 // ========== Marco : PlayerSoldier ==========

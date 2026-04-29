@@ -38,7 +38,7 @@ public:
     ProjectileWeapon(int weaponType, int dmg, float rate, int amm, int projClass);
     virtual ~ProjectileWeapon();
 
-    virtual void fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm) override = 0;
+    virtual void fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm) = 0;
 };
 
 // ========== Pistol : ProjectileWeapon ==========
@@ -51,8 +51,8 @@ public:
     Pistol();
     virtual ~Pistol();
 
-    virtual void fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm) override;
-    virtual void update() override;
+    virtual void fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm);
+    virtual void update();
 };
 
 // ========== HeavyMachineGun : ProjectileWeapon ==========
@@ -62,8 +62,8 @@ public:
     HeavyMachineGun();
     virtual ~HeavyMachineGun();
 
-    virtual void fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm) override;
-    virtual void update() override;
+    virtual void fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm);
+    virtual void update();
 };
 
 // ========== RocketLauncher : ProjectileWeapon ==========
@@ -77,8 +77,8 @@ public:
     RocketLauncher();
     virtual ~RocketLauncher();
 
-    virtual void fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm) override;
-    virtual void update() override;
+    virtual void fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm);
+    virtual void update();
 };
 
 // ========== FlameShot : Weapon (NOT ProjectileWeapon) ==========
@@ -91,8 +91,8 @@ public:
     FlameShot();
     virtual ~FlameShot();
 
-    virtual void fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm) override;
-    virtual void update() override;
+    virtual void fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm);
+    virtual void update();
 };
 
 // ========== LaserGun : Weapon (NOT ProjectileWeapon) ==========
@@ -102,6 +102,6 @@ public:
     LaserGun();
     virtual ~LaserGun();
 
-    virtual void fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm) override;
-    virtual void update() override;
+    virtual void fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm);
+    virtual void update();
 };

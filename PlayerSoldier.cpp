@@ -1,5 +1,6 @@
 #include "PlayerSoldier.h"
 #include <iostream>
+#include <fstream>
 
 // ========== PlayerSoldier Implementation ==========
 

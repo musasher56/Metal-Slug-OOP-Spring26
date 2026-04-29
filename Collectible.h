@@ -16,8 +16,8 @@ public:
 
     virtual void onPickup(CharacterManager* cm) = 0;
     
-    virtual void update(float scroll, void* lvl) override;
-    virtual void draw(RenderWindow& window, float scroll) override;
+    virtual void update(float scroll, void* lvl);
+    virtual void draw(RenderWindow& window, float scroll);
     
     IntRect getBoundingBox() const;
 };
@@ -36,8 +36,8 @@ public:
     virtual void onInteract(CharacterManager* cm) = 0;
     
     bool isInRange(sf::Vector2f pos) const;
-    virtual void update(float scroll, void* lvl) override;
-    virtual void draw(RenderWindow& window, float scroll) override;
+    virtual void update(float scroll, void* lvl);
+    virtual void draw(RenderWindow& window, float scroll);
     
     IntRect getBoundingBox() const;
 };
@@ -53,7 +53,7 @@ public:
     Food(TextureManager* texMgr, AudioManager* audMgr, bool turkey);
     virtual ~Food();
 
-    virtual void onPickup(CharacterManager* cm) override;
+    virtual void onPickup(CharacterManager* cm);
 };
 
 // ========== SupplyCrate : Collectible ==========
@@ -69,7 +69,7 @@ public:
     SupplyCrate(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~SupplyCrate();
 
-    virtual void onPickup(CharacterManager* cm) override;
+    virtual void onPickup(CharacterManager* cm);
     void generateContents();  // 90% HMG/Flame/Rocket  10% Laser
 };
 
@@ -83,6 +83,6 @@ public:
     POWPrisoner(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~POWPrisoner();
 
-    virtual void onInteract(CharacterManager* cm) override;
+    virtual void onInteract(CharacterManager* cm);
     void free(CharacterManager* cm);  // Spawns SupplyCrate
 };
