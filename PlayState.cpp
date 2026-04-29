@@ -35,6 +35,20 @@ PlayState::~PlayState() {
 }
 
 void PlayState::update(float dt) {
+    // WHY: Apply movement every frame using real-time input
+    if (this->player != nullptr) {
+        bool left  = Keyboard::isKeyPressed(Keyboard::Left);
+        bool right = Keyboard::isKeyPressed(Keyboard::Right);
+
+        if (right && !left) {
+            this->player->moveRight();
+        } else if (left && !right) {
+            this->player->moveLeft();
+        } else {
+            this->player->stop();
+        }
+    }
+
     // WHY: Update player physics and collision with level
     if (this->player != nullptr && this->level != nullptr) {
         this->player->update(
@@ -58,37 +72,10 @@ void PlayState::render(RenderWindow& window) {
 }
 
 void PlayState::handleEvent(Event& event) {
-    // WHY: Handle player movement input
+    // WHY: Only handle jump on key press
     if (event.type == Event::KeyPressed) {
-        if (event.key.code == Keyboard::Right) {
-            this->movingRight = true;
-            this->movingLeft = false;
-        }
-        if (event.key.code == Keyboard::Left) {
-            this->movingLeft = true;
-            this->movingRight = false;
-        }
         if (event.key.code == Keyboard::Space && this->player != nullptr) {
             this->player->jump();
-        }
-    }
-    if (event.type == Event::KeyReleased) {
-        if (event.key.code == Keyboard::Right) {
-            this->movingRight = false;
-        }
-        if (event.key.code == Keyboard::Left) {
-            this->movingLeft = false;
-        }
-    }
-    
-    // WHY: Apply movement state to player
-    if (this->player != nullptr) {
-        if (this->movingRight) {
-            this->player->moveRight();
-        } else if (this->movingLeft) {
-            this->player->moveLeft();
-        } else {
-            this->player->stop();
         }
     }
 }
