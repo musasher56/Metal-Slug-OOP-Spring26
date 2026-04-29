@@ -40,13 +40,19 @@ set(SOURCES
         Entity.cpp
         DamagableEntity.cpp
         Soldier.cpp
-        Player.cpp
+        PlayerSoldier.cpp
         TransformationState.cpp
-        NormalState.cpp
-        UndeadState.cpp
-        MummyState.cpp
         AimController.cpp
         Gravity.cpp
+        Weapon.cpp
+        Grenade.cpp
+        Projectile.cpp
+        Collectible.cpp
+        CharacterManager.cpp
+        LevelManager.cpp
+        ScoreManager.cpp
+        HUD.cpp
+        Vehicle.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

@@ -28,8 +28,8 @@ public:
     virtual ~Soldier();
     
     virtual void update(float scroll, Level* lvl);
-    virtual void draw(RenderWindow& window, float scroll) override;
-    virtual void takeDamage(int amount) override;
+    virtual void draw(RenderWindow& window, float scroll);
+    virtual void takeDamage(int amount);
     void meleeAttack();
     int getState() const;  // returns currentHP as state
     int getLives() const;
@@ -50,5 +50,5 @@ protected:
     virtual void handleCollision(Level* lvl);
     virtual void applyMovement(float& scroll);
     virtual void handleStateTimers();
-    virtual void onDeath() override = 0;
+    virtual void onDeath() = 0;
 };

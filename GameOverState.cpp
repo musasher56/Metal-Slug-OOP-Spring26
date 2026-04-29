@@ -2,7 +2,7 @@
 
 GameOverState::GameOverState(int score) 
     : finalScore(score) {
-    this->id = STATE_GAME_OVER;
+    this->id = GSTATE_GAME_OVER;
 }
 
 GameOverState::~GameOverState() {

@@ -1,7 +1,7 @@
 #include "PausedState.h"
 
 PausedState::PausedState() {
-    this->id = STATE_PAUSED;
+    this->id = GSTATE_PAUSED;
 }
 
 PausedState::~PausedState() {

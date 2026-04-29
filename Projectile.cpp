@@ -1,4 +1,5 @@
 #include "Projectile.h"
+#include <cmath>
 
 // ========== Projectile Implementation ==========
 

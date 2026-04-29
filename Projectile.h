@@ -22,7 +22,7 @@ public:
     virtual ~Projectile();
 
     virtual void update(float scroll) = 0;
-    virtual void draw(RenderWindow& window, float scroll) override;
+    virtual void draw(RenderWindow& window, float scroll);
     
     IntRect getBoundingBox() const;
     int getDamage() const;
@@ -41,7 +41,7 @@ public:
     StraightProjectile(TextureManager* texMgr, AudioManager* audMgr, float ang);
     virtual ~StraightProjectile();
 
-    virtual void update(float scroll) override;
+    virtual void update(float scroll);
 };
 
 // ========== BallisticProjectile : Projectile ==========
@@ -57,7 +57,7 @@ public:
     BallisticProjectile(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~BallisticProjectile();
 
-    virtual void update(float scroll) override;
+    virtual void update(float scroll);
 };
 
 // ========== ExplosiveProjectile : BallisticProjectile ==========
@@ -67,5 +67,5 @@ public:
     ExplosiveProjectile(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~ExplosiveProjectile();
 
-    virtual void onImpact(EnemyManager* em, CharacterManager* cm) override;
+    virtual void onImpact(EnemyManager* em, CharacterManager* cm);
 };

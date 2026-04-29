@@ -19,7 +19,7 @@ public:
     Grenade(int radius, int dmg);
     virtual ~Grenade();
 
-    virtual void throw(sf::Vector2f origin, sf::Vector2f target) = 0;
+    virtual void launch(sf::Vector2f origin, sf::Vector2f target) = 0;
     virtual void onImpact(EnemyManager* em) = 0;
     
     void update();
@@ -38,8 +38,8 @@ public:
     HandGrenade();
     virtual ~HandGrenade();
 
-    virtual void throw(sf::Vector2f origin, sf::Vector2f target) override;
-    virtual void onImpact(EnemyManager* em) override;
+    virtual void launch(sf::Vector2f origin, sf::Vector2f target);
+    virtual void onImpact(EnemyManager* em);
 };
 
 // ========== FireBombGrenade : Grenade ==========
@@ -55,8 +55,8 @@ public:
     FireBombGrenade();
     virtual ~FireBombGrenade();
 
-    virtual void throw(sf::Vector2f origin, sf::Vector2f target) override;
-    virtual void onImpact(EnemyManager* em) override;
+    virtual void launch(sf::Vector2f origin, sf::Vector2f target);
+    virtual void onImpact(EnemyManager* em);
     
     void spawnFirePool();
 };

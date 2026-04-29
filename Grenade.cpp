@@ -54,7 +54,7 @@ HandGrenade::HandGrenade()
 
 HandGrenade::~HandGrenade() {}
 
-void HandGrenade::throw(sf::Vector2f origin, sf::Vector2f target) {
+void HandGrenade::launch(sf::Vector2f origin, sf::Vector2f target) {
     this->position = origin;
     this->active = true;
     
@@ -87,7 +87,7 @@ FireBombGrenade::FireBombGrenade()
 
 FireBombGrenade::~FireBombGrenade() {}
 
-void FireBombGrenade::throw(sf::Vector2f origin, sf::Vector2f target) {
+void FireBombGrenade::launch(sf::Vector2f origin, sf::Vector2f target) {
     this->position = origin;
     this->active = true;
     
