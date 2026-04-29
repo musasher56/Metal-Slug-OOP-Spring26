@@ -84,12 +84,12 @@ const int PROJ_BALLISTIC  = 1;
 const int PROJ_EXPLOSIVE  = 2;
 const int PROJ_BEAM       = 3;
 
-// GameStateID
-const int STATE_MENU        = 0;
-const int STATE_PLAY        = 1;
-const int STATE_PAUSED      = 2;
-const int STATE_GAME_OVER   = 3;
-const int STATE_LEADERBOARD = 4;
+// GameStateID — renamed to GSTATE_* to avoid collision with CharacterState constants
+const int GSTATE_MENU        = 0;
+const int GSTATE_PLAY        = 1;
+const int GSTATE_PAUSED      = 2;
+const int GSTATE_GAME_OVER   = 3;
+const int GSTATE_LEADERBOARD = 4;
 
 // ========== SCREEN & LIMITS ==========
 const int SCREEN_W = 1280;

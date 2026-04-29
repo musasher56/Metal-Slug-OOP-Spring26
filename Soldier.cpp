@@ -1,7 +1,5 @@
 #include "Soldier.h"
-
-// Forward declaration for Level (avoid circular dependency)
-class Level;
+#include "Level.h"
 
 Soldier::Soldier(TextureManager* texMgr, AudioManager* audMgr)
     : DamagableEntity(texMgr, audMgr)
@@ -20,14 +18,15 @@ Soldier::Soldier(TextureManager* texMgr, AudioManager* audMgr)
 {}
 
 Soldier::~Soldier() {
-    // WHY: Soldier does not own NormalState (singleton), but owns other states
-    if (this->transformState != nullptr) {
+    // WHY: FIX #4 - Soldier does not own NormalState (singleton), but owns other states
+    // NormalState has type TRANSFORM_NONE, so we only delete if type != TRANSFORM_NONE
+    if (this->transformState != nullptr && this->transformState->getType() != TRANSFORM_NONE) {
         delete this->transformState;
-        this->transformState = nullptr;
     }
+    this->transformState = nullptr;
 }
 
-void Soldier::update(float scroll, void* lvl) {
+void Soldier::update(float scroll, Level* lvl) {
     this->handleStateTimers();
     this->applyGravity();
     this->handleCollision(lvl);
@@ -127,9 +126,10 @@ void Soldier::applyGravity() {
     }
 }
 
-void Soldier::handleCollision(void* lvl) {
+void Soldier::handleCollision(Level* lvl) {
     // Placeholder - actual implementation needs Level pointer
     // This will be implemented in concrete classes or with proper Level include
+    (void)lvl;  // Suppress unused warning for now
 }
 
 void Soldier::applyMovement(float& scroll) {

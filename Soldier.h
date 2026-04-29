@@ -2,6 +2,9 @@
 #include "DamagableEntity.h"
 #include "TransformationState.h"
 
+// Forward declaration to avoid circular dependency
+class Level;
+
 // WHY: Soldier extends DamagableEntity with movement, gravity, lives, transformation state
 // Base class for PlayerSoldier and Enemy - handles physics, collision, state timers
 class Soldier : public DamagableEntity {
@@ -24,7 +27,7 @@ public:
     Soldier(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~Soldier();
     
-    virtual void update(float scroll, void* lvl) override;
+    virtual void update(float scroll, Level* lvl);
     virtual void draw(RenderWindow& window, float scroll) override;
     virtual void takeDamage(int amount) override;
     void meleeAttack();
@@ -44,7 +47,7 @@ public:
 protected:
     virtual void handleJump();
     virtual void applyGravity();
-    virtual void handleCollision(void* lvl);  // lvl is Level*
+    virtual void handleCollision(Level* lvl);
     virtual void applyMovement(float& scroll);
     virtual void handleStateTimers();
     virtual void onDeath() override = 0;
