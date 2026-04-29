@@ -152,12 +152,12 @@ Marco::Marco(TextureManager* texMgr, AudioManager* audMgr)
     , dualFireActive(false)
 {
     // ROOT CAUSE 1 FIX: Load Marco's sprite texture via TextureManager
-    Texture& tex = texMgr->getTexture("resources/Sprites/Character.png");
+    Texture& tex = texMgr->getTexture("resources/Sprites/marco.png");
     this->animation.setTexture(&tex);
     this->animation.setFrameCount(12);  // 12 frames in the sprite sheet
     this->animation.setLoop(true);
     this->sprite.setTexture(tex);
-    this->sprite.setScale(0.2f, 0.2f);
+    this->sprite.setScale(3.0f, 3.0f);
     
     // Set initial frame rect for idle animation (first frame of 12-frame sheet)
     // Assuming each frame is roughly 32x32 pixels in the source sheet
