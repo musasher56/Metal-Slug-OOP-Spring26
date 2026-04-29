@@ -53,7 +53,7 @@ void Game::handleEvents() {
             // WHY: Check for state changes after event handling
             GameState* current = this->stateManager->peek();
             if (current != nullptr) {
-                if (current->getID() == STATE_MENU) {
+                if (current->getID() == GSTATE_MENU) {
                     MenuState* menu = (MenuState*)current;
                     int mode = menu->getSelectedMode();
                     if (mode == 99) {

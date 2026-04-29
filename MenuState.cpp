@@ -2,7 +2,7 @@
 
 MenuState::MenuState(TextureManager* texMgr, AudioManager* audMgr) 
     : mainMenu(nullptr), texManager(texMgr), audManager(audMgr) {
-    this->id = STATE_MENU;
+    this->id = GSTATE_MENU;
     this->gameMode = -1; // prevent auto-transition before a selection
     // WHY: Create MainMenu instance which handles video frames and menu rendering
     this->mainMenu = new MainMenu(this->texManager, this->audManager);

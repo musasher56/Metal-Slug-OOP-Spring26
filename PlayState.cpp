@@ -1,17 +1,23 @@
 #include "PlayState.h"
+#include "CharacterManager.h"
+#include "LevelManager.h"
+#include "ScoreManager.h"
+#include "HUD.h"
 
 PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr) 
-    : entityManager(nullptr), levelManager(nullptr), characterManager(nullptr),
-      enemyManager(nullptr), enemyVehicleManager(nullptr), projectileManager(nullptr),
-      collectibleManager(nullptr), scoreManager(nullptr), hud(nullptr), 
+    : entityManager(nullptr), enemyManager(nullptr), enemyVehicleManager(nullptr),
+      projectileManager(nullptr), collectibleManager(nullptr),
       texManager(texMgr), audManager(audMgr),
-      level(nullptr), player(nullptr), gameMode(mode),
+      level(nullptr), characterManager(nullptr), levelManager(nullptr),
+      scoreManager(nullptr), hud(nullptr), gameMode(mode),
       movingLeft(false), movingRight(false) {
-    this->id = STATE_PLAY;
+    this->id = GSTATE_PLAY;
     
-    // WHY: Initialize level and player for basic gameplay (temporary until managers are implemented)
-    this->level = new Level();
-    this->player = new Player();
+    // WHY: Initialize level manager and character manager for basic gameplay
+    this->levelManager = new LevelManager();
+    this->characterManager = new CharacterManager(texMgr, audMgr);
+    this->scoreManager = new ScoreManager();
+    this->hud = new HUD();
     
     // WHY: Load background texture for gameplay
     this->bgTex.loadFromFile("resources/Sprites/tempbg.jpeg");
@@ -22,61 +28,57 @@ PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
 }
 
 PlayState::~PlayState() {
-    // WHY: PlayState owns level and player, must delete them
-    if (this->level != nullptr) {
-        delete this->level;
-        this->level = nullptr;
+    // WHY: PlayState owns managers, must delete them
+    if (this->levelManager != nullptr) {
+        delete this->levelManager;
+        this->levelManager = nullptr;
     }
-    if (this->player != nullptr) {
-        delete this->player;
-        this->player = nullptr;
+    if (this->characterManager != nullptr) {
+        delete this->characterManager;
+        this->characterManager = nullptr;
+    }
+    if (this->scoreManager != nullptr) {
+        delete this->scoreManager;
+        this->scoreManager = nullptr;
+    }
+    if (this->hud != nullptr) {
+        delete this->hud;
+        this->hud = nullptr;
     }
     // WHY: texManager and audManager are owned by Game, just references here
 }
 
 void PlayState::update(float dt) {
-    // WHY: Apply movement every frame using real-time input
-    if (this->player != nullptr) {
-        bool left  = Keyboard::isKeyPressed(Keyboard::Left);
-        bool right = Keyboard::isKeyPressed(Keyboard::Right);
-
-        if (right && !left) {
-            this->player->moveRight();
-        } else if (left && !right) {
-            this->player->moveLeft();
-        } else {
-            this->player->stop();
-        }
+    // WHY: Update character manager (handles all PlayerSoldiers)
+    if (this->characterManager != nullptr && this->levelManager != nullptr) {
+        Level* lvl = this->levelManager->getLevel();
+        this->characterManager->update(dt, lvl);
     }
-
-    // WHY: Update player physics and collision with level
-    if (this->player != nullptr && this->level != nullptr) {
-        this->player->update(
-            this->level->getLvl(),
-            this->level->getHeight(),
-            this->level->getWidth(),
-            this->level->getCellSize()
-        );
+    
+    // WHY: Update level manager
+    if (this->levelManager != nullptr) {
+        this->levelManager->update(dt);
     }
 }
 
 void PlayState::render(RenderWindow& window) {
-    // WHY: Render background, level, and player sprite
+    // WHY: Render background, level, and all characters
     window.draw(this->bgSprite);
-    if (this->level != nullptr) {
-        this->level->Draw(window);
+    if (this->levelManager != nullptr) {
+        this->levelManager->draw(window);
     }
-    if (this->player != nullptr) {
-        this->player->draw(window);
+    if (this->characterManager != nullptr) {
+        this->characterManager->draw(window);
+    }
+    if (this->hud != nullptr) {
+        this->hud->draw(window);
     }
 }
 
 void PlayState::handleEvent(Event& event) {
-    // WHY: Only handle jump on key press
-    if (event.type == Event::KeyPressed) {
-        if (event.key.code == Keyboard::Space && this->player != nullptr) {
-            this->player->jump();
-        }
+    // WHY: Delegate input handling to character manager
+    if (this->characterManager != nullptr) {
+        this->characterManager->handleInput(event);
     }
 }
 

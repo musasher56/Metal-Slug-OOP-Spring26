@@ -15,11 +15,11 @@ public:
     MenuState(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~MenuState();
     
-    virtual void update(float dt) override;
-    virtual void render(RenderWindow& window) override;
-    virtual void handleEvent(Event& event) override;
-    virtual void onEnter() override;
-    virtual void onExit() override;
+    virtual void update(float dt);
+    virtual void render(RenderWindow& window);
+    virtual void handleEvent(Event& event);
+    virtual void onEnter();
+    virtual void onExit();
     
     int getSelectedMode() const;
 };

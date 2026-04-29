@@ -1,7 +1,5 @@
 #include "Soldier.h"
-
-// Forward declaration for Level (avoid circular dependency)
-class Level;
+#include "Level.h"
 
 Soldier::Soldier(TextureManager* texMgr, AudioManager* audMgr)
     : DamagableEntity(texMgr, audMgr)
@@ -20,14 +18,15 @@ Soldier::Soldier(TextureManager* texMgr, AudioManager* audMgr)
 {}
 
 Soldier::~Soldier() {
-    // WHY: Soldier does not own NormalState (singleton), but owns other states
-    if (this->transformState != nullptr) {
+    // WHY: FIX #4 - Soldier does not own NormalState (singleton), but owns other states
+    // NormalState has type TRANSFORM_NONE, so we only delete if type != TRANSFORM_NONE
+    if (this->transformState != nullptr && this->transformState->getType() != TRANSFORM_NONE) {
         delete this->transformState;
-        this->transformState = nullptr;
     }
+    this->transformState = nullptr;
 }
 
-void Soldier::update(float scroll, void* lvl) {
+void Soldier::update(float scroll, Level* lvl) {
     this->handleStateTimers();
     this->applyGravity();
     this->handleCollision(lvl);
@@ -35,8 +34,9 @@ void Soldier::update(float scroll, void* lvl) {
 }
 
 void Soldier::draw(RenderWindow& window, float scroll) {
+    this->animation.update();                          // advance frame
+    this->animation.applyToSprite(this->sprite);       // apply to sprite
     this->sprite.setPosition(this->position.x - scroll, this->position.y);
-    this->animation.applyToSprite(this->sprite);
     window.draw(this->sprite);
 }
 
@@ -127,20 +127,101 @@ void Soldier::applyGravity() {
     }
 }
 
-void Soldier::handleCollision(void* lvl) {
-    // Placeholder - actual implementation needs Level pointer
-    // This will be implemented in concrete classes or with proper Level include
+void Soldier::handleCollision(Level* lvl) {
+    // ROOT CAUSE 3 FIX: Null-guard handleCollision against null level
+    if (lvl == nullptr) return;  // no collision without a level — safe to skip
+    
+    // Get player bounding box - use abs() on scale to handle flipped sprites
+    float scaleX = std::abs(this->sprite.getScale().x);
+    float scaleY = std::abs(this->sprite.getScale().y);
+    float playerLeft = this->position.x;
+    float playerRight = this->position.x + 32.f * scaleX;
+    float playerTop = this->position.y;
+    float playerBottom = this->position.y + 40.f * scaleY;
+    
+    int cellSize = lvl->getCellSize();
+    this->onGround = false;
+    
+    // Check cells around the player
+    int startCol = static_cast<int>(playerLeft) / cellSize - 1;
+    int endCol = static_cast<int>(playerRight) / cellSize + 1;
+    int startRow = static_cast<int>(playerTop) / cellSize - 1;
+    int endRow = static_cast<int>(playerBottom) / cellSize + 1;
+    
+    for (int row = startRow; row <= endRow; ++row) {
+        for (int col = startCol; col <= endCol; ++col) {
+            if (!lvl->isSolid(row, col)) continue;
+            
+            // Solid block bounds
+            float blockLeft = static_cast<float>(col * cellSize);
+            float blockRight = blockLeft + static_cast<float>(cellSize);
+            float blockTop = static_cast<float>(row * cellSize);
+            float blockBottom = blockTop + static_cast<float>(cellSize);
+            
+            // Check for overlap
+            if (playerRight > blockLeft && playerLeft < blockRight &&
+                playerBottom > blockTop && playerTop < blockBottom) {
+                
+                // Collision detected - resolve based on velocity
+                float overlapLeft = playerRight - blockLeft;
+                float overlapRight = blockRight - playerLeft;
+                float overlapTop = playerBottom - blockTop;
+                float overlapBottom = blockBottom - playerTop;
+                
+                // Find minimum overlap
+                float minOverlap = overlapLeft;
+                int resolveDir = 0; // 1=left, 2=right, 3=top, 4=bottom
+                
+                if (overlapRight < minOverlap) {
+                    minOverlap = overlapRight;
+                    resolveDir = 2;
+                }
+                if (overlapTop < minOverlap) {
+                    minOverlap = overlapTop;
+                    resolveDir = 3;
+                }
+                if (overlapBottom < minOverlap) {
+                    minOverlap = overlapBottom;
+                    resolveDir = 4;
+                }
+                
+                // Resolve collision
+                if (resolveDir == 1) {
+                    this->position.x -= minOverlap;
+                    this->velocityX = 0.f;
+                } else if (resolveDir == 2) {
+                    this->position.x += minOverlap;
+                    this->velocityX = 0.f;
+                } else if (resolveDir == 3) {
+                    this->position.y -= minOverlap;
+                    this->velocityY = 0.f;
+                    this->onGround = true;
+                } else if (resolveDir == 4) {
+                    this->position.y += minOverlap;
+                    this->velocityY = 0.f;
+                }
+                
+                // Update player bounds after resolution - use abs() on scale
+                playerLeft = this->position.x;
+                playerRight = this->position.x + 32.f * scaleX;
+                playerTop = this->position.y;
+                playerBottom = this->position.y + 40.f * scaleY;
+            }
+        }
+    }
 }
 
 void Soldier::applyMovement(float& scroll) {
     this->position.x += this->velocityX;
     this->position.y += this->velocityY;
     
-    // Apply direction to sprite
+    // Apply direction to sprite - preserve existing scale magnitude, only flip X sign
+    float scaleX = std::abs(this->sprite.getScale().x);
+    float scaleY = this->sprite.getScale().y;
     if (this->direction == DIR_LEFT) {
-        this->sprite.setScale(-1.f, 1.f);
+        this->sprite.setScale(-scaleX, scaleY);
     } else {
-        this->sprite.setScale(1.f, 1.f);
+        this->sprite.setScale(scaleX, scaleY);
     }
 }
 
@@ -151,6 +232,31 @@ void Soldier::handleStateTimers() {
         
         if (this->transformState->isExpired()) {
             this->transformState->onExpiry(this);
+        }
+    }
+}
+
+// ROOT CAUSE 4 FIX: Helper methods for movement control from CharacterManager
+void Soldier::setDirectionAndVelocity(int dir) {
+    this->direction = dir;
+    float accel = 0.5f;
+    if (dir == DIR_LEFT) {
+        this->velocityX -= accel;
+        if (this->velocityX < -this->maxVelocity) this->velocityX = -this->maxVelocity;
+    } else {
+        this->velocityX += accel;
+        if (this->velocityX > this->maxVelocity) this->velocityX = this->maxVelocity;
+    }
+}
+
+void Soldier::decelerate() {
+    if (this->onGround) {
+        if (this->velocityX > 0.f) {
+            this->velocityX -= 0.5f;
+            if (this->velocityX < 0.f) this->velocityX = 0.f;
+        } else if (this->velocityX < 0.f) {
+            this->velocityX += 0.5f;
+            if (this->velocityX > 0.f) this->velocityX = 0.f;
         }
     }
 }
