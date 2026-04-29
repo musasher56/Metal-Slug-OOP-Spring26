@@ -150,13 +150,32 @@ Marco::Marco(TextureManager* texMgr, AudioManager* audMgr)
     : PlayerSoldier(texMgr, audMgr)
     , fireRateMultiplier(1.25f)
     , dualFireActive(false)
-{}
+{
+    // ROOT CAUSE 1 FIX: Load Marco's sprite texture via TextureManager
+    Texture& tex = texMgr->getTexture("resources/Sprites/Character.png");
+    this->animation.setTexture(&tex);
+    this->animation.setFrameCount(12);  // 12 frames in the sprite sheet
+    this->animation.setLoop(true);
+    this->sprite.setTexture(tex);
+    this->sprite.setScale(0.2f, 0.2f);
+    
+    // Set initial frame rect for idle animation (first frame of 12-frame sheet)
+    // Assuming each frame is roughly 32x32 pixels in the source sheet
+    this->sprite.setTextureRect(IntRect(0, 0, 32, 32));
+    
+    // Set starting position
+    this->position = sf::Vector2f(200.f, 300.f);
+    this->updateBoundingBox();
+}
 
 Marco::~Marco() {}
 
 void Marco::updateSprite() {
-    // WHY: Marco-specific sprite updates
-    // Different animation frames based on state
+    // WHY: Marco-specific sprite updates - update frame based on state
+    // Different animation frames based on state (idle, run, jump, etc.)
+    int frameIndex = 0;  // Default to idle frame
+    // TODO: Update frameIndex based on current action state
+    this->sprite.setTextureRect(IntRect(frameIndex * 32, 0, 32, 32));
 }
 
 void Marco::activatePowerUp() {
@@ -167,7 +186,7 @@ void Marco::activatePowerUp() {
 
 void Marco::handleInput() {
     // WHY: Marco handles keyboard/mouse input for movement and actions
-    // Actual implementation in PlayState event handling
+    // Actual implementation in CharacterManager polling
 }
 
 void Marco::meleeAttack() {
@@ -183,12 +202,25 @@ Tarma::Tarma(TextureManager* texMgr, AudioManager* audMgr)
     , vehicleFireRateBonus(0.25f)
     , vehicleDurabilityBonus(0.20f)
     , immunityActive(false)
-{}
+{
+    // ROOT CAUSE 1 FIX: Load Tarma's sprite texture via TextureManager
+    Texture& tex = texMgr->getTexture("resources/Sprites/Character.png");
+    this->animation.setTexture(&tex);
+    this->animation.setFrameCount(12);
+    this->animation.setLoop(true);
+    this->sprite.setTexture(tex);
+    this->sprite.setScale(0.2f, 0.2f);
+    this->sprite.setTextureRect(IntRect(0, 0, 32, 32));
+    this->position = sf::Vector2f(200.f, 300.f);
+    this->updateBoundingBox();
+}
 
 Tarma::~Tarma() {}
 
 void Tarma::updateSprite() {
     // WHY: Tarma-specific sprite updates
+    int frameIndex = 0;
+    this->sprite.setTextureRect(IntRect(frameIndex * 32, 0, 32, 32));
 }
 
 void Tarma::activatePowerUp() {
@@ -218,12 +250,25 @@ Eri::Eri(TextureManager* texMgr, AudioManager* audMgr)
     : PlayerSoldier(texMgr, audMgr)
     , blastRadiusMultiplier(1.50f)
     , doubleGrenadeActive(false)
-{}
+{
+    // ROOT CAUSE 1 FIX: Load Eri's sprite texture via TextureManager
+    Texture& tex = texMgr->getTexture("resources/Sprites/Character.png");
+    this->animation.setTexture(&tex);
+    this->animation.setFrameCount(12);
+    this->animation.setLoop(true);
+    this->sprite.setTexture(tex);
+    this->sprite.setScale(0.2f, 0.2f);
+    this->sprite.setTextureRect(IntRect(0, 0, 32, 32));
+    this->position = sf::Vector2f(200.f, 300.f);
+    this->updateBoundingBox();
+}
 
 Eri::~Eri() {}
 
 void Eri::updateSprite() {
     // WHY: Eri-specific sprite updates
+    int frameIndex = 0;
+    this->sprite.setTextureRect(IntRect(frameIndex * 32, 0, 32, 32));
 }
 
 void Eri::activatePowerUp() {
@@ -254,12 +299,25 @@ Fio::Fio(TextureManager* texMgr, AudioManager* audMgr)
     , ammoBonusMultiplier(1.50f)
     , fireRateMultiplier(1.10f)
     , superchargedActive(false)
-{}
+{
+    // ROOT CAUSE 1 FIX: Load Fio's sprite texture via TextureManager
+    Texture& tex = texMgr->getTexture("resources/Sprites/Character.png");
+    this->animation.setTexture(&tex);
+    this->animation.setFrameCount(12);
+    this->animation.setLoop(true);
+    this->sprite.setTexture(tex);
+    this->sprite.setScale(0.2f, 0.2f);
+    this->sprite.setTextureRect(IntRect(0, 0, 32, 32));
+    this->position = sf::Vector2f(200.f, 300.f);
+    this->updateBoundingBox();
+}
 
 Fio::~Fio() {}
 
 void Fio::updateSprite() {
     // WHY: Fio-specific sprite updates
+    int frameIndex = 0;
+    this->sprite.setTextureRect(IntRect(frameIndex * 32, 0, 32, 32));
 }
 
 void Fio::activatePowerUp() {

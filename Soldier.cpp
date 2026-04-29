@@ -34,8 +34,9 @@ void Soldier::update(float scroll, Level* lvl) {
 }
 
 void Soldier::draw(RenderWindow& window, float scroll) {
-    this->sprite.setPosition(this->position.x - scroll, this->position.y);
+    // ROOT CAUSE 2 FIX: applyToSprite sets texture rect if animation is set
     this->animation.applyToSprite(this->sprite);
+    this->sprite.setPosition(this->position.x - scroll, this->position.y);
     window.draw(this->sprite);
 }
 
@@ -127,6 +128,9 @@ void Soldier::applyGravity() {
 }
 
 void Soldier::handleCollision(Level* lvl) {
+    // ROOT CAUSE 3 FIX: Null-guard handleCollision against null level
+    if (lvl == nullptr) return;  // no collision without a level — safe to skip
+    
     // Placeholder - actual implementation needs Level pointer
     // This will be implemented in concrete classes or with proper Level include
     (void)lvl;  // Suppress unused warning for now
@@ -151,6 +155,31 @@ void Soldier::handleStateTimers() {
         
         if (this->transformState->isExpired()) {
             this->transformState->onExpiry(this);
+        }
+    }
+}
+
+// ROOT CAUSE 4 FIX: Helper methods for movement control from CharacterManager
+void Soldier::setDirectionAndVelocity(int dir) {
+    this->direction = dir;
+    float accel = 0.5f;
+    if (dir == DIR_LEFT) {
+        this->velocityX -= accel;
+        if (this->velocityX < -this->maxVelocity) this->velocityX = -this->maxVelocity;
+    } else {
+        this->velocityX += accel;
+        if (this->velocityX > this->maxVelocity) this->velocityX = this->maxVelocity;
+    }
+}
+
+void Soldier::decelerate() {
+    if (this->onGround) {
+        if (this->velocityX > 0.f) {
+            this->velocityX -= 0.5f;
+            if (this->velocityX < 0.f) this->velocityX = 0.f;
+        } else if (this->velocityX < 0.f) {
+            this->velocityX += 0.5f;
+            if (this->velocityX > 0.f) this->velocityX = 0.f;
         }
     }
 }

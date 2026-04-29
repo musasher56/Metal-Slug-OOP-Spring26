@@ -1,5 +1,5 @@
 ```
-# Build artifacts
+# Compiled and binary files
 *.o
 *.obj
 *.exe
@@ -8,12 +8,29 @@
 *.a
 *.out
 
-# CMake build directory
+# Build artifacts
 build/
-cmake-build-*/
+dist/
 
 # Dependencies
-vendor/
+node_modules/
+venv/
+.venv/
+__pycache__/
+*.egg-info/
+.Python/
+pip-log.txt
+.tox/
+.coverage
+coverage/
+htmlcov/
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
 
 # Logs
 *.log
@@ -23,25 +40,14 @@ vendor/
 .env.local
 *.env.*
 
-# Editor/IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-*.tmp
-
-# OS files
+# OS specific
 .DS_Store
 Thumbs.db
 
-# Coverage reports
-coverage/
-htmlcov/
-*.coverage
-
-# MyPy cache
-.mypy_cache/
-
-# Pytest cache
+# Testing
 .pytest_cache/
+.mypy_cache/
+*.pyc
+*.pyo
+*.pyd
 ```

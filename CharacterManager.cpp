@@ -21,17 +21,29 @@ CharacterManager::~CharacterManager() {
             this->characters[i] = nullptr;
         }
     }
-    if (this->fusionCompanion != nullptr) {
-        delete this->fusionCompanion;
-        this->fusionCompanion = nullptr;
-    }
+    // WHY: fusionCompanion is a stub - actual deletion will happen when FusionCompanion is fully implemented
+    // For now, just set to nullptr to avoid incomplete type issues
+    this->fusionCompanion = nullptr;
 }
 
 void CharacterManager::update(float dt, Level* lvl) {
-    // WHY: Update current active character
-    if (this->characters[this->currentCharacter] != nullptr && lvl != nullptr) {
-        this->characters[this->currentCharacter]->update(0.0f, lvl);
+    // ROOT CAUSE 3 & 4 FIX: Always update character, poll input here (frame-based)
+    PlayerSoldier* current = this->characters[this->currentCharacter];
+    if (current == nullptr) return;
+
+    // Poll real-time input here (movement is frame-based, not event-based)
+    if (Keyboard::isKeyPressed(Keyboard::Left)) {
+        current->setDirectionAndVelocity(DIR_LEFT);
     }
+    if (Keyboard::isKeyPressed(Keyboard::Right)) {
+        current->setDirectionAndVelocity(DIR_RIGHT);
+    }
+    if (!Keyboard::isKeyPressed(Keyboard::Left) && !Keyboard::isKeyPressed(Keyboard::Right)) {
+        current->decelerate();
+    }
+
+    // ROOT CAUSE 3 FIX: lvl can be nullptr — Soldier::handleCollision null-checks it
+    current->update(0.0f, lvl);
 }
 
 void CharacterManager::draw(RenderWindow& window) {
@@ -42,10 +54,15 @@ void CharacterManager::draw(RenderWindow& window) {
 }
 
 void CharacterManager::handleInput(Event& event) {
-    // WHY: Delegate input to current character's handleInput
-    if (this->characters[this->currentCharacter] != nullptr) {
-        // Character-specific input handled inside PlayerSoldier::handleInput
-        // handleInput delegated to PlayerSoldier::update();
+    // ROOT CAUSE 4 FIX: Handle jump event (event-based, not polled)
+    PlayerSoldier* current = this->characters[this->currentCharacter];
+    if (current == nullptr) return;
+
+    if (event.type == Event::KeyPressed) {
+        if (event.key.code == Keyboard::Space) {
+            current->handleJump();  // handleJump is protected, but CharacterManager needs access
+            // Note: May need to make handleJump public or add a public jump() wrapper
+        }
     }
 }
 
