@@ -131,9 +131,82 @@ void Soldier::handleCollision(Level* lvl) {
     // ROOT CAUSE 3 FIX: Null-guard handleCollision against null level
     if (lvl == nullptr) return;  // no collision without a level — safe to skip
     
-    // Placeholder - actual implementation needs Level pointer
-    // This will be implemented in concrete classes or with proper Level include
-    (void)lvl;  // Suppress unused warning for now
+    // Get player bounding box
+    float playerLeft = this->position.x;
+    float playerRight = this->position.x + 32.f * this->sprite.getScale().x;
+    float playerTop = this->position.y;
+    float playerBottom = this->position.y + 40.f * this->sprite.getScale().y;
+    
+    int cellSize = lvl->getCellSize();
+    this->onGround = false;
+    
+    // Check cells around the player
+    int startCol = static_cast<int>(playerLeft) / cellSize - 1;
+    int endCol = static_cast<int>(playerRight) / cellSize + 1;
+    int startRow = static_cast<int>(playerTop) / cellSize - 1;
+    int endRow = static_cast<int>(playerBottom) / cellSize + 1;
+    
+    for (int row = startRow; row <= endRow; ++row) {
+        for (int col = startCol; col <= endCol; ++col) {
+            if (!lvl->isSolid(row, col)) continue;
+            
+            // Solid block bounds
+            float blockLeft = static_cast<float>(col * cellSize);
+            float blockRight = blockLeft + static_cast<float>(cellSize);
+            float blockTop = static_cast<float>(row * cellSize);
+            float blockBottom = blockTop + static_cast<float>(cellSize);
+            
+            // Check for overlap
+            if (playerRight > blockLeft && playerLeft < blockRight &&
+                playerBottom > blockTop && playerTop < blockBottom) {
+                
+                // Collision detected - resolve based on velocity
+                float overlapLeft = playerRight - blockLeft;
+                float overlapRight = blockRight - playerLeft;
+                float overlapTop = playerBottom - blockTop;
+                float overlapBottom = blockBottom - playerTop;
+                
+                // Find minimum overlap
+                float minOverlap = overlapLeft;
+                int resolveDir = 0; // 1=left, 2=right, 3=top, 4=bottom
+                
+                if (overlapRight < minOverlap) {
+                    minOverlap = overlapRight;
+                    resolveDir = 2;
+                }
+                if (overlapTop < minOverlap) {
+                    minOverlap = overlapTop;
+                    resolveDir = 3;
+                }
+                if (overlapBottom < minOverlap) {
+                    minOverlap = overlapBottom;
+                    resolveDir = 4;
+                }
+                
+                // Resolve collision
+                if (resolveDir == 1) {
+                    this->position.x -= minOverlap;
+                    this->velocityX = 0.f;
+                } else if (resolveDir == 2) {
+                    this->position.x += minOverlap;
+                    this->velocityX = 0.f;
+                } else if (resolveDir == 3) {
+                    this->position.y -= minOverlap;
+                    this->velocityY = 0.f;
+                    this->onGround = true;
+                } else if (resolveDir == 4) {
+                    this->position.y += minOverlap;
+                    this->velocityY = 0.f;
+                }
+                
+                // Update player bounds after resolution
+                playerLeft = this->position.x;
+                playerRight = this->position.x + 32.f * this->sprite.getScale().x;
+                playerTop = this->position.y;
+                playerBottom = this->position.y + 40.f * this->sprite.getScale().y;
+            }
+        }
+    }
 }
 
 void Soldier::applyMovement(float& scroll) {
