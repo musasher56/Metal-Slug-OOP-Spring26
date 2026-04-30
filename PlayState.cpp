@@ -90,7 +90,7 @@ void PlayState::render(RenderWindow& window) {
     float bgWidth = static_cast<float>(this->bgTex.getSize().x) * this->bgScaleY;
     float bgHeight = static_cast<float>(this->bgTex.getSize().y) * this->bgScaleY;
     float bgX = -this->scroll;
-    float bgY = 0.f;  // TODO: When vertical scroll is added, use -scrollY here
+    float bgY = -(bgHeight - (float)SCREEN_H);  // Start at bottom of background
 
     // Clamp horizontal: don't show empty space on left/right
     float maxBgScrollX = bgWidth - (float)SCREEN_W;

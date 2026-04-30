@@ -229,6 +229,18 @@ void Soldier::handleCollision(Level* lvl) {
             }
         }
     }
+    
+    // FIX: Invisible walls at level boundaries
+    if (this->position.x < 0.f) {
+        this->position.x = 0.f;
+        this->velocityX = 0.f;
+    }
+    float maxPlayerX = (float)(lvl->getWidth()) * (float)(lvl->getCellSize()) 
+                       - 32.f * scaleX;  // account for player width
+    if (this->position.x > maxPlayerX) {
+        this->position.x = maxPlayerX;
+        this->velocityX = 0.f;
+    }
 }
 
 void Soldier::applyMovement(float& scroll) {
