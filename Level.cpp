@@ -1,4 +1,5 @@
 #include "Level.h"
+#include "Constants.h"
 
 Level::Level()
     : lvl(nullptr)
@@ -42,13 +43,19 @@ Level::~Level() {
     this->lvl = nullptr;
 }
 
-void Level::Draw(sf::RenderWindow& window) {
+void Level::Draw(sf::RenderWindow& window, float scroll) {
+    // WHY: Only draw tiles that are visible on screen (culling for performance)
+    int startCol = static_cast<int>(scroll / this->cell_size) - 1;
+    int endCol = static_cast<int>((scroll + SCREEN_W) / this->cell_size) + 1;
+    if (startCol < 0) startCol = 0;
+    if (endCol >= this->width) endCol = this->width - 1;
+
     // WHY: Iterate grid and draw only solid blocks ('g' = grass)
     for (int i = 0; i < this->height; i++) {
-        for (int j = 0; j < this->width; j++) {
+        for (int j = startCol; j <= endCol; j++) {
             if (this->lvl[i][j] == 'g') {
                 this->wallSprite1.setPosition(
-                    static_cast<float>(j * this->cell_size),
+                    static_cast<float>(j * this->cell_size) - scroll,
                     static_cast<float>(i * this->cell_size)
                 );
                 window.draw(this->wallSprite1);
