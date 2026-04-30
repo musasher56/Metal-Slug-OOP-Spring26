@@ -143,7 +143,7 @@ void Soldier::handleCollision(Level* lvl) {
     float playerLeft = this->position.x;
     float playerRight = this->position.x + 32.f * scaleX;
     float playerTop = this->position.y;
-    float playerBottom = this->position.y + 40.f * scaleY;
+    float playerBottom = this->position.y + 48.f * scaleY;
     
     int cellSize = lvl->getCellSize();
     this->onGround = false;
@@ -211,7 +211,7 @@ void Soldier::handleCollision(Level* lvl) {
                 playerLeft = this->position.x;
                 playerRight = this->position.x + 32.f * scaleX;
                 playerTop = this->position.y;
-                playerBottom = this->position.y + 40.f * scaleY;
+                playerBottom = this->position.y + 48.f * scaleY;
             }
         }
     }
