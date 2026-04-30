@@ -19,12 +19,18 @@ PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
     this->scoreManager = new ScoreManager();
     this->hud = new HUD();
     
-    // WHY: Load background texture for gameplay
-    this->bgTex.loadFromFile("resources/Sprites/tempbg.jpeg");
+    // WHY: Load panoramic scrolling background — scale to screen height, preserve aspect ratio
+    this->scroll = 0.f;
+    this->bgTex.loadFromFile("resources/Sprites/background.png");
     this->bgSprite.setTexture(this->bgTex);
-    float sx = (float)SCREEN_W / (float)this->bgTex.getSize().x;
-    float sy = (float)SCREEN_H / (float)this->bgTex.getSize().y;
-    this->bgSprite.setScale(sx, sy);
+    // Scale to fill screen height, preserve aspect ratio
+    float texH = static_cast<float>(this->bgTex.getSize().y);
+    if (texH > 0.f) {
+        this->bgScaleY = (float)SCREEN_H / texH;
+        this->bgSprite.setScale(this->bgScaleY, this->bgScaleY);
+    } else {
+        this->bgScaleY = 1.f;
+    }
 }
 
 PlayState::~PlayState() {
@@ -53,6 +59,24 @@ void PlayState::update(float dt) {
     if (this->characterManager != nullptr && this->levelManager != nullptr) {
         Level* lvl = this->levelManager->getLevel();
         this->characterManager->update(dt, lvl);
+
+        // WHY: Compute camera scroll — center on player, clamp to level bounds
+        PlayerSoldier* player = this->characterManager->getCurrentCharacter();
+        if (player != nullptr && lvl != nullptr) {
+            float playerX = player->getPosition().x;
+            float halfScreen = (float)SCREEN_W / 2.0f;
+            float levelWidth = (float)(lvl->getWidth() * lvl->getCellSize());
+            
+            // Camera centers on player
+            this->scroll = playerX - halfScreen;
+            
+            // Clamp: don't scroll past left edge
+            if (this->scroll < 0.f) this->scroll = 0.f;
+            // Clamp: don't scroll past right edge
+            float maxScroll = levelWidth - (float)SCREEN_W;
+            if (maxScroll < 0.f) maxScroll = 0.f;
+            if (this->scroll > maxScroll) this->scroll = maxScroll;
+        }
     }
     
     // WHY: Update level manager
@@ -62,14 +86,28 @@ void PlayState::update(float dt) {
 }
 
 void PlayState::render(RenderWindow& window) {
-    // WHY: Render background, level, and all characters
+    // WHY: Draw scrolling background — offset X by camera scroll
+    float bgWidth = static_cast<float>(this->bgTex.getSize().x) * this->bgScaleY;
+    float bgX = -this->scroll;
+    
+    // Clamp background position so it doesn't show empty space on sides
+    float maxBgScroll = bgWidth - (float)SCREEN_W;
+    if (maxBgScroll < 0.f) maxBgScroll = 0.f;
+    if (bgX > 0.f) bgX = 0.f;
+    if (bgX < -maxBgScroll) bgX = -maxBgScroll;
+    
+    this->bgSprite.setPosition(bgX, 0.f);
     window.draw(this->bgSprite);
+
+    // WHY: Draw level tiles with scroll offset
     if (this->levelManager != nullptr) {
-        this->levelManager->draw(window);
+        this->levelManager->draw(window, this->scroll);
     }
+    // WHY: Draw characters with scroll offset
     if (this->characterManager != nullptr) {
-        this->characterManager->draw(window);
+        this->characterManager->draw(window, this->scroll);
     }
+    // WHY: HUD draws on top without scroll (fixed to screen)
     if (this->hud != nullptr) {
         this->hud->draw(window);
     }

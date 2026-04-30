@@ -1,5 +1,5 @@
 ```
-# Compiled and build artifacts
+# Compiled files
 *.o
 *.obj
 *.exe
@@ -8,56 +8,37 @@
 *.a
 *.out
 
-# Dependencies
-venv/
-.venv/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-env.bak/
-venv.bak/
-
 # Build directories
 build/
 dist/
-*.egg-info/
-.installed.cfg
-.tox/
-.coverage
-htmlcov/
+target/
 
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-*.swo
-*~
+# Dependencies
+node_modules/
+venv/
+.venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+.gradle/
 
-# Environment variables
-.env
-.env.local
-.env.*
-!.env.example
-
-# Editors
+# Editor/IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
-.DS_Store
-Thumbs.db
+*.tmp
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Icon?
-iTunes_Control/
-journal.dat
+# Logs
+*.log
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Environment
+.env
+.env.local
+*.env.*
 ```

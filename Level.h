@@ -14,7 +14,7 @@ public:
     Level();
     ~Level();
 
-    void Draw(sf::RenderWindow& window);
+    void Draw(sf::RenderWindow& window, float scroll);
 
     int    getHeight()   const { return this->height; }
     int    getWidth()    const { return this->width; }
