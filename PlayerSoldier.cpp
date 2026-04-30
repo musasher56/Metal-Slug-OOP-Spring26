@@ -158,9 +158,10 @@ Marco::Marco(TextureManager* texMgr, AudioManager* audMgr)
     this->sprite.setTexture(tex);
     this->sprite.setScale(2.8f, 3.5f);  // Slightly narrower, taller — matches original proportions
     
-    // Set initial frame rect for idle animation (first frame of 12-frame sheet)
-    // Assuming each frame is roughly 32x32 pixels in the source sheet
-    this->sprite.setTextureRect(IntRect(0, 0, 32, 32));
+    // Set initial frame rect for idle animation (frame 5 is idle pose)
+    // Frame properties: Top X=177, Top Y=1, Width=35, Height=40
+    // Each frame is 35px wide in the sprite sheet
+    this->sprite.setTextureRect(IntRect(177, 1, 35, 40));
     
     // Set starting position
     this->position = sf::Vector2f(200.f, 300.f);
