@@ -153,15 +153,13 @@ Marco::Marco(TextureManager* texMgr, AudioManager* audMgr)
     // ROOT CAUSE 1 FIX: Load Marco's sprite texture via TextureManager
     Texture& tex = texMgr->getTexture("resources/Sprites/marco.png");
     this->animation.setTexture(&tex);
-    this->animation.setFrameCount(10);  // 10 frames in the sprite sheet
+    this->animation.setFrameCount(12);
     this->animation.setLoop(true);
     this->sprite.setTexture(tex);
-    this->sprite.setScale(2.8f, 3.5f);  // Slightly narrower, taller — matches original proportions
+    this->sprite.setScale(3.5f, 3.5f);
     
-    // Set initial frame rect for idle animation (frame 5 is idle pose)
-    // Frame properties: Top X=177, Top Y=1, Width=35, Height=40
-    // Each frame is 35px wide in the sprite sheet
-    this->sprite.setTextureRect(IntRect(177, 1, 35, 40));
+    // Set initial frame rect for idle animation
+    this->sprite.setTextureRect(IntRect(0, 0, 32, 32));
     
     // Set starting position
     this->position = sf::Vector2f(200.f, 300.f);
@@ -175,7 +173,7 @@ void Marco::updateSprite() {
     // Different animation frames based on state (idle, run, jump, etc.)
     int frameIndex = 0;  // Default to idle frame
     // TODO: Update frameIndex based on current action state
-    this->sprite.setTextureRect(IntRect(frameIndex * 32, 0, 32, 48));
+    this->sprite.setTextureRect(IntRect(frameIndex * 32, 0, 32, 32));
 }
 
 void Marco::activatePowerUp() {
