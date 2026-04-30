@@ -29,12 +29,18 @@ Soldier::~Soldier() {
 void Soldier::update(float scroll, Level* lvl) {
     this->handleStateTimers();
     this->applyGravity();
-    this->handleCollision(lvl);
     this->applyMovement(scroll);
+    this->handleCollision(lvl);
 }
 
 void Soldier::draw(RenderWindow& window, float scroll) {
-    this->animation.update();                          // advance frame
+    // Only animate when moving or in the air; reset to frame 5 when idle on ground
+    if (this->velocityX != 0.f || !this->onGround) {
+        this->animation.update();                          // advance frame
+    } else {
+        this->animation.currentFrame = 5;                  // snap back to idle frame (index 5)
+        this->animation.clock.restart();                   // restart clock to prevent jump
+    }
     this->animation.applyToSprite(this->sprite);       // apply to sprite
     this->sprite.setPosition(this->position.x - scroll, this->position.y);
     window.draw(this->sprite);
@@ -206,6 +212,20 @@ void Soldier::handleCollision(Level* lvl) {
                 playerRight = this->position.x + 32.f * scaleX;
                 playerTop = this->position.y;
                 playerBottom = this->position.y + 40.f * scaleY;
+            }
+        }
+    }
+    
+    // Ground probe: detect solid tiles 1px below feet when no overlap exists
+    if (!this->onGround) {
+        float probeY = playerBottom + 1.0f;  // 1px tolerance below feet
+        int probeRow = static_cast<int>(probeY) / cellSize;
+        int probeStartCol = static_cast<int>(playerLeft + 2) / cellSize;
+        int probeEndCol = static_cast<int>(playerRight - 2) / cellSize;
+        for (int col = probeStartCol; col <= probeEndCol; ++col) {
+            if (lvl->isSolid(probeRow, col)) {
+                this->onGround = true;
+                break;
             }
         }
     }
