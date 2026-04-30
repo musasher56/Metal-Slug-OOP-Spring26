@@ -19,14 +19,14 @@ PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
     this->scoreManager = new ScoreManager();
     this->hud = new HUD();
     
-    // WHY: Load panoramic scrolling background — scale to screen height, preserve aspect ratio
+    // WHY: Load panoramic scrolling background — zoomed in (1.4x), preserve aspect ratio
     this->scroll = 0.f;
     this->bgTex.loadFromFile("resources/Sprites/background.png");
     this->bgSprite.setTexture(this->bgTex);
-    // Scale to fill screen height, preserve aspect ratio
+    // Scale to fill screen height with 1.4x zoom factor for close-up view
     float texH = static_cast<float>(this->bgTex.getSize().y);
     if (texH > 0.f) {
-        this->bgScaleY = (float)SCREEN_H / texH;
+        this->bgScaleY = (float)SCREEN_H / texH * 1.4f;
         this->bgSprite.setScale(this->bgScaleY, this->bgScaleY);
     } else {
         this->bgScaleY = 1.f;
@@ -86,17 +86,25 @@ void PlayState::update(float dt) {
 }
 
 void PlayState::render(RenderWindow& window) {
-    // WHY: Draw scrolling background — offset X by camera scroll
+    // WHY: Draw scrolling background — offset by camera scroll, clamped on both axes
     float bgWidth = static_cast<float>(this->bgTex.getSize().x) * this->bgScaleY;
+    float bgHeight = static_cast<float>(this->bgTex.getSize().y) * this->bgScaleY;
     float bgX = -this->scroll;
-    
-    // Clamp background position so it doesn't show empty space on sides
-    float maxBgScroll = bgWidth - (float)SCREEN_W;
-    if (maxBgScroll < 0.f) maxBgScroll = 0.f;
+    float bgY = -(bgHeight - (float)SCREEN_H);  // Start at bottom of background
+
+    // Clamp horizontal: don't show empty space on left/right
+    float maxBgScrollX = bgWidth - (float)SCREEN_W;
+    if (maxBgScrollX < 0.f) maxBgScrollX = 0.f;
     if (bgX > 0.f) bgX = 0.f;
-    if (bgX < -maxBgScroll) bgX = -maxBgScroll;
-    
-    this->bgSprite.setPosition(bgX, 0.f);
+    if (bgX < -maxBgScrollX) bgX = -maxBgScrollX;
+
+    // Clamp vertical: don't show empty space on top/bottom (for future vertical scroll)
+    float maxBgScrollY = bgHeight - (float)SCREEN_H;
+    if (maxBgScrollY < 0.f) maxBgScrollY = 0.f;
+    if (bgY > 0.f) bgY = 0.f;
+    if (bgY < -maxBgScrollY) bgY = -maxBgScrollY;
+
+    this->bgSprite.setPosition(bgX, bgY);
     window.draw(this->bgSprite);
 
     // WHY: Draw level tiles with scroll offset
