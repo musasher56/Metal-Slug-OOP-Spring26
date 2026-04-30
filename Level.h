@@ -7,9 +7,6 @@ private:
     int    height;
     int    width;
     int    cell_size;
-
-    sf::Texture wallTex1;
-    sf::Sprite  wallSprite1;
 public:
     Level();
     ~Level();
