@@ -156,7 +156,7 @@ Marco::Marco(TextureManager* texMgr, AudioManager* audMgr)
     this->animation.setFrameCount(12);  // 12 frames in the sprite sheet
     this->animation.setLoop(true);
     this->sprite.setTexture(tex);
-    this->sprite.setScale(2.0f, 2.0f);
+    this->sprite.setScale(1.6f, 2.0f);
     
     // Set initial frame rect for idle animation (first frame of 12-frame sheet)
     // Assuming each frame is roughly 32x32 pixels in the source sheet

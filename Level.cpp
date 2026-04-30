@@ -2,9 +2,9 @@
 
 Level::Level()
     : lvl(nullptr)
-    , height(14)
-    , width(110)
-    , cell_size(64)
+    , height(16)
+    , width(150)
+    , cell_size(48)
 {
     // WHY: Allocate 2D grid for level blocks using manual memory management
     this->lvl = new char*[this->height];
@@ -14,12 +14,22 @@ Level::Level()
 
     // WHY: Place a simple ground platform for testing collision
     for (int j = 0; j < this->width; j++) {
-        this->lvl[10][j] = 'g';  // row 10 * 64 = 640px — visible on screen
+        this->lvl[14][j] = 'g';  // row 14 * 48 = 672px — slightly lower
     }
 
     // WHY: Load block texture; fallback handled by caller if missing
     this->wallTex1.loadFromFile("resources/Sprites/blocks/grass_block_side.png");
     this->wallSprite1.setTexture(this->wallTex1);
+
+    // Scale wall sprite to match new cell_size regardless of source texture dimensions
+    float texW = static_cast<float>(this->wallTex1.getSize().x);
+    float texH = static_cast<float>(this->wallTex1.getSize().y);
+    if (texW > 0.f && texH > 0.f) {
+        this->wallSprite1.setScale(
+            static_cast<float>(this->cell_size) / texW,
+            static_cast<float>(this->cell_size) / texH
+        );
+    }
 }
 
 Level::~Level() {
