@@ -17,7 +17,7 @@ public:
     virtual ~LevelManager();
     
     void update(float dt);
-    void draw(RenderWindow& window);
+    void draw(RenderWindow& window, float scroll);
     Level* getLevel();
     void nextLevel(TextureManager* tex);
     void saveData();

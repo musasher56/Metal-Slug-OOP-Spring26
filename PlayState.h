@@ -32,6 +32,8 @@ private:
     
     Sprite bgSprite;             // Background sprite for gameplay
     Texture bgTex;               // Background texture
+    float scroll;                // Camera X offset for scrolling
+    float bgScaleY;              // Background Y scale factor (screenH / texH)
     
     int gameMode;  // MODE_SURVIVAL, MODE_CAMPAIGN, MODE_SELF_PLAY
     bool movingLeft;
