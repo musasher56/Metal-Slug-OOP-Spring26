@@ -1,53 +1,40 @@
 #include "Weapon.h"
+#include "ProjectileManager.h"
 
-// ========== Weapon Implementation ==========
+// ============================================================
+// Weapon (base)
+// ============================================================
 
 Weapon::Weapon(int weaponType, int dmg, float rate, int amm)
-    : ammo(amm)
-    , fireRate(rate)
-    , damage(dmg)
-    , type(weaponType)
+    : ammo(amm), fireRate(rate), damage(dmg), type(weaponType)
 {}
 
 Weapon::~Weapon() {}
 
-bool Weapon::hasAmmo() const {
-    return this->ammo > 0 || this->ammo == -1;  // -1 means infinite
-}
+bool  Weapon::hasAmmo()    const { return this->ammo > 0 || this->ammo == -1; }
+int   Weapon::getAmmo()    const { return this->ammo;     }
+int   Weapon::getDamage()  const { return this->damage;   }
+float Weapon::getFireRate()const { return this->fireRate; }
+int   Weapon::getType()    const { return this->type;     }
 
 void Weapon::addAmmo(int amount) {
     if (amount < 0) return;
-    if (this->ammo != -1) {  // Don't add to infinite ammo
-        this->ammo += amount;
-    }
+    if (this->ammo != -1) this->ammo += amount;
 }
 
-int Weapon::getAmmo() const {
-    return this->ammo;
-}
+// ============================================================
+// ProjectileWeapon
+// ============================================================
 
-int Weapon::getDamage() const {
-    return this->damage;
-}
-
-float Weapon::getFireRate() const {
-    return this->fireRate;
-}
-
-int Weapon::getType() const {
-    return this->type;
-}
-
-// ========== ProjectileWeapon Implementation ==========
-
-ProjectileWeapon::ProjectileWeapon(int weaponType, int dmg, float rate, int amm, int projClass)
-    : Weapon(weaponType, dmg, rate, amm)
-    , projectileClass(projClass)
+ProjectileWeapon::ProjectileWeapon(int wt, int dmg, float rate, int amm, int pc)
+    : Weapon(wt, dmg, rate, amm), projectileClass(pc)
 {}
 
 ProjectileWeapon::~ProjectileWeapon() {}
 
-// ========== Pistol Implementation ==========
+// ============================================================
+// Pistol
+// ============================================================
 
 Pistol::Pistol()
     : ProjectileWeapon(WEAPON_PISTOL, 3, 4.f, -1, PROJ_STRAIGHT)
@@ -57,20 +44,19 @@ Pistol::Pistol()
 Pistol::~Pistol() {}
 
 void Pistol::fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm) {
-    if (!this->hasAmmo()) return;
-    
-    // WHY: Pistol fires straight projectiles
-    // Infinite ammo so no decrement needed
-    if (pm != nullptr) {
-        // pm->addStraightProjectile(origin, dir, angle, this->damage);
-    }
+    if (!pm || !this->hasAmmo()) return;
+    // 4 shots/s → minimum 0.25s between shots
+    if (this->fireTimer.getElapsedTime().asSeconds() < 1.f / this->fireRate) return;
+
+    pm->spawnStraight(origin, dir, angle, this->damage, false);
+    this->fireTimer.restart();
 }
 
-void Pistol::update() {
-    // WHY: No special update logic for pistol
-}
+void Pistol::update() {}
 
-// ========== HeavyMachineGun Implementation ==========
+// ============================================================
+// HeavyMachineGun
+// ============================================================
 
 HeavyMachineGun::HeavyMachineGun()
     : ProjectileWeapon(WEAPON_HMG, 3, 8.f, 100, PROJ_STRAIGHT)
@@ -79,19 +65,19 @@ HeavyMachineGun::HeavyMachineGun()
 HeavyMachineGun::~HeavyMachineGun() {}
 
 void HeavyMachineGun::fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm) {
-    if (!this->hasAmmo()) return;
-    
+    if (!pm || !this->hasAmmo()) return;
+    if (this->fireTimer.getElapsedTime().asSeconds() < 1.f / this->fireRate) return;
+
     this->ammo--;
-    if (pm != nullptr) {
-        // pm->addStraightProjectile(origin, dir, angle, this->damage);
-    }
+    pm->spawnStraight(origin, dir, angle, this->damage, false);
+    this->fireTimer.restart();
 }
 
-void HeavyMachineGun::update() {
-    // WHY: No special update logic for HMG
-}
+void HeavyMachineGun::update() {}
 
-// ========== RocketLauncher Implementation ==========
+// ============================================================
+// RocketLauncher
+// ============================================================
 
 RocketLauncher::RocketLauncher()
     : ProjectileWeapon(WEAPON_ROCKET_LAUNCHER, 5, 0.5f, 10, PROJ_EXPLOSIVE)
@@ -101,71 +87,50 @@ RocketLauncher::RocketLauncher()
 RocketLauncher::~RocketLauncher() {}
 
 void RocketLauncher::fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm) {
-    if (!this->hasAmmo()) return;
-    
-    if (this->reloadTimer.getElapsedTime().asSeconds() < this->reloadTime) {
-        return;  // Still reloading
-    }
-    
+    if (!pm || !this->hasAmmo()) return;
+    if (this->reloadTimer.getElapsedTime().asSeconds() < this->reloadTime) return;
+
     this->ammo--;
+    pm->spawnExplosive(origin, dir, angle, this->damage, 3, false);
     this->reloadTimer.restart();
-    
-    if (pm != nullptr) {
-        // pm->addExplosiveProjectile(origin, dir, angle, this->damage, 3);  // 3-block blast radius
-    }
 }
 
-void RocketLauncher::update() {
-    // WHY: Reload timer handled in fire()
-}
+void RocketLauncher::update() {}
 
-// ========== FlameShot Implementation ==========
+// ============================================================
+// FlameShot  (stream zone — no projectile spawned)
+// ============================================================
 
 FlameShot::FlameShot()
-    : Weapon(WEAPON_FLAME_SHOT, 2, 1.f, 50)
-    , streamLength(5)  // 5 blocks
+    : Weapon(WEAPON_FLAME_SHOT, 2, 1.f, 50), streamLength(5)
 {}
 
 FlameShot::~FlameShot() {}
 
 void FlameShot::fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm) {
     if (!this->hasAmmo()) return;
-    
     this->ammo--;
-    
-    // WHY: FlameShot creates a stream/collision area, not a projectile
-    // Actual implementation needs collision detection with enemies in front
-    (void)origin;
-    (void)dir;
-    (void)angle;
-    (void)pm;
+    // TODO: em->applyStreamDamage(origin, dir, streamLength)
+    (void)origin; (void)dir; (void)angle; (void)pm;
 }
 
-void FlameShot::update() {
-    // WHY: Stream duration handled externally
-}
+void FlameShot::update() {}
 
-// ========== LaserGun Implementation ==========
+// ============================================================
+// LaserGun  (instant ray-cast — no projectile spawned)
+// ============================================================
 
 LaserGun::LaserGun()
-    : Weapon(WEAPON_LASER_GUN, 999, 0.5f, 20)  // Instant kill = high damage
+    : Weapon(WEAPON_LASER_GUN, 999, 0.5f, 20)
 {}
 
 LaserGun::~LaserGun() {}
 
 void LaserGun::fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm) {
     if (!this->hasAmmo()) return;
-    
     this->ammo--;
-    
-    // WHY: LaserGun performs ray-cast to screen edge, instant hit
-    // Not a projectile - immediate damage calculation
-    (void)origin;
-    (void)dir;
-    (void)angle;
-    (void)pm;
+    // TODO: em->applyRaycastDamage(origin, dir)
+    (void)origin; (void)dir; (void)angle; (void)pm;
 }
 
-void LaserGun::update() {
-    // WHY: No special update logic for laser
-}
+void LaserGun::update() {}

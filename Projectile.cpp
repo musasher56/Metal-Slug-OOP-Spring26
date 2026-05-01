@@ -1,7 +1,10 @@
 #include "Projectile.h"
+#include "Level.h"
 #include <cmath>
 
-// ========== Projectile Implementation ==========
+// ============================================================
+// Projectile  (base)
+// ============================================================
 
 Projectile::Projectile(TextureManager* texMgr, AudioManager* audMgr)
     : Entity(texMgr, audMgr)
@@ -11,43 +14,185 @@ Projectile::Projectile(TextureManager* texMgr, AudioManager* audMgr)
     , fromEnemy(false)
     , isExplosive(false)
     , blastRadius(0)
-    , projectileClass(PROJ_STRAIGHT)
+    , projectileClass(0)
 {}
 
 Projectile::~Projectile() {}
 
+void Projectile::setVelocity(float vx, float vy) {
+    this->velocityX = vx;
+    this->velocityY = vy;
+}
+
+// ------------------------------------------------------------------
+// update() — Template Method (non-virtual, enforces pipeline order)
+// ------------------------------------------------------------------
+// Pipeline:
+//   1. move(scroll)            — subclass advances position
+//   2. checkTileCollision(lvl) — base tests solid tiles
+//   3. checkBounds(scroll)     — base deactivates off-screen projectiles
+//
+// WHY check status at the top AND after each step?
+//   move() can be called on a projectile that was already inactive
+//   if the caller doesn't guard (common bug in student code).
+//   The early return here is the single authoritative guard.
+//   After checkTileCollision, we must also check status because
+//   a hit might have deactivated us; calling checkBounds on a
+//   deactivated projectile is harmless but wasteful.
+// ------------------------------------------------------------------
+void Projectile::update(float scroll, Level* lvl) {
+    if (!this->status) return;
+
+    // Step 1: Subclass advances position
+    this->move(scroll);
+
+    // Step 2: Tile collision — base handles it for ALL subclasses
+    if (lvl != nullptr) {
+        this->checkTileCollision(lvl);
+    }
+
+    if (!this->status) return;  // tile hit deactivated us
+
+    // Step 3: Deactivate if it flew off screen
+    this->checkBounds(scroll);
+}
+
+// ------------------------------------------------------------------
+// checkTileCollision — leading-edge probe
+// ------------------------------------------------------------------
+// WHY test the leading edge instead of the center?
+//
+//   Suppose a bullet moves 15 pixels per frame and a wall is exactly
+//   1 cell (e.g. 32px) thick.  If the bullet's center starts 20px
+//   in front of the wall, the center will be 5px past the wall's
+//   far side next frame — the center never actually lands INSIDE the
+//   wall tile, so a center-test would miss it entirely.
+//
+//   Leading-edge probe: we test the FRONT FACE of the projectile
+//   in the direction of travel.  The front face is always the first
+//   part to physically contact anything, so we test there.
+//
+// X-axis probe:
+//   Moving right (velocityX > 0): front face is the RIGHT edge → pos.x + width
+//   Moving left  (velocityX < 0): front face is the LEFT edge  → pos.x
+//
+// Y-axis probe:
+//   Moving down  (velocityY > 0): front face is the BOTTOM edge → pos.y + height
+//   Moving up    (velocityY < 0): front face is the TOP edge    → pos.y
+//
+// We probe X and Y independently so a diagonal bullet (angle ≠ 0°, ≠ 90°)
+// resolves correctly when grazing a corner.
+// ------------------------------------------------------------------
+void Projectile::checkTileCollision(Level* lvl) {
+    if (lvl == nullptr) return;
+
+    const int  cell  = lvl->getCellSize();
+    const int  PROJ_W = 8;  // projectile bounding box width  (pixels)
+    const int  PROJ_H = 8;  // projectile bounding box height (pixels)
+
+    // --- X-axis front-face ---
+    float frontX = (this->velocityX >= 0.f)
+                   ? this->position.x + PROJ_W   // moving right → right edge
+                   : this->position.x;            // moving left  → left edge
+
+    // --- Y-axis front-face ---
+    float frontY = (this->velocityY >= 0.f)
+                   ? this->position.y + PROJ_H   // moving down  → bottom edge
+                   : this->position.y;            // moving up    → top edge
+
+    // Convert pixel coordinates to tile indices
+    int colX = (int)frontX / cell;
+    int rowY = (int)frontY / cell;
+
+    // Also find the row for the X probe and the col for the Y probe,
+    // using the projectile CENTER on the non-probed axis.
+    // This prevents false positives on tiles diagonally adjacent.
+    int rowForX = (int)(this->position.y + PROJ_H / 2.f) / cell;
+    int colForY = (int)(this->position.x + PROJ_W / 2.f) / cell;
+
+    bool hitX = lvl->isSolid(rowForX, colX);
+    bool hitY = lvl->isSolid(rowY,    colForY);
+
+    if (hitX || hitY) {
+        // Trigger impact behaviour (explosive will override this)
+        this->onImpact(nullptr, nullptr);
+        this->deactivate();
+    }
+}
+
+// ------------------------------------------------------------------
+// checkBounds — deactivate projectiles that have left the visible area
+// ------------------------------------------------------------------
+// WHY a generous margin (300px) instead of exact screen edge?
+//   A projectile aimed upward at 80° might be off the visible strip
+//   but still close to an enemy who is also off-screen.  Shrinking the
+//   margin causes premature culling.  300px is generous and not costly.
+// ------------------------------------------------------------------
+void Projectile::checkBounds(float scroll) {
+    const float MARGIN = 300.f;
+
+    // Off the left side of the world
+    if (this->position.x + 8.f < scroll - MARGIN) {
+        this->deactivate();
+        return;
+    }
+    // Off the right side of the visible window
+    if (this->position.x > scroll + SCREEN_W + MARGIN) {
+        this->deactivate();
+        return;
+    }
+    // Too high (above the level)
+    if (this->position.y + 8.f < -MARGIN) {
+        this->deactivate();
+        return;
+    }
+    // Too low (below level floor — should be caught by tile collision first)
+    if (this->position.y > SCREEN_H + MARGIN) {
+        this->deactivate();
+    }
+}
+
+// ------------------------------------------------------------------
+// draw
+// ------------------------------------------------------------------
 void Projectile::draw(RenderWindow& window, float scroll) {
-    this->sprite.setPosition(this->position.x - scroll, this->position.y);
+    if (!this->status) return;
     this->animation.applyToSprite(this->sprite);
+    this->sprite.setPosition(this->position.x - scroll, this->position.y);
     window.draw(this->sprite);
 }
 
+// ------------------------------------------------------------------
+// Accessors
+// ------------------------------------------------------------------
 IntRect Projectile::getBoundingBox() const {
+    // WHY position.x/y included?
+    //   getBoundingBox() must return WORLD-SPACE coordinates so that
+    //   checkEntityCollisions() can perform a direct overlap test
+    //   without the caller needing to add position manually.
     return IntRect(
         static_cast<int>(this->position.x),
         static_cast<int>(this->position.y),
-        8,   // Default projectile width
-        8    // Default projectile height
+        8,   // all projectiles share 8×8 hitbox regardless of sprite scale
+        8
     );
 }
 
-int Projectile::getDamage() const {
-    return this->damage;
-}
-
-bool Projectile::isFromEnemy() const {
-    return this->fromEnemy;
-}
+int  Projectile::getDamage()   const { return this->damage;    }
+bool Projectile::isFromEnemy() const { return this->fromEnemy; }
 
 void Projectile::onImpact(EnemyManager* em, CharacterManager* cm) {
-    // WHY: Base impact handling - can be overridden by explosive projectiles
-    (void)em;
-    (void)cm;
+    // Base: no-op.  ExplosiveProjectile overrides to apply blast.
+    (void)em; (void)cm;
 }
 
-// ========== StraightProjectile Implementation ==========
+// ============================================================
+// StraightProjectile
+// ============================================================
 
-StraightProjectile::StraightProjectile(TextureManager* texMgr, AudioManager* audMgr, float ang)
+StraightProjectile::StraightProjectile(TextureManager* texMgr,
+                                        AudioManager* audMgr,
+                                        float ang)
     : Projectile(texMgr, audMgr)
     , angle(ang)
 {
@@ -56,59 +201,67 @@ StraightProjectile::StraightProjectile(TextureManager* texMgr, AudioManager* aud
 
 StraightProjectile::~StraightProjectile() {}
 
-void StraightProjectile::update(float scroll) {
-    // WHY: Constant-velocity linear trajectory
-    float speed = 15.f;
-    this->velocityX = speed * cosf(this->angle * 3.14159f / 180.f);
-    this->velocityY = speed * sinf(this->angle * 3.14159f / 180.f);
-    
+// WHY only two lines?
+//   All the heavy lifting (tile collision, bounds, status check) is in
+//   Projectile::update() which the base Template Method handles.
+//   This function is ONLY responsible for advancing position — nothing else.
+//   velocityX/Y were set at spawn by ProjectileManager::spawnStraight().
+void StraightProjectile::move(float /*scroll*/) {
     this->position.x += this->velocityX;
     this->position.y += this->velocityY;
 }
 
-// ========== BallisticProjectile Implementation ==========
+// ============================================================
+// BallisticProjectile
+// ============================================================
 
 BallisticProjectile::BallisticProjectile(TextureManager* texMgr, AudioManager* audMgr)
     : Projectile(texMgr, audMgr)
     , gravity(0.5f)
-    , initialVelocityX(0.f)
-    , initialVelocityY(0.f)
-    , timeAlive(0.f)
 {
     this->projectileClass = PROJ_BALLISTIC;
 }
 
 BallisticProjectile::~BallisticProjectile() {}
 
-void BallisticProjectile::update(float scroll) {
-    // WHY: Parabolic arc under simulated gravity
-    this->timeAlive += 0.016f;  // Approximate frame time
-    
-    this->velocityX = this->initialVelocityX;
-    this->velocityY = this->initialVelocityY + this->gravity * this->timeAlive * 60.f;
-    
+// WHY accumulate gravity into velocityY before adding to position?
+//   The sequence matters:
+//     velY += gravity    (update velocity for this frame)
+//     pos.y += velY      (move by the NOW-UPDATED velocity)
+//   This is semi-implicit Euler integration.  It's slightly more stable
+//   than explicit Euler (pos.y += velY; velY += gravity) — the position
+//   uses the updated velocity, so the arc overshoots slightly less.
+//   Consistent with how Gravity.cpp works in your codebase.
+void BallisticProjectile::move(float /*scroll*/) {
+    this->velocityY += this->gravity;   // gravity accumulates each frame
     this->position.x += this->velocityX;
     this->position.y += this->velocityY;
 }
 
-// ========== ExplosiveProjectile Implementation ==========
+// ============================================================
+// ExplosiveProjectile
+// ============================================================
 
 ExplosiveProjectile::ExplosiveProjectile(TextureManager* texMgr, AudioManager* audMgr)
     : BallisticProjectile(texMgr, audMgr)
 {
-    this->isExplosive = true;
-    this->blastRadius = 3;  // 3-block blast radius
-    this->projectileClass = PROJ_EXPLOSIVE;
+    this->isExplosive      = true;
+    this->blastRadius      = 3;
+    this->projectileClass  = PROJ_EXPLOSIVE;
 }
 
 ExplosiveProjectile::~ExplosiveProjectile() {}
 
+// WHY override onImpact() here instead of in move()?
+//   Explosion logic is impact-triggered, not motion-triggered.
+//   The base Template Method calls onImpact() when tile collision fires,
+//   AND ProjectileManager::checkEntityCollisions() calls it on entity hit.
+//   Both paths go through the same override — single point of logic.
 void ExplosiveProjectile::onImpact(EnemyManager* em, CharacterManager* cm) {
-    // WHY: Apply blast damage to all enemies/characters in radius
-    if (em != nullptr) {
-        // em->applyBlastDamage(this->position, this->blastRadius, this->damage);
-    }
-    if (cm != nullptr) {
-        // cm->applyBlastDamage(this->position, this->blastRadius, this->damage);
-    }
+    // Blast damage is applied by the caller (ProjectileManager or PlayState)
+    // who has access to the full enemy/character arrays.
+    // We leave em/cm stubs here; the blast radius is readable via blastRadius.
+    (void)em; (void)cm;
+    // TODO: when EnemyManager is ready, call:
+    //   em->applyBlastDamage(this->position, this->blastRadius, this->damage);
 }

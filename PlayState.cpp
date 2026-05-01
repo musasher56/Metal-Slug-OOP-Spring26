@@ -3,27 +3,45 @@
 #include "LevelManager.h"
 #include "ScoreManager.h"
 #include "HUD.h"
+#include <cstdio>
 
-PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr) 
+PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
     : entityManager(nullptr), enemyManager(nullptr), enemyVehicleManager(nullptr),
       projectileManager(nullptr), collectibleManager(nullptr),
       texManager(texMgr), audManager(audMgr),
       level(nullptr), characterManager(nullptr), levelManager(nullptr),
       scoreManager(nullptr), hud(nullptr), gameMode(mode),
-      movingLeft(false), movingRight(false) {
+      movingLeft(false), movingRight(false),
+      gameWindow(nullptr),
+      lastMouseWorld(0.f, 0.f),
+      debugMode(true)
+{
     this->id = GSTATE_PLAY;
-    
-    // WHY: Initialize level manager and character manager for basic gameplay
-    this->levelManager = new LevelManager();
-    this->characterManager = new CharacterManager(texMgr, audMgr);
-    this->scoreManager = new ScoreManager();
-    this->hud = new HUD();
-    
-    // WHY: Load panoramic scrolling background — zoomed in (1.4x), preserve aspect ratio
+
+    this->levelManager      = new LevelManager();
+    this->characterManager  = new CharacterManager(texMgr, audMgr);
+    this->scoreManager      = new ScoreManager();
+    this->hud               = new HUD();
+
+    // ProjectileManager: class name uppercase M, new uses class name
+    this->projectileManager = new ProjectileManager(texMgr, audMgr);
+
+    PlayerSoldier* player = this->characterManager->getCurrentCharacter();
+    if (player != nullptr)
+        player->setProjectileManager(this->projectileManager);
+
+    bool fontLoaded = this->debugFont.loadFromFile("/System/Library/Fonts/Helvetica.ttc");
+    if (!fontLoaded) fontLoaded = this->debugFont.loadFromFile("/Library/Fonts/Arial.ttf");
+    if (!fontLoaded) this->debugFont.loadFromFile("resources/font.ttf");
+
+    this->debugText.setFont(this->debugFont);
+    this->debugText.setCharacterSize(16);
+    this->debugText.setFillColor(Color(0, 255, 0));
+    this->debugText.setPosition(10.f, 10.f);
+
     this->scroll = 0.f;
     this->bgTex.loadFromFile("resources/Sprites/background.png");
     this->bgSprite.setTexture(this->bgTex);
-    // Scale to fill screen height with 1.4x zoom factor for close-up view
     float texH = static_cast<float>(this->bgTex.getSize().y);
     if (texH > 0.f) {
         this->bgScaleY = (float)SCREEN_H / texH * 1.4f;
@@ -34,104 +52,118 @@ PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
 }
 
 PlayState::~PlayState() {
-    // WHY: PlayState owns managers, must delete them
-    if (this->levelManager != nullptr) {
-        delete this->levelManager;
-        this->levelManager = nullptr;
-    }
-    if (this->characterManager != nullptr) {
-        delete this->characterManager;
-        this->characterManager = nullptr;
-    }
-    if (this->scoreManager != nullptr) {
-        delete this->scoreManager;
-        this->scoreManager = nullptr;
-    }
-    if (this->hud != nullptr) {
-        delete this->hud;
-        this->hud = nullptr;
-    }
-    // WHY: texManager and audManager are owned by Game, just references here
+    if (this->projectileManager) { delete this->projectileManager; this->projectileManager = nullptr; }
+    if (this->levelManager)      { delete this->levelManager;      this->levelManager      = nullptr; }
+    if (this->characterManager)  { delete this->characterManager;  this->characterManager  = nullptr; }
+    if (this->scoreManager)      { delete this->scoreManager;      this->scoreManager      = nullptr; }
+    if (this->hud)               { delete this->hud;               this->hud               = nullptr; }
 }
 
 void PlayState::update(float dt) {
-    // WHY: Update character manager (handles all PlayerSoldiers)
-    if (this->characterManager != nullptr && this->levelManager != nullptr) {
-        Level* lvl = this->levelManager->getLevel();
+    Level*         lvl    = this->levelManager    ? this->levelManager->getLevel()                : nullptr;
+    PlayerSoldier* player = this->characterManager? this->characterManager->getCurrentCharacter() : nullptr;
+
+    // Zero-lag aim: read mouse this frame using stored window pointer
+    if (player != nullptr && this->gameWindow != nullptr) {
+        sf::Vector2i mp = Mouse::getPosition(*this->gameWindow);
+        sf::Vector2f mouseWorld(
+            static_cast<float>(mp.x) + this->scroll,
+            static_cast<float>(mp.y)
+        );
+        this->lastMouseWorld = mouseWorld;
+        player->updateAim(mouseWorld);
+    }
+
+    if (this->characterManager)
         this->characterManager->update(dt, lvl);
 
-        // WHY: Compute camera scroll — center on player, clamp to level bounds
-        PlayerSoldier* player = this->characterManager->getCurrentCharacter();
-        if (player != nullptr && lvl != nullptr) {
-            float playerX = player->getPosition().x;
-            float halfScreen = (float)SCREEN_W / 2.0f;
-            float levelWidth = (float)(lvl->getWidth() * lvl->getCellSize());
-            
-            // Camera centers on player
-            this->scroll = playerX - halfScreen;
-            
-            // Clamp: don't scroll past left edge
-            if (this->scroll < 0.f) this->scroll = 0.f;
-            // Clamp: don't scroll past right edge
-            float maxScroll = levelWidth - (float)SCREEN_W;
-            if (maxScroll < 0.f) maxScroll = 0.f;
-            if (this->scroll > maxScroll) this->scroll = maxScroll;
-        }
+    if (player != nullptr)
+        player->handleInput();
+
+    if (this->projectileManager)
+        this->projectileManager->update(this->scroll, lvl);
+
+    if (player != nullptr && lvl != nullptr) {
+        float playerX    = player->getPosition().x;
+        float levelWidth = (float)(lvl->getWidth() * lvl->getCellSize());
+        this->scroll = playerX - (float)SCREEN_W / 2.f;
+        if (this->scroll < 0.f) this->scroll = 0.f;
+        float maxScroll = levelWidth - (float)SCREEN_W;
+        if (maxScroll < 0.f) maxScroll = 0.f;
+        if (this->scroll > maxScroll) this->scroll = maxScroll;
     }
-    
-    // WHY: Update level manager
-    if (this->levelManager != nullptr) {
+
+    if (this->levelManager)
         this->levelManager->update(dt);
-    }
 }
 
 void PlayState::render(RenderWindow& window) {
-    // WHY: Draw scrolling background — offset by camera scroll, clamped on both axes
-    float bgWidth = static_cast<float>(this->bgTex.getSize().x) * this->bgScaleY;
+    if (this->gameWindow == nullptr)
+        this->gameWindow = &window;
+
+    float bgWidth  = static_cast<float>(this->bgTex.getSize().x) * this->bgScaleY;
     float bgHeight = static_cast<float>(this->bgTex.getSize().y) * this->bgScaleY;
     float bgX = -this->scroll;
-    float bgY = -(bgHeight - (float)SCREEN_H);  // Start at bottom of background
+    float bgY = -(bgHeight - (float)SCREEN_H);
 
-    // Clamp horizontal: don't show empty space on left/right
-    float maxBgScrollX = bgWidth - (float)SCREEN_W;
-    if (maxBgScrollX < 0.f) maxBgScrollX = 0.f;
     if (bgX > 0.f) bgX = 0.f;
-    if (bgX < -maxBgScrollX) bgX = -maxBgScrollX;
-
-    // Clamp vertical: don't show empty space on top/bottom (for future vertical scroll)
-    float maxBgScrollY = bgHeight - (float)SCREEN_H;
-    if (maxBgScrollY < 0.f) maxBgScrollY = 0.f;
+    float maxBgX = bgWidth  - (float)SCREEN_W; if (maxBgX < 0.f) maxBgX = 0.f;
+    float maxBgY = bgHeight - (float)SCREEN_H; if (maxBgY < 0.f) maxBgY = 0.f;
+    if (bgX < -maxBgX) bgX = -maxBgX;
     if (bgY > 0.f) bgY = 0.f;
-    if (bgY < -maxBgScrollY) bgY = -maxBgScrollY;
+    if (bgY < -maxBgY) bgY = -maxBgY;
 
     this->bgSprite.setPosition(bgX, bgY);
     window.draw(this->bgSprite);
 
-    // WHY: Draw level tiles with scroll offset
-    if (this->levelManager != nullptr) {
-        this->levelManager->draw(window, this->scroll);
+    if (this->levelManager)      this->levelManager->draw(window, this->scroll);
+    if (this->characterManager)  this->characterManager->draw(window, this->scroll);
+    if (this->projectileManager) this->projectileManager->draw(window, this->scroll);
+    if (this->hud)               this->hud->draw(window);
+    if (this->debugMode)         this->renderDebug(window);
+}
+
+void PlayState::renderDebug(RenderWindow& window) {
+    PlayerSoldier* player = this->characterManager
+                          ? this->characterManager->getCurrentCharacter() : nullptr;
+    char buf[512]; buf[0] = '\0';
+    char line[128];
+    int k = 0;
+    auto append = [&](const char* src) {
+        int j = 0; while (src[j]) buf[k++] = src[j++]; buf[k] = '\0';
+    };
+
+    sprintf(line, "Projectiles: %d\n",
+            this->projectileManager ? this->projectileManager->getActiveCount() : -1);
+    append(line);
+    sprintf(line, "Aim: %.1f deg  |  Mouse: (%.0f, %.0f)\n",
+            player ? player->getAimAngle() : -1.f,
+            this->lastMouseWorld.x, this->lastMouseWorld.y);
+    append(line);
+    if (player) {
+        sf::Vector2f p = player->getPosition();
+        sprintf(line, "Player: (%.0f, %.0f)  Scroll: %.0f\n", p.x, p.y, this->scroll);
+    } else {
+        sprintf(line, "Player: NULL\n");
     }
-    // WHY: Draw characters with scroll offset
-    if (this->characterManager != nullptr) {
-        this->characterManager->draw(window, this->scroll);
-    }
-    // WHY: HUD draws on top without scroll (fixed to screen)
-    if (this->hud != nullptr) {
-        this->hud->draw(window);
-    }
+    append(line);
+    sprintf(line, "Lag: %s\n", this->gameWindow ? "ZERO" : "1-frame");
+    append(line);
+    sprintf(line, "Z=Shoot  X=Grenade  Arrows=Move  Space=Jump");
+    append(line);
+
+    this->debugText.setString(buf);
+    RectangleShape bg(sf::Vector2f(380.f, 95.f));
+    bg.setFillColor(Color(0, 0, 0, 170));
+    bg.setPosition(5.f, 5.f);
+    window.draw(bg);
+    window.draw(this->debugText);
 }
 
 void PlayState::handleEvent(Event& event) {
-    // WHY: Delegate input handling to character manager
-    if (this->characterManager != nullptr) {
+    if (this->characterManager)
         this->characterManager->handleInput(event);
-    }
 }
 
-void PlayState::onEnter() {
-    // WHY: Request focus when entering play state
-}
-
-void PlayState::onExit() {
-    // WHY: Cleanup when exiting play state
-}
+void PlayState::onEnter() {}
+void PlayState::onExit()  {}
