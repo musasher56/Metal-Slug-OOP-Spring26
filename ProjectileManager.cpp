@@ -77,24 +77,8 @@ void ProjectileManager::spawnExplosive(sf::Vector2f origin, int dir,
     this->slots[this->activeCount++] = p;
 }
 
-// ============================================================
-// update — Phase 1: MOVE ONLY
-// ============================================================
-// WHY split into two phases?
-//   Blocks mark the level grid solid so the player can stand on them.
-//   If we ran tile collision here, a bullet entering a block tile would
-//   be destroyed by Projectile::checkTileCollision() BEFORE
-//   checkEntityCollisions() could let the bullet damage the block.
-//
-//   By splitting:
-//     1. update()        → move bullets
-//     2. checkEntityCollisions() → bullets damage blocks, blocks clear grid
-//     3. postEntityUpdate()      → tile collision + bounds on survivors
-//   Bullets that hit a block damage it, the grid cell clears, and
-//   remaining bullets pass through the now-empty cell.
-// ============================================================
 void ProjectileManager::update(float scroll, Level* lvl) {
-    (void)lvl;  // tile collision handled in postEntityUpdate
+    (void)lvl;
     for (int i = 0; i < this->activeCount; i++) {
         Projectile* p = this->slots[i];
         if (p != nullptr && p->status) {
@@ -103,9 +87,6 @@ void ProjectileManager::update(float scroll, Level* lvl) {
     }
 }
 
-// ============================================================
-// postEntityUpdate — Phase 3: tile collision + bounds + cleanup
-// ============================================================
 void ProjectileManager::postEntityUpdate(float scroll, Level* lvl) {
     int i = 0;
     while (i < this->activeCount) {
@@ -115,7 +96,6 @@ void ProjectileManager::postEntityUpdate(float scroll, Level* lvl) {
             continue;
         }
 
-        // Tile collision (blocks that were damaged already cleared their cells)
         if (lvl != nullptr) {
             p->checkTileCollision(lvl);
         }
@@ -125,7 +105,6 @@ void ProjectileManager::postEntityUpdate(float scroll, Level* lvl) {
             continue;
         }
 
-        // Off-screen check
         p->checkBounds(scroll);
         if (!p->status) {
             this->removeAt(i);
@@ -136,11 +115,8 @@ void ProjectileManager::postEntityUpdate(float scroll, Level* lvl) {
     }
 }
 
-// ============================================================
-// draw
-// ============================================================
 void ProjectileManager::draw(RenderWindow& window, float scroll) {
-    RectangleShape rect(sf::Vector2f(16.f, 24.f));
+    RectangleShape rect(sf::Vector2f(8.f, 6.f));   // CHANGED: was (16.f, 24.f)
 
     for (int i = 0; i < this->activeCount; i++) {
         Projectile* p = this->slots[i];
@@ -159,9 +135,6 @@ void ProjectileManager::draw(RenderWindow& window, float scroll) {
     }
 }
 
-// ============================================================
-// checkEntityCollisions
-// ============================================================
 int ProjectileManager::checkEntityCollisions(DamagableEntity** targets,
     int targetCount)
 {
@@ -200,9 +173,6 @@ int ProjectileManager::checkEntityCollisions(DamagableEntity** targets,
     return totalDamage;
 }
 
-// ============================================================
-// removeAt — O(1) swap-remove
-// ============================================================
 void ProjectileManager::removeAt(int i) {
     delete this->slots[i];
     this->slots[i] = nullptr;
