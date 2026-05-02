@@ -219,7 +219,7 @@ void PlayState::spawnTestBlocks() {
     // Platform 1: 8 blocks at row 12 (just above ground at row 14)
     this->blockManager->spawnPlatform(
         static_cast<float>(8 * 48),
-        static_cast<float>(12 * 48),
+        static_cast<float>(10 * 48),
         8
     );
 
@@ -227,13 +227,18 @@ void PlayState::spawnTestBlocks() {
     this->blockManager->spawnPlatform(
         static_cast<float>(22 * 48),
         static_cast<float>(10 * 48),
-        6
+        7
+    );
+    this->blockManager->spawnPlatform(
+        static_cast<float>(32 * 48),
+        static_cast<float>(11 * 48),
+        4
     );
 
     // Platform 3: 4 blocks at row 11
     this->blockManager->spawnPlatform(
         static_cast<float>(40 * 48),
-        static_cast<float>(11 * 48),
-        4
+        static_cast<float>(9 * 48),
+        12
     );
 }
