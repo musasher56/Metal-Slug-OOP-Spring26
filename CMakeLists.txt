@@ -57,7 +57,7 @@ set(SOURCES
         ProjectileManager.cpp
 )
 
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(${PROJECT_NAME} ${SOURCES} "Block.h" "Block.cpp" "BlockManager.cpp")
 
 # ── Output goes to project root (next to resources/) ──────────────────────────
 # This fixes "Unable to open file" — executable now runs where resources/ lives

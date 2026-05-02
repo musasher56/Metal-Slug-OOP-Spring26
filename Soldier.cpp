@@ -15,7 +15,8 @@ Soldier::Soldier(TextureManager* texMgr, AudioManager* audMgr)
     , meleeDamage(1.f)
     , meleeCooldown(0.5f)
     , transformState(nullptr)
-{}
+{
+}
 
 Soldier::~Soldier() {
     // WHY: FIX #4 - Soldier does not own NormalState (singleton), but owns other states
@@ -37,7 +38,8 @@ void Soldier::draw(RenderWindow& window, float scroll) {
     // Only animate when moving or in the air; reset to frame 5 when idle on ground
     if (this->velocityX != 0.f || !this->onGround) {
         this->animation.update();                          // advance frame
-    } else {
+    }
+    else {
         this->animation.currentFrame = 5;                  // snap back to idle frame (index 5)
         this->animation.clock.restart();                   // restart clock to prevent jump
     }
@@ -48,24 +50,26 @@ void Soldier::draw(RenderWindow& window, float scroll) {
 
 void Soldier::takeDamage(int amount) {
     if (amount < 0) return;
-    
+
     // Check if transformation provides immunity or reduction
     if (this->transformState != nullptr) {
         // Undead state could have different damage handling
     }
-    
+
     this->currentHP -= amount;
     if (this->currentHP < 0) this->currentHP = 0;
-    
+
     // Update health state enum
     if (this->currentHP == 0) {
         this->onDeath();
-    } else if (this->currentHP == 1) {
+    }
+    else if (this->currentHP == 1) {
         // CRITICAL state
-    } else if (this->currentHP == 2) {
+    }
+    else if (this->currentHP == 2) {
         // INJURED state
     }
-    
+
     DamagableEntity::takeDamage(amount);
 }
 
@@ -105,9 +109,9 @@ void Soldier::setTransformationState(TransformationState* newState) {
         delete this->transformState;
         this->transformState = nullptr;
     }
-    
+
     this->transformState = newState;
-    
+
     if (this->transformState != nullptr) {
         this->transformState->applyEffects(this);
     }
@@ -119,7 +123,7 @@ TransformationState* Soldier::getTransformationState() const {
 
 void Soldier::handleJump() {
     if (this->onGround) {
-        this->velocityY = -12.f;  // Jump strength
+        this->velocityY = -15.f;  // Jump strength (increased to clear blocks)
         this->onGround = false;
     }
 }
@@ -136,7 +140,7 @@ void Soldier::applyGravity() {
 void Soldier::handleCollision(Level* lvl) {
     // ROOT CAUSE 3 FIX: Null-guard handleCollision against null level
     if (lvl == nullptr) return;  // no collision without a level — safe to skip
-    
+
     // Get player bounding box - use abs() on scale to handle flipped sprites
     float scaleX = std::abs(this->sprite.getScale().x);
     float scaleY = std::abs(this->sprite.getScale().y);
@@ -144,40 +148,40 @@ void Soldier::handleCollision(Level* lvl) {
     float playerRight = this->position.x + 32.f * scaleX;
     float playerTop = this->position.y;
     float playerBottom = this->position.y + 40.f * scaleY;
-    
+
     int cellSize = lvl->getCellSize();
     this->onGround = false;
-    
+
     // Check cells around the player
     int startCol = static_cast<int>(playerLeft) / cellSize - 1;
     int endCol = static_cast<int>(playerRight) / cellSize + 1;
     int startRow = static_cast<int>(playerTop) / cellSize - 1;
     int endRow = static_cast<int>(playerBottom) / cellSize + 1;
-    
+
     for (int row = startRow; row <= endRow; ++row) {
         for (int col = startCol; col <= endCol; ++col) {
             if (!lvl->isSolid(row, col)) continue;
-            
+
             // Solid block bounds
             float blockLeft = static_cast<float>(col * cellSize);
             float blockRight = blockLeft + static_cast<float>(cellSize);
             float blockTop = static_cast<float>(row * cellSize);
             float blockBottom = blockTop + static_cast<float>(cellSize);
-            
+
             // Check for overlap
             if (playerRight > blockLeft && playerLeft < blockRight &&
                 playerBottom > blockTop && playerTop < blockBottom) {
-                
+
                 // Collision detected - resolve based on velocity
                 float overlapLeft = playerRight - blockLeft;
                 float overlapRight = blockRight - playerLeft;
                 float overlapTop = playerBottom - blockTop;
                 float overlapBottom = blockBottom - playerTop;
-                
+
                 // Find minimum overlap
                 float minOverlap = overlapLeft;
                 int resolveDir = 0; // 1=left, 2=right, 3=top, 4=bottom
-                
+
                 if (overlapRight < minOverlap) {
                     minOverlap = overlapRight;
                     resolveDir = 2;
@@ -190,23 +194,26 @@ void Soldier::handleCollision(Level* lvl) {
                     minOverlap = overlapBottom;
                     resolveDir = 4;
                 }
-                
+
                 // Resolve collision
                 if (resolveDir == 1) {
                     this->position.x -= minOverlap;
                     this->velocityX = 0.f;
-                } else if (resolveDir == 2) {
+                }
+                else if (resolveDir == 2) {
                     this->position.x += minOverlap;
                     this->velocityX = 0.f;
-                } else if (resolveDir == 3) {
+                }
+                else if (resolveDir == 3) {
                     this->position.y -= minOverlap;
                     this->velocityY = 0.f;
                     this->onGround = true;
-                } else if (resolveDir == 4) {
+                }
+                else if (resolveDir == 4) {
                     this->position.y += minOverlap;
                     this->velocityY = 0.f;
                 }
-                
+
                 // Update player bounds after resolution - use abs() on scale
                 playerLeft = this->position.x;
                 playerRight = this->position.x + 32.f * scaleX;
@@ -215,7 +222,7 @@ void Soldier::handleCollision(Level* lvl) {
             }
         }
     }
-    
+
     // Ground probe: detect solid tiles 1px below feet when no overlap exists
     if (!this->onGround) {
         float probeY = playerBottom + 1.0f;  // 1px tolerance below feet
@@ -229,14 +236,14 @@ void Soldier::handleCollision(Level* lvl) {
             }
         }
     }
-    
+
     // FIX: Invisible walls at level boundaries
     if (this->position.x < 0.f) {
         this->position.x = 0.f;
         this->velocityX = 0.f;
     }
-    float maxPlayerX = (float)(lvl->getWidth()) * (float)(lvl->getCellSize()) 
-                       - 32.f * scaleX;  // account for player width
+    float maxPlayerX = (float)(lvl->getWidth()) * (float)(lvl->getCellSize())
+        - 32.f * scaleX;  // account for player width
     if (this->position.x > maxPlayerX) {
         this->position.x = maxPlayerX;
         this->velocityX = 0.f;
@@ -246,13 +253,14 @@ void Soldier::handleCollision(Level* lvl) {
 void Soldier::applyMovement(float& scroll) {
     this->position.x += this->velocityX;
     this->position.y += this->velocityY;
-    
+
     // Apply direction to sprite - preserve existing scale magnitude, only flip X sign
     float scaleX = std::abs(this->sprite.getScale().x);
     float scaleY = this->sprite.getScale().y;
     if (this->direction == DIR_LEFT) {
         this->sprite.setScale(-scaleX, scaleY);
-    } else {
+    }
+    else {
         this->sprite.setScale(scaleX, scaleY);
     }
 }
@@ -261,7 +269,7 @@ void Soldier::handleStateTimers() {
     if (this->transformState != nullptr) {
         float dt = 0.016f;  // Approximate frame time
         this->transformState->update(this, dt);
-        
+
         if (this->transformState->isExpired()) {
             this->transformState->onExpiry(this);
         }
@@ -275,7 +283,8 @@ void Soldier::setDirectionAndVelocity(int dir) {
     if (dir == DIR_LEFT) {
         this->velocityX -= accel;
         if (this->velocityX < -this->maxVelocity) this->velocityX = -this->maxVelocity;
-    } else {
+    }
+    else {
         this->velocityX += accel;
         if (this->velocityX > this->maxVelocity) this->velocityX = this->maxVelocity;
     }
@@ -286,9 +295,83 @@ void Soldier::decelerate() {
         if (this->velocityX > 0.f) {
             this->velocityX -= 0.5f;
             if (this->velocityX < 0.f) this->velocityX = 0.f;
-        } else if (this->velocityX < 0.f) {
+        }
+        else if (this->velocityX < 0.f) {
             this->velocityX += 0.5f;
             if (this->velocityX > 0.f) this->velocityX = 0.f;
+        }
+    }
+}
+
+// ============================================================
+// resolveBlockCollisions
+// ============================================================
+// Called from PlayState::update() after block list is built.
+// Resolves the player against each live block's world-space bounding box
+// using the same min-overlap logic as handleCollision().
+// WHY separate from handleCollision()?
+//   handleCollision() reads solid tiles from Level. Blocks are NOT marked
+//   solid in the level grid (that would stop bullets — see Block.cpp notes).
+//   So block collision must be handled here, against entity bounding boxes.
+// ============================================================
+void Soldier::resolveBlockCollisions(DamagableEntity** blocks, int count) {
+    if (blocks == nullptr || count == 0) return;
+
+    float scaleX = std::abs(this->sprite.getScale().x);
+    float scaleY = std::abs(this->sprite.getScale().y);
+
+    for (int i = 0; i < count; i++) {
+        if (blocks[i] == nullptr) continue;
+        if (!blocks[i]->isAlive() && !blocks[i]->getStatus()) continue;
+
+        IntRect b = blocks[i]->getBoundingBox();  // world-space
+
+        float playerLeft = this->position.x;
+        float playerRight = this->position.x + 32.f * scaleX;
+        float playerTop = this->position.y;
+        float playerBottom = this->position.y + 40.f * scaleY;
+
+        float blockLeft = static_cast<float>(b.left);
+        float blockRight = static_cast<float>(b.left + b.width);
+        float blockTop = static_cast<float>(b.top);
+        float blockBottom = static_cast<float>(b.top + b.height);
+
+        // No overlap — skip
+        if (playerRight <= blockLeft || playerLeft >= blockRight ||
+            playerBottom <= blockTop || playerTop >= blockBottom) continue;
+
+        // Overlap on all four sides
+        float overlapLeft = playerRight - blockLeft;
+        float overlapRight = blockRight - playerLeft;
+        float overlapTop = playerBottom - blockTop;
+        float overlapBottom = blockBottom - playerTop;
+
+        // Resolve on the axis of minimum penetration
+        float minOverlap = overlapLeft;
+        int   resolveDir = 1;  // 1=push left, 2=push right, 3=push up(land), 4=push down
+
+        if (overlapRight < minOverlap) { minOverlap = overlapRight;  resolveDir = 2; }
+        if (overlapTop < minOverlap) { minOverlap = overlapTop;    resolveDir = 3; }
+        if (overlapBottom < minOverlap) { minOverlap = overlapBottom; resolveDir = 4; }
+
+        if (resolveDir == 1) {
+            this->position.x -= minOverlap;
+            this->velocityX = 0.f;
+        }
+        else if (resolveDir == 2) {
+            this->position.x += minOverlap;
+            this->velocityX = 0.f;
+        }
+        else if (resolveDir == 3) {
+            // Land on top of block
+            this->position.y -= minOverlap;
+            this->velocityY = 0.f;
+            this->onGround = true;
+        }
+        else if (resolveDir == 4) {
+            // Hit underside of block (jumping into it)
+            this->position.y += minOverlap;
+            this->velocityY = 0.f;
         }
     }
 }

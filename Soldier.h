@@ -26,7 +26,7 @@ protected:
 public:
     Soldier(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~Soldier();
-    
+
     virtual void update(float scroll, Level* lvl);
     virtual void draw(RenderWindow& window, float scroll);
     virtual void takeDamage(int amount);
@@ -37,20 +37,24 @@ public:
     void respawn();
     void setTransformationState(TransformationState* newState);
     TransformationState* getTransformationState() const;
-    
+
     // WHY: Provide protected getters/setters for velocity to allow TransformationState access
     float getBaseMaxVelocity() const { return this->baseMaxVelocity; }
     void setBaseMaxVelocity(float val) { this->baseMaxVelocity = val; }
     float getMaxVelocity() const { return this->maxVelocity; }
     void setMaxVelocity(float val) { this->maxVelocity = val; }
-    
+
     // ROOT CAUSE 4 FIX: Helper methods for movement control from CharacterManager
     void setDirectionAndVelocity(int dir);
     void decelerate();
-    
+
     // ROOT CAUSE 4 FIX: Make handleJump public so CharacterManager can call it
     void handleJump();
-    
+
+    // Resolve player position against destructible block bounding boxes.
+    // Call from PlayState::update() after blockManager->getActiveBlocks().
+    void resolveBlockCollisions(DamagableEntity** blocks, int count);
+
 protected:
     virtual void applyGravity();
     virtual void handleCollision(Level* lvl);

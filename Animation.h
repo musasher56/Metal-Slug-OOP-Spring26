@@ -21,6 +21,7 @@ public:
     void reset();
     void setLoop(bool shouldLoop);
     void setFrameCount(int count);
+    void setFrameDelay(int delay);
     void setTexture(Texture* tex);
     bool isFinished() const;
 };

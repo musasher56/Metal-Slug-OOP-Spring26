@@ -3,27 +3,28 @@
 #include "LevelManager.h"
 #include "ScoreManager.h"
 #include "HUD.h"
+#include "BlockManager.h"
+#include "DamagableEntity.h"
 #include <cstdio>
 
 PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
     : entityManager(nullptr), enemyManager(nullptr), enemyVehicleManager(nullptr),
-      projectileManager(nullptr), collectibleManager(nullptr),
-      texManager(texMgr), audManager(audMgr),
-      level(nullptr), characterManager(nullptr), levelManager(nullptr),
-      scoreManager(nullptr), hud(nullptr), gameMode(mode),
-      movingLeft(false), movingRight(false),
-      gameWindow(nullptr),
-      lastMouseWorld(0.f, 0.f),
-      debugMode(true)
+    projectileManager(nullptr), collectibleManager(nullptr),
+    texManager(texMgr), audManager(audMgr),
+    level(nullptr), characterManager(nullptr), levelManager(nullptr),
+    scoreManager(nullptr), hud(nullptr), blockManager(nullptr),
+    gameMode(mode),
+    movingLeft(false), movingRight(false),
+    gameWindow(nullptr),
+    lastMouseWorld(0.f, 0.f),
+    debugMode(true)
 {
     this->id = GSTATE_PLAY;
 
-    this->levelManager      = new LevelManager();
-    this->characterManager  = new CharacterManager(texMgr, audMgr);
-    this->scoreManager      = new ScoreManager();
-    this->hud               = new HUD();
-
-    // ProjectileManager: class name uppercase M, new uses class name
+    this->levelManager = new LevelManager();
+    this->characterManager = new CharacterManager(texMgr, audMgr);
+    this->scoreManager = new ScoreManager();
+    this->hud = new HUD();
     this->projectileManager = new ProjectileManager(texMgr, audMgr);
 
     PlayerSoldier* player = this->characterManager->getCurrentCharacter();
@@ -32,7 +33,8 @@ PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
 
     bool fontLoaded = this->debugFont.loadFromFile("/System/Library/Fonts/Helvetica.ttc");
     if (!fontLoaded) fontLoaded = this->debugFont.loadFromFile("/Library/Fonts/Arial.ttf");
-    if (!fontLoaded) this->debugFont.loadFromFile("resources/font.ttf");
+    if (!fontLoaded) fontLoaded = this->debugFont.loadFromFile("C:\\Windows\\Fonts\\Arial.ttf");
+    if (!fontLoaded) fontLoaded = this->debugFont.loadFromFile("resources/font.ttf");
 
     this->debugText.setFont(this->debugFont);
     this->debugText.setCharacterSize(16);
@@ -46,24 +48,33 @@ PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
     if (texH > 0.f) {
         this->bgScaleY = (float)SCREEN_H / texH * 1.4f;
         this->bgSprite.setScale(this->bgScaleY, this->bgScaleY);
-    } else {
+    }
+    else {
         this->bgScaleY = 1.f;
+    }
+
+    if (this->levelManager != nullptr) {
+        Level* lvl = this->levelManager->getLevel();
+        if (lvl != nullptr) {
+            this->blockManager = new BlockManager(texMgr, audMgr, lvl);
+            this->spawnTestBlocks();
+        }
     }
 }
 
 PlayState::~PlayState() {
+    if (this->blockManager) { delete this->blockManager;      this->blockManager = nullptr; }
     if (this->projectileManager) { delete this->projectileManager; this->projectileManager = nullptr; }
-    if (this->levelManager)      { delete this->levelManager;      this->levelManager      = nullptr; }
-    if (this->characterManager)  { delete this->characterManager;  this->characterManager  = nullptr; }
-    if (this->scoreManager)      { delete this->scoreManager;      this->scoreManager      = nullptr; }
-    if (this->hud)               { delete this->hud;               this->hud               = nullptr; }
+    if (this->levelManager) { delete this->levelManager;      this->levelManager = nullptr; }
+    if (this->characterManager) { delete this->characterManager;  this->characterManager = nullptr; }
+    if (this->scoreManager) { delete this->scoreManager;      this->scoreManager = nullptr; }
+    if (this->hud) { delete this->hud;               this->hud = nullptr; }
 }
 
 void PlayState::update(float dt) {
-    Level*         lvl    = this->levelManager    ? this->levelManager->getLevel()                : nullptr;
-    PlayerSoldier* player = this->characterManager? this->characterManager->getCurrentCharacter() : nullptr;
+    Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
+    PlayerSoldier* player = this->characterManager ? this->characterManager->getCurrentCharacter() : nullptr;
 
-    // Zero-lag aim: read mouse this frame using stored window pointer
     if (player != nullptr && this->gameWindow != nullptr) {
         sf::Vector2i mp = Mouse::getPosition(*this->gameWindow);
         sf::Vector2f mouseWorld(
@@ -83,8 +94,32 @@ void PlayState::update(float dt) {
     if (this->projectileManager)
         this->projectileManager->update(this->scroll, lvl);
 
+    if (this->blockManager) {
+        this->blockManager->update(this->scroll);
+
+        // getActiveBlocks() rebuilds the cache AND updates activeCount.
+        // Call it first — getActiveCount() alone returns a stale value.
+        DamagableEntity** blocks = this->blockManager->getActiveBlocks();
+        int bCount = this->blockManager->getActiveCount();
+
+        // Projectile vs block collision
+        if (bCount > 0 && this->projectileManager) {
+            this->projectileManager->checkEntityCollisions(blocks, bCount);
+        }
+
+        // Player vs block physics — blocks are NOT solid tiles (see Block.cpp),
+        // so we must resolve the player against their bounding boxes here.
+        if (bCount > 0 && player != nullptr) {
+            player->resolveBlockCollisions(blocks, bCount);
+        }
+
+        // Cleanup AFTER collision so blocks killed this frame play their
+        // destroy animation before being removed next frame.
+        this->blockManager->cleanup();
+    }
+
     if (player != nullptr && lvl != nullptr) {
-        float playerX    = player->getPosition().x;
+        float playerX = player->getPosition().x;
         float levelWidth = (float)(lvl->getWidth() * lvl->getCellSize());
         this->scroll = playerX - (float)SCREEN_W / 2.f;
         if (this->scroll < 0.f) this->scroll = 0.f;
@@ -101,13 +136,13 @@ void PlayState::render(RenderWindow& window) {
     if (this->gameWindow == nullptr)
         this->gameWindow = &window;
 
-    float bgWidth  = static_cast<float>(this->bgTex.getSize().x) * this->bgScaleY;
+    float bgWidth = static_cast<float>(this->bgTex.getSize().x) * this->bgScaleY;
     float bgHeight = static_cast<float>(this->bgTex.getSize().y) * this->bgScaleY;
     float bgX = -this->scroll;
     float bgY = -(bgHeight - (float)SCREEN_H);
 
     if (bgX > 0.f) bgX = 0.f;
-    float maxBgX = bgWidth  - (float)SCREEN_W; if (maxBgX < 0.f) maxBgX = 0.f;
+    float maxBgX = bgWidth - (float)SCREEN_W; if (maxBgX < 0.f) maxBgX = 0.f;
     float maxBgY = bgHeight - (float)SCREEN_H; if (maxBgY < 0.f) maxBgY = 0.f;
     if (bgX < -maxBgX) bgX = -maxBgX;
     if (bgY > 0.f) bgY = 0.f;
@@ -117,6 +152,7 @@ void PlayState::render(RenderWindow& window) {
     window.draw(this->bgSprite);
 
     if (this->levelManager)      this->levelManager->draw(window, this->scroll);
+    if (this->blockManager)      this->blockManager->draw(window, this->scroll);
     if (this->characterManager)  this->characterManager->draw(window, this->scroll);
     if (this->projectileManager) this->projectileManager->draw(window, this->scroll);
     if (this->hud)               this->hud->draw(window);
@@ -125,25 +161,30 @@ void PlayState::render(RenderWindow& window) {
 
 void PlayState::renderDebug(RenderWindow& window) {
     PlayerSoldier* player = this->characterManager
-                          ? this->characterManager->getCurrentCharacter() : nullptr;
+        ? this->characterManager->getCurrentCharacter() : nullptr;
     char buf[512]; buf[0] = '\0';
     char line[128];
     int k = 0;
     auto append = [&](const char* src) {
         int j = 0; while (src[j]) buf[k++] = src[j++]; buf[k] = '\0';
-    };
+        };
 
     sprintf(line, "Projectiles: %d\n",
-            this->projectileManager ? this->projectileManager->getActiveCount() : -1);
+        this->projectileManager ? this->projectileManager->getActiveCount() : -1);
+    append(line);
+    sprintf(line, "Blocks: %d / %d\n",
+        this->blockManager ? this->blockManager->getActiveCount() : -1,
+        this->blockManager ? this->blockManager->getTotalCount() : -1);
     append(line);
     sprintf(line, "Aim: %.1f deg  |  Mouse: (%.0f, %.0f)\n",
-            player ? player->getAimAngle() : -1.f,
-            this->lastMouseWorld.x, this->lastMouseWorld.y);
+        player ? player->getAimAngle() : -1.f,
+        this->lastMouseWorld.x, this->lastMouseWorld.y);
     append(line);
     if (player) {
         sf::Vector2f p = player->getPosition();
         sprintf(line, "Player: (%.0f, %.0f)  Scroll: %.0f\n", p.x, p.y, this->scroll);
-    } else {
+    }
+    else {
         sprintf(line, "Player: NULL\n");
     }
     append(line);
@@ -153,7 +194,7 @@ void PlayState::renderDebug(RenderWindow& window) {
     append(line);
 
     this->debugText.setString(buf);
-    RectangleShape bg(sf::Vector2f(380.f, 95.f));
+    RectangleShape bg(sf::Vector2f(380.f, 110.f));
     bg.setFillColor(Color(0, 0, 0, 170));
     bg.setPosition(5.f, 5.f);
     window.draw(bg);
@@ -166,4 +207,26 @@ void PlayState::handleEvent(Event& event) {
 }
 
 void PlayState::onEnter() {}
-void PlayState::onExit()  {}
+void PlayState::onExit() {}
+
+void PlayState::spawnTestBlocks() {
+    if (this->blockManager == nullptr) return;
+
+    this->blockManager->spawnPlatform(
+        static_cast<float>(8 * 48),
+        static_cast<float>(12 * 48),
+        4
+    );
+
+    this->blockManager->spawnPlatform(
+        static_cast<float>(22 * 48),
+        static_cast<float>(10 * 48),
+        4
+    );
+
+    this->blockManager->spawnPlatform(
+        static_cast<float>(40 * 48),
+        static_cast<float>(11 * 48),
+        3
+    );
+}

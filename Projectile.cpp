@@ -15,7 +15,8 @@ Projectile::Projectile(TextureManager* texMgr, AudioManager* audMgr)
     , isExplosive(false)
     , blastRadius(0)
     , projectileClass(0)
-{}
+{
+}
 
 Projectile::~Projectile() {}
 
@@ -86,19 +87,19 @@ void Projectile::update(float scroll, Level* lvl) {
 void Projectile::checkTileCollision(Level* lvl) {
     if (lvl == nullptr) return;
 
-    const int  cell  = lvl->getCellSize();
+    const int  cell = lvl->getCellSize();
     const int  PROJ_W = 8;  // projectile bounding box width  (pixels)
     const int  PROJ_H = 8;  // projectile bounding box height (pixels)
 
     // --- X-axis front-face ---
     float frontX = (this->velocityX >= 0.f)
-                   ? this->position.x + PROJ_W   // moving right → right edge
-                   : this->position.x;            // moving left  → left edge
+        ? this->position.x + PROJ_W   // moving right → right edge
+        : this->position.x;            // moving left  → left edge
 
     // --- Y-axis front-face ---
     float frontY = (this->velocityY >= 0.f)
-                   ? this->position.y + PROJ_H   // moving down  → bottom edge
-                   : this->position.y;            // moving up    → top edge
+        ? this->position.y + PROJ_H   // moving down  → bottom edge
+        : this->position.y;            // moving up    → top edge
 
     // Convert pixel coordinates to tile indices
     int colX = (int)frontX / cell;
@@ -111,7 +112,7 @@ void Projectile::checkTileCollision(Level* lvl) {
     int colForY = (int)(this->position.x + PROJ_W / 2.f) / cell;
 
     bool hitX = lvl->isSolid(rowForX, colX);
-    bool hitY = lvl->isSolid(rowY,    colForY);
+    bool hitY = lvl->isSolid(rowY, colForY);
 
     if (hitX || hitY) {
         // Trigger impact behaviour (explosive will override this)
@@ -166,19 +167,24 @@ void Projectile::draw(RenderWindow& window, float scroll) {
 // Accessors
 // ------------------------------------------------------------------
 IntRect Projectile::getBoundingBox() const {
-    // WHY position.x/y included?
-    //   getBoundingBox() must return WORLD-SPACE coordinates so that
-    //   checkEntityCollisions() can perform a direct overlap test
-    //   without the caller needing to add position manually.
+    // Returns WORLD-SPACE coordinates for overlap testing in checkEntityCollisions().
+    // WHY width=16, height=24?
+    //   Bullets travel horizontally and spawn at barrel height (player mid-body).
+    //   Block tops sit at their position.y which is often 20-30px below barrel height.
+    //   An 8x8 box at the bullet origin misses the block top entirely.
+    //   A 16x24 box extends the hitbox downward so a bullet fired at mid-player
+    //   height overlaps the top face of a block it visually passes through.
+    //   Width 16 also gives a small grace window on fast-moving bullets that
+    //   might skip a narrow target between frames.
     return IntRect(
         static_cast<int>(this->position.x),
         static_cast<int>(this->position.y),
-        8,   // all projectiles share 8×8 hitbox regardless of sprite scale
-        8
+        16,  // wider than 8px — less frame-skip misses on fast bullets
+        24   // taller than 8px — covers downward reach to block top face
     );
 }
 
-int  Projectile::getDamage()   const { return this->damage;    }
+int  Projectile::getDamage()   const { return this->damage; }
 bool Projectile::isFromEnemy() const { return this->fromEnemy; }
 
 void Projectile::onImpact(EnemyManager* em, CharacterManager* cm) {
@@ -191,8 +197,8 @@ void Projectile::onImpact(EnemyManager* em, CharacterManager* cm) {
 // ============================================================
 
 StraightProjectile::StraightProjectile(TextureManager* texMgr,
-                                        AudioManager* audMgr,
-                                        float ang)
+    AudioManager* audMgr,
+    float ang)
     : Projectile(texMgr, audMgr)
     , angle(ang)
 {
@@ -245,9 +251,9 @@ void BallisticProjectile::move(float /*scroll*/) {
 ExplosiveProjectile::ExplosiveProjectile(TextureManager* texMgr, AudioManager* audMgr)
     : BallisticProjectile(texMgr, audMgr)
 {
-    this->isExplosive      = true;
-    this->blastRadius      = 3;
-    this->projectileClass  = PROJ_EXPLOSIVE;
+    this->isExplosive = true;
+    this->blastRadius = 3;
+    this->projectileClass = PROJ_EXPLOSIVE;
 }
 
 ExplosiveProjectile::~ExplosiveProjectile() {}

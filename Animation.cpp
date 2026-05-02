@@ -45,8 +45,9 @@ void Animation::reset() {
 }
 
 void Animation::setLoop(bool shouldLoop)    { this->loop = shouldLoop; }
-void Animation::setFrameCount(int count)    { this->frameCount = count; }
-void Animation::setTexture(Texture* tex)    { this->texture = tex; }
+void Animation::setFrameCount(int count) { this->frameCount = count; }
+void Animation::setFrameDelay(int delay) { this->frameDelay = delay; }
+void Animation::setTexture(Texture* tex) { this->texture = tex; }
 bool Animation::isFinished() const {
     return !this->loop && this->currentFrame >= this->frameCount - 1;
 }

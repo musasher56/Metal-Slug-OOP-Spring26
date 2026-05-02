@@ -24,5 +24,11 @@ public:
         return this->lvl[row][col] == 'g';
     }
 
+    void setSolid(int row, int col, bool solid) {
+        if (row < 0 || row >= this->height || col < 0 || col >= this->width)
+            return;
+        this->lvl[row][col] = solid ? 'g' : '\0';
+    }
+
 //Affan Commit test
 };
