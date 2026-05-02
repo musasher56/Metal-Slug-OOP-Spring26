@@ -18,38 +18,12 @@ void ProjectileManager::clearAll() {
     this->activeCount = 0;
 }
 
-// ============================================================
-// calcBarrelTip  (static)
-// ============================================================
-// WHERE DO PROJECTILES SPAWN FROM?
-//
-// Metal Slug bullets come from the barrel tip of the weapon,
-// NOT from the player's origin (top-left of sprite).
-//
-// Visual layout for a 32×64px player sprite facing right:
-//
-//   pos.x  pos.x+32
-//     │        │
-//     ┌────────┐  ← pos.y
-//     │  head  │
-//     │  ●─────┼──►  ← pos.y + barrelOffsetY  (e.g. 20px from top)
-//     │  body  │
-//     └────────┘
-//                ↑
-//           spawn here (pos.x + spriteWidth + GAP)
-//
-// Facing left: mirror — spawn at pos.x - GAP
-//
-// barrelOffsetY: vertical distance from pos.y to where the gun sits.
-// For a 64px tall player, ~20px puts the barrel at upper-body height.
-// Fine-tune this once the character sprite is visible.
-// ============================================================
 sf::Vector2f ProjectileManager::calcBarrelTip(sf::Vector2f entityPos,
     int dir,
     float spriteWidth,
     float barrelOffsetY)
 {
-    const float GAP = 4.f;  // clearance so bullet starts outside hitbox
+    const float GAP = 4.f;
 
     float x = (dir == DIR_RIGHT)
         ? entityPos.x + spriteWidth + GAP
@@ -59,13 +33,6 @@ sf::Vector2f ProjectileManager::calcBarrelTip(sf::Vector2f entityPos,
     return sf::Vector2f(x, y);
 }
 
-// ============================================================
-// angleToVelocity  (static)
-// ============================================================
-// angle=0  → horizontal  (velX = ±speed, velY = 0)
-// angle=90 → straight up (velX = 0,      velY = -speed)
-// Screen Y-axis is inverted, so "up" = negative velY.
-// ============================================================
 void ProjectileManager::angleToVelocity(float angle, int dir, float speed,
     float& outVX, float& outVY)
 {
@@ -74,9 +41,6 @@ void ProjectileManager::angleToVelocity(float angle, int dir, float speed,
     outVY = -sinf(rad) * speed;
 }
 
-// ============================================================
-// spawnStraight — pistol / HMG bullets
-// ============================================================
 void ProjectileManager::spawnStraight(sf::Vector2f origin, int dir,
     float angle, int dmg, bool fromEnemy)
 {
@@ -94,9 +58,6 @@ void ProjectileManager::spawnStraight(sf::Vector2f origin, int dir,
     this->slots[this->activeCount++] = p;
 }
 
-// ============================================================
-// spawnExplosive — rocket launcher
-// ============================================================
 void ProjectileManager::spawnExplosive(sf::Vector2f origin, int dir,
     float angle, int dmg,
     int blastRadius, bool fromEnemy)
@@ -117,40 +78,69 @@ void ProjectileManager::spawnExplosive(sf::Vector2f origin, int dir,
 }
 
 // ============================================================
-// update
+// update — Phase 1: MOVE ONLY
+// ============================================================
+// WHY split into two phases?
+//   Blocks mark the level grid solid so the player can stand on them.
+//   If we ran tile collision here, a bullet entering a block tile would
+//   be destroyed by Projectile::checkTileCollision() BEFORE
+//   checkEntityCollisions() could let the bullet damage the block.
+//
+//   By splitting:
+//     1. update()        → move bullets
+//     2. checkEntityCollisions() → bullets damage blocks, blocks clear grid
+//     3. postEntityUpdate()      → tile collision + bounds on survivors
+//   Bullets that hit a block damage it, the grid cell clears, and
+//   remaining bullets pass through the now-empty cell.
 // ============================================================
 void ProjectileManager::update(float scroll, Level* lvl) {
-    int i = 0;
-    while (i < this->activeCount) {
+    (void)lvl;  // tile collision handled in postEntityUpdate
+    for (int i = 0; i < this->activeCount; i++) {
         Projectile* p = this->slots[i];
-        if (p == nullptr) { this->removeAt(i); continue; }
-
-        p->update(scroll, lvl);
-
-        if (!p->getStatus()) this->removeAt(i);
-        else                 i++;
+        if (p != nullptr && p->status) {
+            p->move(scroll);
+        }
     }
 }
 
 // ============================================================
-// draw — PLACEHOLDER coloured rectangles
+// postEntityUpdate — Phase 3: tile collision + bounds + cleanup
 // ============================================================
-// Renders coloured 8×8 squares so you can SEE bullets moving and
-// debug spawn origin / angle / speed before the sprite sheet is ready.
-//
-//   Yellow  = straight projectile (pistol / HMG bullet)
-//   Orange  = explosive projectile (rocket)
-//
-// TO SWAP IN REAL SPRITES later:
-//   1. In spawnStraight(), after new StraightProjectile:
-//        p->animation.setTexture(&texMgr->getTexture("bullets.png"));
-//        p->animation.setFrameCount(1);
-//        p->sprite.setTextureRect(IntRect(X, Y, W, H)); // your sheet coords
-//   2. Replace the RectangleShape block below with:
-//        p->draw(window, scroll);
+void ProjectileManager::postEntityUpdate(float scroll, Level* lvl) {
+    int i = 0;
+    while (i < this->activeCount) {
+        Projectile* p = this->slots[i];
+        if (p == nullptr || !p->status) {
+            this->removeAt(i);
+            continue;
+        }
+
+        // Tile collision (blocks that were damaged already cleared their cells)
+        if (lvl != nullptr) {
+            p->checkTileCollision(lvl);
+        }
+
+        if (!p->status) {
+            this->removeAt(i);
+            continue;
+        }
+
+        // Off-screen check
+        p->checkBounds(scroll);
+        if (!p->status) {
+            this->removeAt(i);
+            continue;
+        }
+
+        i++;
+    }
+}
+
+// ============================================================
+// draw
 // ============================================================
 void ProjectileManager::draw(RenderWindow& window, float scroll) {
-    RectangleShape rect(sf::Vector2f(16.f, 24.f));  // matches getBoundingBox() size
+    RectangleShape rect(sf::Vector2f(16.f, 24.f));
 
     for (int i = 0; i < this->activeCount; i++) {
         Projectile* p = this->slots[i];
@@ -158,14 +148,11 @@ void ProjectileManager::draw(RenderWindow& window, float scroll) {
 
         rect.setPosition(p->position.x - scroll, p->position.y);
 
-        // WHY reuse one RectangleShape object instead of creating per bullet?
-        // RectangleShape allocation inside a loop creates/destroys a heap
-        // object every frame per bullet.  One shape, reset each iteration.
         if (p->isExplosive) {
-            rect.setFillColor(Color(255, 140, 0));   // orange — rocket
+            rect.setFillColor(Color(255, 140, 0));
         }
         else {
-            rect.setFillColor(Color(255, 255, 0));   // yellow — bullet
+            rect.setFillColor(Color(255, 255, 0));
         }
 
         window.draw(rect);

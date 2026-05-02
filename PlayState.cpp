@@ -85,36 +85,40 @@ void PlayState::update(float dt) {
         player->updateAim(mouseWorld);
     }
 
+    // 1. Update player movement + gravity + handleCollision (checks grid — blocks are solid)
     if (this->characterManager)
         this->characterManager->update(dt, lvl);
 
     if (player != nullptr)
         player->handleInput();
 
-    if (this->projectileManager)
-        this->projectileManager->update(this->scroll, lvl);
-
+    // 2. Update block destruction animations
     if (this->blockManager) {
         this->blockManager->update(this->scroll);
+    }
 
-        // getActiveBlocks() rebuilds the cache AND updates activeCount.
-        // Call it first — getActiveCount() alone returns a stale value.
+    // 3. PHASE 1: Move projectiles (no tile collision yet)
+    if (this->projectileManager && lvl != nullptr)
+        this->projectileManager->update(this->scroll, lvl);
+
+    // 4. Bullet vs block entity collision (after move, before tile check)
+    //    Damaged blocks clear their grid cells here.
+    if (this->blockManager && this->projectileManager) {
         DamagableEntity** blocks = this->blockManager->getActiveBlocks();
         int bCount = this->blockManager->getActiveCount();
-
-        // Projectile vs block collision
-        if (bCount > 0 && this->projectileManager) {
+        if (bCount > 0) {
             this->projectileManager->checkEntityCollisions(blocks, bCount);
         }
+    }
 
-        // Player vs block physics — blocks are NOT solid tiles (see Block.cpp),
-        // so we must resolve the player against their bounding boxes here.
-        if (bCount > 0 && player != nullptr) {
-            player->resolveBlockCollisions(blocks, bCount);
-        }
+    // 5. PHASE 3: Tile collision + bounds + cleanup for projectiles
+    //    Blocks that took damage already cleared their grid cells,
+    //    so bullets pass through destroyed block positions.
+    if (this->projectileManager && lvl != nullptr)
+        this->projectileManager->postEntityUpdate(this->scroll, lvl);
 
-        // Cleanup AFTER collision so blocks killed this frame play their
-        // destroy animation before being removed next frame.
+    // 6. Clean up finished block destruction animations
+    if (this->blockManager) {
         this->blockManager->cleanup();
     }
 
@@ -212,21 +216,24 @@ void PlayState::onExit() {}
 void PlayState::spawnTestBlocks() {
     if (this->blockManager == nullptr) return;
 
+    // Platform 1: 8 blocks at row 12 (just above ground at row 14)
     this->blockManager->spawnPlatform(
         static_cast<float>(8 * 48),
         static_cast<float>(12 * 48),
-        4
+        8
     );
 
+    // Platform 2: 6 blocks at row 10 (floating higher)
     this->blockManager->spawnPlatform(
         static_cast<float>(22 * 48),
         static_cast<float>(10 * 48),
-        4
+        6
     );
 
+    // Platform 3: 4 blocks at row 11
     this->blockManager->spawnPlatform(
         static_cast<float>(40 * 48),
         static_cast<float>(11 * 48),
-        3
+        4
     );
 }

@@ -4,6 +4,8 @@
 class Block : public DamagableEntity {
 public:
     static const int TOTAL_FRAMES = 15;
+    static const int FRAME_X = 16;   // spritesheet X origin
+    static const int FRAME_Y = 285;  // spritesheet Y origin
     static const int FRAME_W = 140;
     static const int FRAME_H = 143;
 

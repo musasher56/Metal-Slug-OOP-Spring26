@@ -36,6 +36,7 @@ public:
 
     DamagableEntity** getActiveBlocks();
     int getActiveCount() const { return this->activeCount; }
+    int getTotalCount()  const { return this->blockCount; }
 };
 
 #endif

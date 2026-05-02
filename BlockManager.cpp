@@ -39,8 +39,16 @@ void BlockManager::spawnBlock(float worldX, float worldY) {
     if (col < 0 || col >= this->level->getWidth()) return;
     if (row < 0 || row >= this->level->getHeight()) return;
 
-    // Skip if cell is already solid (ground row 14 or existing block)
-    if (this->level->isSolid(row, col)) return;
+    // Skip if cell already has a block (check existing blocks, not the grid —
+    // blocks no longer mark the level grid solid; see Block.cpp for why).
+    for (int i = 0; i < this->blockCount; i++) {
+        if (this->blocks[i] == nullptr || !this->blocks[i]->getStatus()) continue;
+        // Compare grid position by snapping worldX/worldY to col/row
+        // The Block constructor already does this math; reuse it here.
+        int existCol = static_cast<int>(this->blocks[i]->getPosition().x / cellSize);
+        int existRow = static_cast<int>(this->blocks[i]->getPosition().y / cellSize);
+        if (existCol == col && existRow == row) return;  // already occupied
+    }
 
     Block* b = new Block(this->texMgr, this->audMgr, worldX, worldY, this->level);
     if (b != nullptr) {

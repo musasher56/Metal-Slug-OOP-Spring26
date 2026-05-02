@@ -7,16 +7,12 @@ Block::Block(TextureManager* texMgr, AudioManager* audMgr,
     , destroying(false)
     , level(lvl)
 {
-    // Use the SAME cell size as the level grid (48px)
-    // so blocks align perfectly with player gravity collision
     int cellSize = 48;
     if (lvl != nullptr) cellSize = lvl->getCellSize();
 
-    // Snap to nearest grid cell
     this->gridCol = static_cast<int>(worldX / cellSize);
     this->gridRow = static_cast<int>(worldY / cellSize);
 
-    // Clamp to level bounds
     if (lvl != nullptr) {
         if (this->gridCol < 0) this->gridCol = 0;
         if (this->gridCol >= lvl->getWidth()) this->gridCol = lvl->getWidth() - 1;
@@ -24,7 +20,6 @@ Block::Block(TextureManager* texMgr, AudioManager* audMgr,
         if (this->gridRow >= lvl->getHeight()) this->gridRow = lvl->getHeight() - 1;
     }
 
-    // Position = exact grid position
     this->position = sf::Vector2f(
         static_cast<float>(this->gridCol * cellSize),
         static_cast<float>(this->gridRow * cellSize)
@@ -34,20 +29,18 @@ Block::Block(TextureManager* texMgr, AudioManager* audMgr,
     this->maxHealth = 1;
     this->scoreValue = 10;
 
-    // Mark grid cell solid so player gravity detects it as floor
     if (lvl != nullptr) {
         lvl->setSolid(this->gridRow, this->gridCol, true);
     }
 
-    // Load block sprite
     Texture& tex = texMgr->getTexture("resources/sprites/blocks/block.png");
     this->animation.setTexture(&tex);
     this->animation.setFrameCount(TOTAL_FRAMES);
     this->animation.setLoop(false);
     this->animation.setFrameDelay(4);
+    this->animation.setSrcOffset(FRAME_X, FRAME_Y);
     this->sprite.setTexture(tex);
 
-    // Scale sprite to fit exactly one cell
     float scaleX = static_cast<float>(cellSize) / static_cast<float>(FRAME_W);
     float scaleY = static_cast<float>(cellSize) / static_cast<float>(FRAME_H);
     this->sprite.setScale(scaleX, scaleY);
@@ -57,7 +50,6 @@ Block::Block(TextureManager* texMgr, AudioManager* audMgr,
 }
 
 Block::~Block() {
-    // Safety: clear grid if block is still active when destroyed
     if (this->status && this->level != nullptr) {
         this->level->setSolid(this->gridRow, this->gridCol, false);
     }
@@ -77,8 +69,6 @@ void Block::takeDamage(int amount) {
         this->animation.setLoop(false);
         this->animation.reset();
 
-        // Clear grid IMMEDIATELY so player falls through
-        // while destruction animation plays
         if (this->level != nullptr) {
             this->level->setSolid(this->gridRow, this->gridCol, false);
         }

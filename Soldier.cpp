@@ -317,19 +317,20 @@ void Soldier::decelerate() {
 void Soldier::resolveBlockCollisions(DamagableEntity** blocks, int count) {
     if (blocks == nullptr || count == 0) return;
 
-    float scaleX = std::abs(this->sprite.getScale().x);
-    float scaleY = std::abs(this->sprite.getScale().y);
+    // Use the actual world-space bounding box of the player (includes position).
+    // Never hardcode magic pixel widths/heights — if the sprite scale or hitbox
+    // changes this code stays correct automatically.
+    IntRect pb = this->getBoundingBox();
+    float playerLeft = static_cast<float>(pb.left);
+    float playerRight = static_cast<float>(pb.left + pb.width);
+    float playerTop = static_cast<float>(pb.top);
+    float playerBottom = static_cast<float>(pb.top + pb.height);
 
     for (int i = 0; i < count; i++) {
         if (blocks[i] == nullptr) continue;
-        if (!blocks[i]->isAlive() && !blocks[i]->getStatus()) continue;
+        if (!blocks[i]->isAlive() || !blocks[i]->getStatus()) continue;
 
         IntRect b = blocks[i]->getBoundingBox();  // world-space
-
-        float playerLeft = this->position.x;
-        float playerRight = this->position.x + 32.f * scaleX;
-        float playerTop = this->position.y;
-        float playerBottom = this->position.y + 40.f * scaleY;
 
         float blockLeft = static_cast<float>(b.left);
         float blockRight = static_cast<float>(b.left + b.width);
@@ -340,20 +341,47 @@ void Soldier::resolveBlockCollisions(DamagableEntity** blocks, int count) {
         if (playerRight <= blockLeft || playerLeft >= blockRight ||
             playerBottom <= blockTop || playerTop >= blockBottom) continue;
 
-        // Overlap on all four sides
-        float overlapLeft = playerRight - blockLeft;
-        float overlapRight = blockRight - playerLeft;
-        float overlapTop = playerBottom - blockTop;
-        float overlapBottom = blockBottom - playerTop;
+        // Penetration depth on each axis
+        float overlapLeft = playerRight - blockLeft;   // push player left
+        float overlapRight = blockRight - playerLeft;  // push player right
+        float overlapTop = playerBottom - blockTop;    // push player up (land on top)
+        float overlapBottom = blockBottom - playerTop;   // push player down (hit ceiling)
 
-        // Resolve on the axis of minimum penetration
+        // WHY velocity bias?
+        // Pure min-overlap can misfire when the player runs into the side of a block
+        // that's also slightly below them — the vertical overlap is tiny so it wins,
+        // snapping the player on top when they should be blocked sideways.
+        // We bias toward vertical resolution only when actually moving vertically,
+        // and toward horizontal resolution when moving horizontally. This lets the
+        // player walk into block sides without riding up onto them, and land cleanly
+        // when dropping or jumping onto the top.
+        bool movingDown = (this->velocityY > 0.5f);
+        bool movingUp = (this->velocityY < -0.5f);
+        bool movingHoriz = (this->velocityX > 0.5f || this->velocityX < -0.5f);
+
+        // Default: pure minimum overlap
         float minOverlap = overlapLeft;
-        int   resolveDir = 1;  // 1=push left, 2=push right, 3=push up(land), 4=push down
+        int   resolveDir = 1;  // 1=left 2=right 3=top(land) 4=bottom(ceiling)
 
         if (overlapRight < minOverlap) { minOverlap = overlapRight;  resolveDir = 2; }
         if (overlapTop < minOverlap) { minOverlap = overlapTop;    resolveDir = 3; }
         if (overlapBottom < minOverlap) { minOverlap = overlapBottom; resolveDir = 4; }
 
+        // Bias: if moving horizontally and NOT falling, prefer side resolution
+        // so the player is blocked by the block face rather than teleported on top.
+        if (movingHoriz && !movingDown) {
+            float sideOverlap = overlapLeft;
+            int   sideDir = 1;
+            if (overlapRight < sideOverlap) { sideOverlap = overlapRight; sideDir = 2; }
+            // Only override if the side overlap is not drastically larger than vertical
+            // (avoids picking a huge side push when a tiny vertical push would do)
+            if (sideOverlap < overlapTop * 2.f) {
+                minOverlap = sideOverlap;
+                resolveDir = sideDir;
+            }
+        }
+
+        // Apply resolution
         if (resolveDir == 1) {
             this->position.x -= minOverlap;
             this->velocityX = 0.f;
@@ -363,15 +391,23 @@ void Soldier::resolveBlockCollisions(DamagableEntity** blocks, int count) {
             this->velocityX = 0.f;
         }
         else if (resolveDir == 3) {
-            // Land on top of block
+            // Land on top of block — snap to exact surface
             this->position.y -= minOverlap;
             this->velocityY = 0.f;
             this->onGround = true;
         }
         else if (resolveDir == 4) {
-            // Hit underside of block (jumping into it)
+            // Bonk head on underside of block
             this->position.y += minOverlap;
-            this->velocityY = 0.f;
+            if (this->velocityY < 0.f) this->velocityY = 0.f;
         }
+
+        // Recompute player box after each resolution so multi-block situations
+        // don't accumulate stale coordinates.
+        pb = this->getBoundingBox();
+        playerLeft = static_cast<float>(pb.left);
+        playerRight = static_cast<float>(pb.left + pb.width);
+        playerTop = static_cast<float>(pb.top);
+        playerBottom = static_cast<float>(pb.top + pb.height);
     }
 }

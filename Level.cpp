@@ -8,18 +8,19 @@ Level::Level()
     , cell_size(48)
 {
     // WHY: Allocate 2D grid for level blocks using manual memory management
-    this->lvl = new char*[this->height];
+    this->lvl = new char* [this->height];
     for (int i = 0; i < this->height; i++) {
         this->lvl[i] = new char[this->width]();  // Zero-initialize
     }
 
-    // WHY: Place a simple ground platform for testing collision
+    // WHY: Ground is the very last row so the floor sits at the screen bottom.
+    // Row 14 was the old value — 14 * 48 = 672px — which landed mid-screen and
+    // created the "invisible floating platform" bug.
+    // Row 15 * 48 = 720px which is at the bottom of a 768px screen.
+    int groundRow = this->height - 1;  // row 15
     for (int j = 0; j < this->width; j++) {
-        this->lvl[14][j] = 'g';  // row 14 * 48 = 672px — slightly lower
+        this->lvl[groundRow][j] = 'g';
     }
-
-    // WHY: Platform is invisible — no texture loading needed
-    // Collision still works via isSolid() reading the grid
 }
 
 Level::~Level() {
