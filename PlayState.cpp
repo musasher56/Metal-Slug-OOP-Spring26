@@ -14,6 +14,7 @@ PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
     level(nullptr), characterManager(nullptr), levelManager(nullptr),
     scoreManager(nullptr), hud(nullptr), blockManager(nullptr),
     gameMode(mode),
+    scroll(0.f), scrollY(0.f),
     movingLeft(false), movingRight(false),
     gameWindow(nullptr),
     lastMouseWorld(0.f, 0.f),
@@ -42,6 +43,7 @@ PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
     this->debugText.setPosition(10.f, 10.f);
 
     this->scroll = 0.f;
+    this->scrollY = 0.f;
     this->bgTex.loadFromFile("resources/Sprites/background.png");
     this->bgSprite.setTexture(this->bgTex);
     float texH = static_cast<float>(this->bgTex.getSize().y);
@@ -57,6 +59,28 @@ PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
         Level* lvl = this->levelManager->getLevel();
         if (lvl != nullptr) {
             this->blockManager = new BlockManager(texMgr, audMgr, lvl);
+
+            this->texManager->loadTexture("dirt", "resources/Sprites/dirt.png");
+
+            int cellSize = lvl->getCellSize();
+            int groundRow = lvl->getHeight() - 1;         // row 39
+            int surfaceRow = groundRow - 2;               // row 37 (new walking surface)
+            float surfaceY = (float)(surfaceRow * cellSize); // 1776
+
+            // FIX: Fill 3 rows of visible dirt blocks for the ground floor.
+            // Row 37 = walking surface, rows 38-39 = underground depth.
+            // 240 cols × 3 rows = 720 blocks.
+            this->blockManager->buildGroundTerrain(surfaceRow, 3);
+
+            // Mountain starts from the new ground surface
+            this->blockManager->buildMountainTerrain(4000.f, surfaceY);
+
+            if (player != nullptr) {
+                // FIX: Spawn on new surface (row 37 top = 1776, minus hitbox height 140)
+                player->position = sf::Vector2f(200.f, surfaceY - 140.f);
+                player->updateBoundingBox();
+            }
+
             this->spawnTestBlocks();
         }
     }
@@ -79,30 +103,25 @@ void PlayState::update(float dt) {
         sf::Vector2i mp = Mouse::getPosition(*this->gameWindow);
         sf::Vector2f mouseWorld(
             static_cast<float>(mp.x) + this->scroll,
-            static_cast<float>(mp.y)
+            static_cast<float>(mp.y) + this->scrollY
         );
         this->lastMouseWorld = mouseWorld;
         player->updateAim(mouseWorld);
     }
 
-    // 1. Update player movement + gravity + handleCollision (checks grid — blocks are solid)
     if (this->characterManager)
         this->characterManager->update(dt, lvl);
 
     if (player != nullptr)
         player->handleInput();
 
-    // 2. Update block destruction animations
     if (this->blockManager) {
-        this->blockManager->update(this->scroll);
+        this->blockManager->update(this->scroll, this->scrollY);
     }
 
-    // 3. PHASE 1: Move projectiles (no tile collision yet)
     if (this->projectileManager && lvl != nullptr)
         this->projectileManager->update(this->scroll, lvl);
 
-    // 4. Bullet vs block entity collision (after move, before tile check)
-    //    Damaged blocks clear their grid cells here.
     if (this->blockManager && this->projectileManager) {
         DamagableEntity** blocks = this->blockManager->getActiveBlocks();
         int bCount = this->blockManager->getActiveCount();
@@ -111,13 +130,9 @@ void PlayState::update(float dt) {
         }
     }
 
-    // 5. PHASE 3: Tile collision + bounds + cleanup for projectiles
-    //    Blocks that took damage already cleared their grid cells,
-    //    so bullets pass through destroyed block positions.
     if (this->projectileManager && lvl != nullptr)
-        this->projectileManager->postEntityUpdate(this->scroll, lvl);
+        this->projectileManager->postEntityUpdate(this->scroll, this->scrollY, lvl);
 
-    // 6. Clean up finished block destruction animations
     if (this->blockManager) {
         this->blockManager->cleanup();
     }
@@ -132,6 +147,16 @@ void PlayState::update(float dt) {
         if (this->scroll > maxScroll) this->scroll = maxScroll;
     }
 
+    if (player != nullptr && lvl != nullptr) {
+        float playerY = player->getPosition().y;
+        float levelHeight = (float)(lvl->getHeight() * lvl->getCellSize());
+        this->scrollY = playerY - (float)SCREEN_H / 2.f;
+        if (this->scrollY < 0.f) this->scrollY = 0.f;
+        float maxScrollY = levelHeight - (float)SCREEN_H;
+        if (maxScrollY < 0.f) maxScrollY = 0.f;
+        if (this->scrollY > maxScrollY) this->scrollY = maxScrollY;
+    }
+
     if (this->levelManager)
         this->levelManager->update(dt);
 }
@@ -142,23 +167,34 @@ void PlayState::render(RenderWindow& window) {
 
     float bgWidth = static_cast<float>(this->bgTex.getSize().x) * this->bgScaleY;
     float bgHeight = static_cast<float>(this->bgTex.getSize().y) * this->bgScaleY;
+
+    const float BG_GROUND_RATIO = 0.82f;
+
+    float groundY = 0.f;
+    Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
+    if (lvl != nullptr) {
+        int surfaceRow = lvl->getHeight() - 3; // row 37
+        groundY = (float)(surfaceRow * lvl->getCellSize());
+    }
+
+    float groundLineInSprite = bgHeight * BG_GROUND_RATIO;
     float bgX = -this->scroll;
-    float bgY = -(bgHeight - (float)SCREEN_H);
+    float bgY = groundY - groundLineInSprite - this->scrollY;
 
     if (bgX > 0.f) bgX = 0.f;
     float maxBgX = bgWidth - (float)SCREEN_W; if (maxBgX < 0.f) maxBgX = 0.f;
-    float maxBgY = bgHeight - (float)SCREEN_H; if (maxBgY < 0.f) maxBgY = 0.f;
     if (bgX < -maxBgX) bgX = -maxBgX;
+    float maxBgY = bgHeight - (float)SCREEN_H; if (maxBgY < 0.f) maxBgY = 0.f;
     if (bgY > 0.f) bgY = 0.f;
     if (bgY < -maxBgY) bgY = -maxBgY;
 
     this->bgSprite.setPosition(bgX, bgY);
     window.draw(this->bgSprite);
 
-    if (this->levelManager)      this->levelManager->draw(window, this->scroll);
-    if (this->blockManager)      this->blockManager->draw(window, this->scroll);
-    if (this->characterManager)  this->characterManager->draw(window, this->scroll);
-    if (this->projectileManager) this->projectileManager->draw(window, this->scroll);
+    if (this->levelManager)      this->levelManager->draw(window, this->scroll, this->scrollY);
+    if (this->blockManager)      this->blockManager->draw(window, this->scroll, this->scrollY);
+    if (this->characterManager)  this->characterManager->draw(window, this->scroll, this->scrollY);
+    if (this->projectileManager) this->projectileManager->draw(window, this->scroll, this->scrollY);
     if (this->hud)               this->hud->draw(window);
     if (this->debugMode)         this->renderDebug(window);
 }
@@ -176,9 +212,10 @@ void PlayState::renderDebug(RenderWindow& window) {
     sprintf(line, "Projectiles: %d\n",
         this->projectileManager ? this->projectileManager->getActiveCount() : -1);
     append(line);
-    sprintf(line, "Blocks: %d / %d\n",
+    sprintf(line, "Blocks: %d / %d  Mountain: %d\n",
         this->blockManager ? this->blockManager->getActiveCount() : -1,
-        this->blockManager ? this->blockManager->getTotalCount() : -1);
+        this->blockManager ? this->blockManager->getTotalCount() : -1,
+        this->blockManager ? 0 : 0);
     append(line);
     sprintf(line, "Aim: %.1f deg  |  Mouse: (%.0f, %.0f)\n",
         player ? player->getAimAngle() : -1.f,
@@ -186,19 +223,18 @@ void PlayState::renderDebug(RenderWindow& window) {
     append(line);
     if (player) {
         sf::Vector2f p = player->getPosition();
-        sprintf(line, "Player: (%.0f, %.0f)  Scroll: %.0f\n", p.x, p.y, this->scroll);
+        sprintf(line, "Player: (%.0f, %.0f)  Scroll: (%.0f, %.0f)\n",
+            p.x, p.y, this->scroll, this->scrollY);
     }
     else {
         sprintf(line, "Player: NULL\n");
     }
     append(line);
-    sprintf(line, "Lag: %s\n", this->gameWindow ? "ZERO" : "1-frame");
-    append(line);
     sprintf(line, "Z=Shoot  X=Grenade  Arrows=Move  Space=Jump");
     append(line);
 
     this->debugText.setString(buf);
-    RectangleShape bg(sf::Vector2f(380.f, 110.f));
+    RectangleShape bg(sf::Vector2f(400.f, 110.f));
     bg.setFillColor(Color(0, 0, 0, 170));
     bg.setPosition(5.f, 5.f);
     window.draw(bg);
@@ -216,29 +252,36 @@ void PlayState::onExit() {}
 void PlayState::spawnTestBlocks() {
     if (this->blockManager == nullptr) return;
 
-    // Platform 1: 8 blocks at row 12 (just above ground at row 14)
+    Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
+    if (lvl == nullptr) return;
+
+    // FIX: Platforms lowered from rows 27-30 to rows 33-34.
+    // With jump velocity -20, max jump height ≈ 250px.
+    // Player stands at y=1636, bottom at y=1776 (surface row 37).
+    // Player bottom at jump apex ≈ 1776 - 250 = 1526.
+    // Row 34 (y=1632): easy reach (bottom 1526 < 1632)
+    // Row 33 (y=1584): moderate reach (bottom 1526 < 1584, 58px margin)
+
     this->blockManager->spawnPlatform(
         static_cast<float>(8 * 48),
-        static_cast<float>(10 * 48),
+        static_cast<float>(34 * 48),   // was 30
         8
     );
 
-    // Platform 2: 6 blocks at row 10 (floating higher)
     this->blockManager->spawnPlatform(
         static_cast<float>(22 * 48),
-        static_cast<float>(10 * 48),
+        static_cast<float>(33 * 48),   // was 28
         7
     );
     this->blockManager->spawnPlatform(
         static_cast<float>(32 * 48),
-        static_cast<float>(11 * 48),
+        static_cast<float>(33 * 48),   // was 29
         4
     );
 
-    // Platform 3: 4 blocks at row 11
     this->blockManager->spawnPlatform(
-        static_cast<float>(40 * 48),
-        static_cast<float>(9 * 48),
-        12
+        static_cast<float>(42 * 48),
+        static_cast<float>(34 * 48),   // was 27
+        10
     );
 }

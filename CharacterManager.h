@@ -29,7 +29,7 @@ public:
     virtual ~CharacterManager();
     
     void update(float dt, Level* lvl);
-    void draw(RenderWindow& window, float scroll);
+    void draw(RenderWindow& window, float scrollX, float scrollY);
     void handleInput(Event& event);
     void switchCharacter();
     void takeDamage(int amount);

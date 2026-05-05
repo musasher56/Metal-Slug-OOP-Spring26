@@ -10,7 +10,7 @@
 class PlayerSoldier : public Soldier {
 protected:
     Weapon*           currentWeapon;
-    Pistol*           pistol;          // always available, infinite ammo
+    Pistol*           pistol;
     Grenade*          currentGrenade;
     int               grenadeCount;
     bool              inVehicle;
@@ -22,27 +22,18 @@ protected:
     Clock             stateTimer;
     AimController     aimController;
 
-    // WHY store pm here instead of passing to shoot()?
-    //   handleInput() is pure virtual with no parameters — every input
-    //   path that triggers shoot() would need pm threaded through it.
-    //   Storing it as a non-owning pointer set once at play-start is cleaner.
-    //   PlayerSoldier does NOT own this pointer — never delete it here.
     ProjectileManager* pm;
 
 public:
     PlayerSoldier(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~PlayerSoldier();
 
-    // Call this once from PlayState after creating both player and pm
     void setProjectileManager(ProjectileManager* manager);
 
-    // Returns current aim angle (0=horizontal, 90=up) — used by debug overlay
     float getAimAngle() const { return this->aimController.getAngle(); }
 
     void switchWeapon(Weapon* w);
     void throwGrenade();
-
-    // shoot() now fully implemented — uses pm, aimController, currentWeapon
     void shoot();
 
     void enterVehicle(Vehicle* v);
@@ -50,8 +41,6 @@ public:
     void saveData(std::ofstream& out);
     void loadData(std::ifstream& in);
 
-    // Call every frame from CharacterManager/PlayState with current mouse pos
-    // WHY separate from shoot()?  Aim updates every frame; shoot only on keypress.
     void updateAim(sf::Vector2f mousePos);
 
 protected:

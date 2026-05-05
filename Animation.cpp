@@ -8,6 +8,10 @@ Animation::Animation()
     , loop(true)
     , srcOffsetX(0)
     , srcOffsetY(0)
+    , cropLeft(0)
+    , cropTop(0)
+    , displayWidth(0)
+    , displayHeight(0)
 {
 }
 
@@ -47,12 +51,16 @@ void Animation::applyToSprite(Sprite& sprite) {
             frameWidth = ((int)this->texture->getSize().x - this->srcOffsetX) / this->frameCount;
             frameHeight = (int)this->texture->getSize().y - this->srcOffsetY;
         }
-        IntRect rect(
-            this->srcOffsetX + this->currentFrame * frameWidth,
-            this->srcOffsetY,
-            frameWidth,
-            frameHeight
-        );
+
+        // Apply display crop: trim empty space from each frame.
+        // cropLeft/cropTop shift the visible window inside the frame.
+        // displayWidth/displayHeight override the visible area (0 = use full).
+        int rectX = this->srcOffsetX + this->currentFrame * frameWidth + this->cropLeft;
+        int rectY = this->srcOffsetY + this->cropTop;
+        int rectW = (this->displayWidth > 0) ? this->displayWidth : (frameWidth - this->cropLeft);
+        int rectH = (this->displayHeight > 0) ? this->displayHeight : (frameHeight - this->cropTop);
+
+        IntRect rect(rectX, rectY, rectW, rectH);
         sprite.setTextureRect(rect);
     }
 }
@@ -60,6 +68,13 @@ void Animation::applyToSprite(Sprite& sprite) {
 void Animation::setSrcOffset(int x, int y) {
     this->srcOffsetX = x;
     this->srcOffsetY = y;
+}
+
+void Animation::setDisplayCrop(int left, int top, int w, int h) {
+    this->cropLeft = left;
+    this->cropTop = top;
+    this->displayWidth = w;
+    this->displayHeight = h;
 }
 
 void Animation::reset() {

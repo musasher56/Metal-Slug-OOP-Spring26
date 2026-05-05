@@ -13,7 +13,7 @@ protected:
 public:
     DamagableEntity(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~DamagableEntity();
-    
+
     virtual void takeDamage(int amount);
     virtual void onDeath() = 0;
     bool isAlive() const;

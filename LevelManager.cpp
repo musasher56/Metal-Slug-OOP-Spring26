@@ -21,10 +21,10 @@ void LevelManager::update(float dt) {
     }
 }
 
-void LevelManager::draw(RenderWindow& window, float scroll) {
-    // WHY: Draw current level with scroll offset
+void LevelManager::draw(RenderWindow& window, float scrollX, float scrollY) {
+    // WHY: Draw current level with both scroll offsets for vertical scrolling
     if (this->level != nullptr) {
-        this->level->Draw(window, scroll);
+        this->level->Draw(window, scrollX, scrollY);
     }
 }
 

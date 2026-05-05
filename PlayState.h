@@ -31,9 +31,9 @@ private:
 
     int   gameMode;
     float scroll;
+    float scrollY;
     bool  movingLeft;
     bool  movingRight;
-
     Texture bgTex;
     Sprite  bgSprite;
     float   bgScaleY;

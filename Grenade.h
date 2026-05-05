@@ -23,7 +23,7 @@ public:
     virtual void onImpact(EnemyManager* em) = 0;
     
     void update();
-    void draw(RenderWindow& window, float scroll);
+    void draw(RenderWindow& window, float scrollX, float scrollY);
     bool isActive() const;
     
     sf::Vector2f getPosition() const;
