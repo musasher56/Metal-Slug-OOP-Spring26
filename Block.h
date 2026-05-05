@@ -4,8 +4,8 @@
 class Block : public DamagableEntity {
 public:
     static const int TOTAL_FRAMES = 15;
-    static const int FRAME_X = 16;   // spritesheet X origin
-    static const int FRAME_Y = 285;  // spritesheet Y origin
+    static const int FRAME_X = 16;
+    static const int FRAME_Y = 285;
     static const int FRAME_W = 140;
     static const int FRAME_H = 143;
 
@@ -21,11 +21,34 @@ public:
     ~Block();
 
     void update(float scroll, Level* lvl);
-    void draw(RenderWindow& window, float scroll);
+    void draw(RenderWindow& window, float scrollX, float scrollY);
 
     void takeDamage(int amount);
     void onDeath();
     void updateBoundingBox();
 
     bool isDestroying() const { return this->destroying; }
+};
+
+// =========================================================================
+// MountainBlock — indestructible visual + collision block for terrain.
+// 48x48 blocks (matches grid cell size) for smooth terrain.
+// =========================================================================
+class TextureManager;
+
+class MountainBlock {
+private:
+    sf::Sprite  sprite;
+    float       worldX;
+    float       worldY;
+    bool        active;
+public:
+    static const int BLOCK_SIZE = 48;  // FIX: was 64, now 48 (matches grid cell)
+
+    MountainBlock(TextureManager* texMgr, float wx, float wy);
+
+    void draw(sf::RenderWindow& window, float scrollX, float scrollY);
+    float getWorldX() const { return this->worldX; }
+    float getWorldY() const { return this->worldY; }
+    bool  getActive() const { return this->active; }
 };

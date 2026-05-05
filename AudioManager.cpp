@@ -1,7 +1,6 @@
 #include "AudioManager.h"
 #include <cstdio>
 
-// WHY: Manual string helper to avoid <cstring> (constraint compliance)
 inline int strLen(const char* str) {
     int len = 0;
     while (str[len] != '\0') len++;
@@ -37,18 +36,15 @@ AudioManager::AudioManager() : soundCount(0), lowpassActive(false) {
 AudioManager::~AudioManager() {}
 
 bool AudioManager::loadSound(const char* filename) {
-    // WHY: Stub — always return false to indicate audio unavailable
     printf("[AudioManager] loadSound stub: %s (disabled)\n", filename);
     return false;
 }
 
 void* AudioManager::getSound(const char* filename) {
-    // WHY: Stub — return nullptr instead of sf::Sound&
     return nullptr;
 }
 
 void AudioManager::applyLowPassFilter(void* sound) {
-    // WHY: Stub — no-op
 }
 
 void AudioManager::setLowPassActive(bool val) {

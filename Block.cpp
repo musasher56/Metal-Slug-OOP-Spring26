@@ -1,5 +1,10 @@
 #include "Block.h"
 #include "Level.h"
+#include "TextureManager.h"
+
+// =========================================================================
+// Block — destructible terrain block (inherits DamagableEntity)
+// =========================================================================
 
 Block::Block(TextureManager* texMgr, AudioManager* audMgr,
     float worldX, float worldY, Level* lvl)
@@ -93,11 +98,11 @@ void Block::update(float scroll, Level* lvl) {
     }
 }
 
-void Block::draw(RenderWindow& window, float scroll) {
+void Block::draw(RenderWindow& window, float scrollX, float scrollY) {
     if (!this->status) return;
 
     this->animation.applyToSprite(this->sprite);
-    this->sprite.setPosition(this->position.x - scroll, this->position.y);
+    this->sprite.setPosition(this->position.x - scrollX, this->position.y - scrollY);
     window.draw(this->sprite);
 }
 
@@ -105,4 +110,27 @@ void Block::updateBoundingBox() {
     int cellSize = 48;
     if (this->level != nullptr) cellSize = this->level->getCellSize();
     this->boundingBox = IntRect(0, 0, cellSize, cellSize);
+}
+
+// =========================================================================
+// MountainBlock — indestructible visual + collision block for terrain.
+// =========================================================================
+
+MountainBlock::MountainBlock(TextureManager* texMgr, float wx, float wy)
+    : worldX(wx), worldY(wy), active(true)
+{
+    Texture& tex = texMgr->getTexture("resources/sprites/blocks/dirt.png");
+    this->sprite.setTexture(tex);
+    sf::Vector2u sz = tex.getSize();
+    if (sz.x > 0 && sz.y > 0) {
+        float sx = (float)BLOCK_SIZE / (float)sz.x;
+        float sy = (float)BLOCK_SIZE / (float)sz.y;
+        this->sprite.setScale(sx, sy);
+    }
+}
+
+void MountainBlock::draw(sf::RenderWindow& window, float scrollX, float scrollY) {
+    if (!this->active) return;
+    this->sprite.setPosition(this->worldX - scrollX, this->worldY - scrollY);
+    window.draw(this->sprite);
 }

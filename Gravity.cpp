@@ -3,7 +3,7 @@
 Gravity::Gravity()
     : gravAcc(1.f)
     , termVel(20.f)
-    , jumpStr(-20.f)
+    , jumpStr(-15.f)
     , grounded(false)
 {}
 

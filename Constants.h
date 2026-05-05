@@ -84,7 +84,7 @@ const int PROJ_BALLISTIC  = 1;
 const int PROJ_EXPLOSIVE  = 2;
 const int PROJ_BEAM       = 3;
 
-// GameStateID — renamed to GSTATE_* to avoid collision with CharacterState constants
+// GameStateID
 const int GSTATE_MENU        = 0;
 const int GSTATE_PLAY        = 1;
 const int GSTATE_PAUSED      = 2;

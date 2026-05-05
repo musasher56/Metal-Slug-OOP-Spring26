@@ -32,7 +32,7 @@ void Soldier::update(float scroll, Level* lvl) {
     this->handleCollision(lvl);
 }
 
-void Soldier::draw(RenderWindow& window, float scroll) {
+void Soldier::draw(RenderWindow& window, float scrollX, float scrollY) {
     if (this->velocityX != 0.f || !this->onGround) {
         this->animation.update();
     }
@@ -41,14 +41,20 @@ void Soldier::draw(RenderWindow& window, float scroll) {
         this->animation.clock.restart();
     }
     this->animation.applyToSprite(this->sprite);
-    this->sprite.setPosition(this->position.x - scroll, this->position.y);
+    this->sprite.setPosition(this->position.x - scrollX, this->position.y - scrollY);
     window.draw(this->sprite);
 }
 
 void Soldier::takeDamage(int amount) {
+    // WHY: Do NOT call DamagableEntity::takeDamage(amount) at the end.
+    // DamagableEntity::takeDamage() also does this->health -= amount,
+    // and Soldier::health == DamagableEntity::health (inherited).
+    // Calling it here would subtract damage TWICE (double damage bug).
+    // Soldier manages its own HP via currentHP; we skip the base call.
     if (amount < 0) return;
 
     if (this->transformState != nullptr) {
+        // Transformation state may modify incoming damage
     }
 
     this->currentHP -= amount;
@@ -58,11 +64,15 @@ void Soldier::takeDamage(int amount) {
         this->onDeath();
     }
     else if (this->currentHP == 1) {
+        // Critical state visual (stub — handled by state timer)
     }
     else if (this->currentHP == 2) {
+        // Injured state visual (stub — handled by state timer)
     }
 
-    DamagableEntity::takeDamage(amount);
+    // Sync DamagableEntity::health with Soldier::currentHP so
+    // isAlive() and getBoundingBox() work correctly
+    this->health = this->currentHP;
 }
 
 void Soldier::meleeAttack() {
@@ -112,7 +122,7 @@ TransformationState* Soldier::getTransformationState() const {
 
 void Soldier::handleJump() {
     if (this->onGround) {
-        this->velocityY = -22.f;  // CHANGED: was -15.f (higher jump to reach row 10 blocks)
+        this->velocityY = -20.f;  // CHANGED: was -15.f (higher jump to reach row 10 blocks)
         this->onGround = false;
     }
 }
@@ -132,7 +142,10 @@ void Soldier::handleCollision(Level* lvl) {
     float scaleX = std::abs(this->sprite.getScale().x);
     float scaleY = std::abs(this->sprite.getScale().y);
     float playerLeft = this->position.x;
-    float playerRight = this->position.x + 32.f * scaleX;
+    // Frame dimensions from sprite sheet: 36 wide x 41 tall (marco.png).
+    // Using 34 wide (2px forgiving padding on each side) and 40 tall
+    // (1px forgiving at feet) for smoother platformer feel.
+    float playerRight = this->position.x + 34.f * scaleX;
     float playerTop = this->position.y;
     float playerBottom = this->position.y + 40.f * scaleY;
 
@@ -196,7 +209,7 @@ void Soldier::handleCollision(Level* lvl) {
                 }
 
                 playerLeft = this->position.x;
-                playerRight = this->position.x + 32.f * scaleX;
+                playerRight = this->position.x + 34.f * scaleX;
                 playerTop = this->position.y;
                 playerBottom = this->position.y + 40.f * scaleY;
             }
@@ -221,7 +234,7 @@ void Soldier::handleCollision(Level* lvl) {
         this->velocityX = 0.f;
     }
     float maxPlayerX = (float)(lvl->getWidth()) * (float)(lvl->getCellSize())
-        - 32.f * scaleX;
+        - 36.f * scaleX;
     if (this->position.x > maxPlayerX) {
         this->position.x = maxPlayerX;
         this->velocityX = 0.f;

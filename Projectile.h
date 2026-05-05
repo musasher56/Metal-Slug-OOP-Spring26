@@ -23,7 +23,7 @@ public:
     virtual ~Projectile();
 
     virtual void update(float scroll, Level* lvl);
-    virtual void draw(RenderWindow& window, float scroll);
+    virtual void draw(RenderWindow& window, float scrollX, float scrollY);
 
     IntRect getBoundingBox() const;
     int     getDamage()      const;
@@ -37,7 +37,8 @@ protected:
 
 private:
     void checkTileCollision(Level* lvl);
-    void checkBounds(float scroll);
+    // FIX: added scrollY so Y bounds use camera position, not SCREEN_H
+    void checkBounds(float scrollX, float scrollY);
 };
 
 class StraightProjectile : public Projectile {

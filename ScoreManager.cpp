@@ -7,18 +7,24 @@ ScoreManager::~ScoreManager() {
 }
 
 void ScoreManager::addKill(int enemyType, bool isAerial, bool isMelee) {
-    // WHY: Add base score for enemy type
-    int baseScore = 50;  // Default Rebel score
-    switch (enemyType) {
-        case ENEMY_REBEL: baseScore = 50; break;
-        case ENEMY_SHIELDED: baseScore = 75; break;
-        case ENEMY_BAZOOKA: baseScore = 100; break;
-        case ENEMY_GRENADE: baseScore = 100; break;
-        case ENEMY_ZOMBIE: baseScore = 100; break;
-        case ENEMY_MUMMY_WARRIOR: baseScore = 150; break;
-        case ENEMY_PARATROOPER: baseScore = 75; break;  // base + 25
-        case ENEMY_MARTIAN: baseScore = 200; break;
-        default: break;
+    // WHY: Add base score for enemy type using if-else chain (no switch — P1 violation)
+    int baseScore = 50;
+    if (enemyType == ENEMY_REBEL) {
+        baseScore = 50;
+    } else if (enemyType == ENEMY_SHIELDED) {
+        baseScore = 75;
+    } else if (enemyType == ENEMY_BAZOOKA) {
+        baseScore = 100;
+    } else if (enemyType == ENEMY_GRENADE) {
+        baseScore = 100;
+    } else if (enemyType == ENEMY_ZOMBIE) {
+        baseScore = 100;
+    } else if (enemyType == ENEMY_MUMMY_WARRIOR) {
+        baseScore = 150;
+    } else if (enemyType == ENEMY_PARATROOPER) {
+        baseScore = 75;
+    } else if (enemyType == ENEMY_MARTIAN) {
+        baseScore = 200;
     }
     
     if (isAerial) baseScore += 100;
@@ -28,23 +34,20 @@ void ScoreManager::addKill(int enemyType, bool isAerial, bool isMelee) {
 }
 
 void ScoreManager::addMultiKill(int count, bool isGrenade) {
-    // WHY: Multi-kill bonus
     int bonus = 300 + (count * 50);
     if (isGrenade) bonus += 200;
     this->score += bonus;
 }
 
 void ScoreManager::addBossKill(bool isUltimate) {
-    // WHY: Boss kill bonus
     if (isUltimate) {
         this->score += 1500;
     } else {
-        this->score += 500;  // Per phase
+        this->score += 500;
     }
 }
 
 void ScoreManager::addLevelClearBonus(int mode, bool flawless) {
-    // WHY: Level clear bonus
     if (mode == MODE_SURVIVAL) {
         this->score += 1000;
     } else if (mode == MODE_CAMPAIGN) {

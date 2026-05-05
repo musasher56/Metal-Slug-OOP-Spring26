@@ -16,7 +16,7 @@ public:
     Sprite sprite;
     Animation animation;
     bool status;  // active/inactive
-    
+
 protected:
     TextureManager* textureManager;
     AudioManager* audioManager;
@@ -24,12 +24,12 @@ protected:
 public:
     Entity(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~Entity();
-    
+
     sf::Vector2f getPosition() const;
     bool getStatus() const;
     void deactivate();
-    
+
     virtual void updateAnimation();
     virtual void update(float scroll, Level* lvl) = 0;
-    virtual void draw(RenderWindow& window, float scroll) = 0;
+    virtual void draw(RenderWindow& window, float scrollX, float scrollY) = 0;
 };
