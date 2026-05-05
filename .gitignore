@@ -69,3 +69,7 @@ htmlcov/
 *.tar.xz
 *.tar.zst
 ```
+/MetalSlug.pdb
+/MetalSlug.ilk
+/resources
+/.vs
