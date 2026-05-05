@@ -5,8 +5,9 @@ class TextureManager {
 public:
     TextureManager();
     ~TextureManager();
-    Texture& getTexture(const char* filename);
-    bool loadTexture(const char* filename);
+    Texture& getTexture(const char* key);
+    bool loadTexture(const char* filepath);
+    bool loadTexture(const char* key, const char* filepath);
 
 private:
     Texture textures[MAX_TEXTURES];

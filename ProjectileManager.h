@@ -35,9 +35,9 @@ public:
     // Phase 3: Tile collision + bounds + cleanup
     // Call AFTER checkEntityCollisions so destroyed blocks
     // have cleared their grid cells before tile check runs
-    void postEntityUpdate(float scroll, Level* lvl);
-
-    void draw(RenderWindow& window, float scroll);
+   // FIX: added scrollY for correct projectile Y bounds checking
+    void postEntityUpdate(float scrollX, float scrollY, Level* lvl);
+    void draw(RenderWindow& window, float scrollX, float scrollY);
 
     int  checkEntityCollisions(DamagableEntity** targets, int targetCount);
 

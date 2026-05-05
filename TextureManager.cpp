@@ -6,7 +6,6 @@ TextureManager::TextureManager() : textureCount(0) {
         loaded[i] = false;
         names[i][0] = '\0';
     }
-    // Create 1x1 white pixel fallback
     Image img;
     img.create(1, 1, Color::White);
     fallback.loadFromImage(img);
@@ -24,10 +23,32 @@ bool TextureManager::loadTexture(const char* filename) {
         return false;
     }
 
-    // Manual string copy
     int i = 0;
     while (filename[i] != '\0' && i < MAX_NAME_LEN - 1) {
         names[textureCount][i] = filename[i];
+        i++;
+    }
+    names[textureCount][i] = '\0';
+    loaded[textureCount] = true;
+    textureCount++;
+    return true;
+}
+
+// WHY: 2-parameter overload stores the texture under a custom key (e.g. "dirt")
+// but loads it from a full filepath (e.g. "resources/Sprites/dirt.png").
+bool TextureManager::loadTexture(const char* key, const char* filepath) {
+    int idx = findSlot(key);
+    if (idx != -1) return true;
+    if (textureCount >= MAX_TEXTURES) return false;
+
+    if (!textures[textureCount].loadFromFile(filepath)) {
+        printf("[WARN] Texture not found: %s (key: %s)\n", filepath, key);
+        return false;
+    }
+
+    int i = 0;
+    while (key[i] != '\0' && i < MAX_NAME_LEN - 1) {
+        names[textureCount][i] = key[i];
         i++;
     }
     names[textureCount][i] = '\0';
@@ -50,7 +71,6 @@ int TextureManager::findSlot(const char* filename) const {
     for (int i = 0; i < textureCount; i++) {
         if (!loaded[i]) continue;
 
-        // Manual string compare
         int j = 0;
         bool match = true;
         while (names[i][j] != '\0' && filename[j] != '\0') {

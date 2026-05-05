@@ -21,13 +21,14 @@ void Grenade::update() {
     this->position.y += this->velocity.y;
 }
 
-void Grenade::draw(RenderWindow& window, float scroll) {
+void Grenade::draw(RenderWindow& window, float scrollX, float scrollY) {
     if (!this->active) return;
     
-    // Draw grenade sprite at position
+    // Draw grenade sprite at position with both scroll offsets
     // Actual implementation needs sprite
     (void)window;
-    (void)scroll;
+    (void)scrollX;
+    (void)scrollY;
 }
 
 bool Grenade::isActive() const {

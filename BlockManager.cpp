@@ -1,6 +1,41 @@
 #include "BlockManager.h"
-#include "Block.h"
 #include "Level.h"
+#include "TextureManager.h"
+
+// =========================================================================
+// HEIGHTMAP — GENTLE CLIMB → HUGE PLATEAU → GENTLE DESCENT
+// =========================================================================
+const int BlockManager::heightmap[BlockManager::MOUNTAIN_HEIGHTMAP_LEN] = {
+    // flat ground entry (cols 0-9)
+     1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+
+     // gentle climb: +1 every 2 columns (cols 10-59)
+      1, 1, 2, 2, 3, 3, 4, 4, 5, 5,
+      6, 6, 7, 7, 8, 8, 9, 9,10,10,
+     11,11,12,12,13,13,14,14,15,15,
+     16,16,17,17,18,18,19,19,20,20,
+     21,21,22,22,23,23,24,24,25,25,
+
+     // FLAT PLATEAU — boss fight arena (cols 60-129)
+     25,25,25,25,25,25,25,25,25,25,
+     25,25,25,25,25,25,25,25,25,25,
+     25,25,25,25,25,25,25,25,25,25,
+     25,25,25,25,25,25,25,25,25,25,
+     25,25,25,25,25,25,25,25,25,25,
+     25,25,25,25,25,25,25,25,25,25,
+     25,25,25,25,25,25,25,25,25,25,
+
+     // gentle descent: -1 every 2 columns (cols 130-179)
+     25,25,24,24,23,23,22,22,21,21,
+     20,20,19,19,18,18,17,17,16,16,
+     15,15,14,14,13,13,12,12,11,11,
+     10,10, 9, 9, 8, 8, 7, 7, 6, 6,
+      5, 5, 4, 4, 3, 3, 2, 2, 1, 1,
+
+      // flat ground exit (cols 180-189)
+       1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+};
+// =========================================================================
 
 BlockManager::BlockManager(TextureManager* texMgr, AudioManager* audMgr, Level* lvl)
     : blockCount(0)
@@ -8,10 +43,14 @@ BlockManager::BlockManager(TextureManager* texMgr, AudioManager* audMgr, Level* 
     , audMgr(audMgr)
     , level(lvl)
     , activeCount(0)
+    , mountainBlockCount(0)
 {
     for (int i = 0; i < MAX_BLOCKS; i++) {
         this->blocks[i] = nullptr;
         this->activeCache[i] = nullptr;
+    }
+    for (int i = 0; i < MAX_MOUNTAIN_BLOCKS; i++) {
+        this->mountainBlocks[i] = nullptr;
     }
 }
 
@@ -24,6 +63,14 @@ BlockManager::~BlockManager() {
     }
     this->blockCount = 0;
     this->activeCount = 0;
+
+    for (int i = 0; i < this->mountainBlockCount; i++) {
+        if (this->mountainBlocks[i] != nullptr) {
+            delete this->mountainBlocks[i];
+            this->mountainBlocks[i] = nullptr;
+        }
+    }
+    this->mountainBlockCount = 0;
 }
 
 void BlockManager::spawnBlock(float worldX, float worldY) {
@@ -35,19 +82,14 @@ void BlockManager::spawnBlock(float worldX, float worldY) {
     int col = static_cast<int>(worldX / cellSize);
     int row = static_cast<int>(worldY / cellSize);
 
-    // Bounds check
     if (col < 0 || col >= this->level->getWidth()) return;
     if (row < 0 || row >= this->level->getHeight()) return;
 
-    // Skip if cell already has a block (check existing blocks, not the grid —
-    // blocks no longer mark the level grid solid; see Block.cpp for why).
     for (int i = 0; i < this->blockCount; i++) {
         if (this->blocks[i] == nullptr || !this->blocks[i]->getStatus()) continue;
-        // Compare grid position by snapping worldX/worldY to col/row
-        // The Block constructor already does this math; reuse it here.
         int existCol = static_cast<int>(this->blocks[i]->getPosition().x / cellSize);
         int existRow = static_cast<int>(this->blocks[i]->getPosition().y / cellSize);
-        if (existCol == col && existRow == row) return;  // already occupied
+        if (existCol == col && existRow == row) return;
     }
 
     Block* b = new Block(this->texMgr, this->audMgr, worldX, worldY, this->level);
@@ -66,18 +108,73 @@ void BlockManager::spawnPlatform(float startX, float startY, int count) {
     }
 }
 
-void BlockManager::update(float scroll) {
-    for (int i = 0; i < this->blockCount; i++) {
-        if (this->blocks[i] != nullptr && this->blocks[i]->getStatus()) {
-            this->blocks[i]->update(scroll, this->level);
+// FIX: Fill the ground floor with visible dirt blocks.
+// surfaceRow = the TOP row of the ground (player walks on top of this).
+// depth = how many rows thick (default 3 = surface + 2 underground rows).
+// Blocks: 240 cols × 3 rows = 720 blocks.
+void BlockManager::buildGroundTerrain(int surfaceRow, int depth) {
+    if (this->level == nullptr) return;
+
+    int cellSize = this->level->getCellSize();
+
+    for (int rowOff = 0; rowOff < depth; rowOff++) {
+        int row = surfaceRow + rowOff;
+        if (row >= this->level->getHeight()) break;
+
+        float wy = static_cast<float>(row) * cellSize;
+
+        for (int col = 0; col < this->level->getWidth()
+            && this->mountainBlockCount < MAX_MOUNTAIN_BLOCKS; col++) {
+            float wx = static_cast<float>(col) * cellSize;
+
+            MountainBlock* mb = new MountainBlock(this->texMgr, wx, wy);
+            this->mountainBlocks[this->mountainBlockCount++] = mb;
+
+            this->level->setSolid(row, col, true);
         }
     }
 }
 
-void BlockManager::draw(RenderWindow& window, float scroll) {
+void BlockManager::buildMountainTerrain(float baseX, float baseY) {
+    int bsz = MountainBlock::BLOCK_SIZE;  // 48
+    int cellSize = 48;
+
+    for (int col = 0; col < MOUNTAIN_HEIGHTMAP_LEN && this->mountainBlockCount < MAX_MOUNTAIN_BLOCKS; col++) {
+        int colHeight = heightmap[col];
+        float wx = baseX + col * MOUNTAIN_COL_STEP;
+
+        for (int row = 0; row < colHeight && this->mountainBlockCount < MAX_MOUNTAIN_BLOCKS; row++) {
+            float wy = baseY - (row + 1) * bsz;
+
+            MountainBlock* mb = new MountainBlock(this->texMgr, wx, wy);
+            this->mountainBlocks[this->mountainBlockCount++] = mb;
+
+            if (this->level != nullptr) {
+                int gc = static_cast<int>(wx + bsz * 0.5f) / cellSize;
+                int gr = static_cast<int>(wy + bsz * 0.5f) / cellSize;
+                this->level->setSolid(gr, gc, true);
+            }
+        }
+    }
+}
+
+void BlockManager::update(float scrollX, float scrollY) {
+    for (int i = 0; i < this->blockCount; i++) {
+        if (this->blocks[i] != nullptr && this->blocks[i]->getStatus()) {
+            this->blocks[i]->update(scrollX, this->level);
+        }
+    }
+}
+
+void BlockManager::draw(RenderWindow& window, float scrollX, float scrollY) {
     for (int i = 0; i < this->blockCount; i++) {
         if (this->blocks[i] != nullptr) {
-            this->blocks[i]->draw(window, scroll);
+            this->blocks[i]->draw(window, scrollX, scrollY);
+        }
+    }
+    for (int i = 0; i < this->mountainBlockCount; i++) {
+        if (this->mountainBlocks[i] != nullptr && this->mountainBlocks[i]->getActive()) {
+            this->mountainBlocks[i]->draw(window, scrollX, scrollY);
         }
     }
 }

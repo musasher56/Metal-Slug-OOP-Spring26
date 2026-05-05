@@ -87,7 +87,7 @@ void ProjectileManager::update(float scroll, Level* lvl) {
     }
 }
 
-void ProjectileManager::postEntityUpdate(float scroll, Level* lvl) {
+void ProjectileManager::postEntityUpdate(float scrollX, float scrollY, Level* lvl) {
     int i = 0;
     while (i < this->activeCount) {
         Projectile* p = this->slots[i];
@@ -105,7 +105,7 @@ void ProjectileManager::postEntityUpdate(float scroll, Level* lvl) {
             continue;
         }
 
-        p->checkBounds(scroll);
+        p->checkBounds(scrollX, scrollY);
         if (!p->status) {
             this->removeAt(i);
             continue;
@@ -115,14 +115,14 @@ void ProjectileManager::postEntityUpdate(float scroll, Level* lvl) {
     }
 }
 
-void ProjectileManager::draw(RenderWindow& window, float scroll) {
+void ProjectileManager::draw(RenderWindow& window, float scrollX, float scrollY) {
     RectangleShape rect(sf::Vector2f(8.f, 6.f));   // CHANGED: was (16.f, 24.f)
 
     for (int i = 0; i < this->activeCount; i++) {
         Projectile* p = this->slots[i];
         if (p == nullptr || !p->getStatus()) continue;
 
-        rect.setPosition(p->position.x - scroll, p->position.y);
+        rect.setPosition(p->position.x - scrollX, p->position.y - scrollY);
 
         if (p->isExplosive) {
             rect.setFillColor(Color(255, 140, 0));

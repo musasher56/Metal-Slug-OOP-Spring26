@@ -4,7 +4,6 @@ project(MetalSlug)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# ── SFML location ──────────────────────────────────────────────────────────────
 if(APPLE)
     if(EXISTS "/opt/homebrew/lib/cmake/SFML")
         set(SFML_DIR "/opt/homebrew/lib/cmake/SFML")
@@ -22,7 +21,6 @@ endif()
 
 find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
 
-# ── Sources ────────────────────────────────────────────────────────────────────
 set(SOURCES
         main.cpp
         AimController.cpp
@@ -57,15 +55,14 @@ set(SOURCES
         ProjectileManager.cpp
 )
 
+# NOTE: MountainBlock is inside Block.h/Block.cpp, MountainManager is inside
+# BlockManager.h/BlockManager.cpp — no separate files needed
 add_executable(${PROJECT_NAME} ${SOURCES} "Block.h" "Block.cpp" "BlockManager.cpp")
 
-# ── Output goes to project root (next to resources/) ──────────────────────────
-# This fixes "Unable to open file" — executable now runs where resources/ lives
 set_target_properties(${PROJECT_NAME} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
 
-# ── Link & include ─────────────────────────────────────────────────────────────
 target_link_libraries(${PROJECT_NAME} PRIVATE
         sfml-graphics
         sfml-window
@@ -77,12 +74,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_SOURCE_DIR}/include
 )
 
-# ── Platform-specific ─────────────────────────────────────────────────────────
 if(APPLE)
     target_compile_options(${PROJECT_NAME} PRIVATE -Wno-deprecated-declarations)
 endif()
 
-# On Windows: copy SFML DLLs next to the exe
 if(WIN32)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -91,8 +86,6 @@ if(WIN32)
     )
 endif()
 
-# ── Resources check ───────────────────────────────────────────────────────────
-# No copy needed — exe now lives in project root where resources/ already exists
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/resources")
     message(WARNING "Resources folder not found: ${CMAKE_SOURCE_DIR}/resources")
 endif()

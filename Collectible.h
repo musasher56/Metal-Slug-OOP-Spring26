@@ -17,7 +17,7 @@ public:
     virtual void onPickup(CharacterManager* cm) = 0;
     
     virtual void update(float scroll, void* lvl);
-    virtual void draw(RenderWindow& window, float scroll);
+    virtual void draw(RenderWindow& window, float scrollX, float scrollY);
     
     IntRect getBoundingBox() const;
 };
@@ -37,7 +37,7 @@ public:
     
     bool isInRange(sf::Vector2f pos) const;
     virtual void update(float scroll, void* lvl);
-    virtual void draw(RenderWindow& window, float scroll);
+    virtual void draw(RenderWindow& window, float scrollX, float scrollY);
     
     IntRect getBoundingBox() const;
 };

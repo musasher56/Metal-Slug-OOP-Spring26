@@ -15,8 +15,8 @@ void Collectible::update(float scroll, void* lvl) {
     (void)lvl;
 }
 
-void Collectible::draw(RenderWindow& window, float scroll) {
-    this->sprite.setPosition(this->position.x - scroll, this->position.y);
+void Collectible::draw(RenderWindow& window, float scrollX, float scrollY) {
+    this->sprite.setPosition(this->position.x - scrollX, this->position.y - scrollY);
     this->animation.applyToSprite(this->sprite);
     window.draw(this->sprite);
 }
@@ -47,8 +47,8 @@ void InteractableObject::update(float scroll, void* lvl) {
     (void)lvl;
 }
 
-void InteractableObject::draw(RenderWindow& window, float scroll) {
-    this->sprite.setPosition(this->position.x - scroll, this->position.y);
+void InteractableObject::draw(RenderWindow& window, float scrollX, float scrollY) {
+    this->sprite.setPosition(this->position.x - scrollX, this->position.y - scrollY);
     this->animation.applyToSprite(this->sprite);
     window.draw(this->sprite);
 }

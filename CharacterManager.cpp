@@ -46,10 +46,10 @@ void CharacterManager::update(float dt, Level* lvl) {
     current->update(0.0f, lvl);
 }
 
-void CharacterManager::draw(RenderWindow& window, float scroll) {
-    // WHY: Draw current active character with scroll offset
+void CharacterManager::draw(RenderWindow& window, float scrollX, float scrollY) {
+    // WHY: Draw current active character with both scroll offsets for vertical scrolling
     if (this->characters[this->currentCharacter] != nullptr) {
-        this->characters[this->currentCharacter]->draw(window, scroll);
+        this->characters[this->currentCharacter]->draw(window, scrollX, scrollY);
     }
 }
 

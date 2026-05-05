@@ -25,7 +25,7 @@ PlayerSoldier::PlayerSoldier(TextureManager* texMgr, AudioManager* audMgr)
     // WHY create Pistol here?
     //   Pistol is always available (infinite ammo, default weapon per PDF).
     //   Without this, currentWeapon is nullptr and shoot() silently does nothing.
-    this->pistol        = new Pistol();
+    this->pistol = new Pistol();
     this->currentWeapon = this->pistol;  // start with pistol equipped
 }
 
@@ -119,14 +119,14 @@ void PlayerSoldier::shoot() {
     //   position is the TOP-LEFT of the sprite.  Spawning there puts bullets
     //   at the player's feet.  calcBarrelTip offsets to the gun barrel.
     //
-    // 32.f  = sprite width  in pixels (unscaled — matches your IntRect width)
+    // 36.f  = sprite frame width in pixels (matches marco.png frame size)
     // 20.f  = barrel height from top of sprite (tune this visually)
     // If your sprite is scaled (e.g. 3.5x), the pixel offset is already in
     // world-space because position.x/y track world coords, not sprite coords.
     sf::Vector2f origin = ProjectileManager::calcBarrelTip(
         this->position,
         this->direction,
-        32.f,    // sprite width — adjust if your character sprite is different
+        36.f,    // sprite frame width (marco.png: 36px per frame)
         20.f     // barrel Y offset from top of sprite
     );
 
@@ -171,22 +171,22 @@ void PlayerSoldier::exitVehicle() {
 // ============================================================
 void PlayerSoldier::saveData(std::ofstream& out) {
     if (!out.is_open()) return;
-    out.write(reinterpret_cast<const char*>(&this->lives),       sizeof(int));
-    out.write(reinterpret_cast<const char*>(&this->currentHP),   sizeof(int));
+    out.write(reinterpret_cast<const char*>(&this->lives), sizeof(int));
+    out.write(reinterpret_cast<const char*>(&this->currentHP), sizeof(int));
     out.write(reinterpret_cast<const char*>(&this->grenadeCount), sizeof(int));
-    out.write(reinterpret_cast<const char*>(&this->inVehicle),   sizeof(bool));
-    out.write(reinterpret_cast<const char*>(&this->position.x),  sizeof(float));
-    out.write(reinterpret_cast<const char*>(&this->position.y),  sizeof(float));
+    out.write(reinterpret_cast<const char*>(&this->inVehicle), sizeof(bool));
+    out.write(reinterpret_cast<const char*>(&this->position.x), sizeof(float));
+    out.write(reinterpret_cast<const char*>(&this->position.y), sizeof(float));
 }
 
 void PlayerSoldier::loadData(std::ifstream& in) {
     if (!in.is_open()) return;
-    in.read(reinterpret_cast<char*>(&this->lives),       sizeof(int));
-    in.read(reinterpret_cast<char*>(&this->currentHP),   sizeof(int));
+    in.read(reinterpret_cast<char*>(&this->lives), sizeof(int));
+    in.read(reinterpret_cast<char*>(&this->currentHP), sizeof(int));
     in.read(reinterpret_cast<char*>(&this->grenadeCount), sizeof(int));
-    in.read(reinterpret_cast<char*>(&this->inVehicle),   sizeof(bool));
-    in.read(reinterpret_cast<char*>(&this->position.x),  sizeof(float));
-    in.read(reinterpret_cast<char*>(&this->position.y),  sizeof(float));
+    in.read(reinterpret_cast<char*>(&this->inVehicle), sizeof(bool));
+    in.read(reinterpret_cast<char*>(&this->position.x), sizeof(float));
+    in.read(reinterpret_cast<char*>(&this->position.y), sizeof(float));
 }
 
 void PlayerSoldier::applyFannumTax(ProjectileManager* manager) {
@@ -199,11 +199,19 @@ void PlayerSoldier::onDeath() {
 }
 
 void PlayerSoldier::updateBoundingBox() {
+    // WHY store (0,0) as local offset instead of position.x/y?
+    //   DamagableEntity::getBoundingBox() adds position to boundingBox.left/top.
+    //   The old code stored world coords here, causing a DOUBLE offset bug:
+    //   getBoundingBox returned (pos + pos, pos + pos, w, h) — wrong!
+    //   Now we store a local (0,0) offset so getBoundingBox correctly returns
+    //   (pos.x, pos.y, w, h) in world space.
+    float scaleX = std::abs(this->sprite.getScale().x);
+    float scaleY = std::abs(this->sprite.getScale().y);
     this->boundingBox = IntRect(
-        static_cast<int>(this->position.x),
-        static_cast<int>(this->position.y),
-        static_cast<int>(32 * std::abs(this->sprite.getScale().x)),
-        static_cast<int>(48 * std::abs(this->sprite.getScale().y))
+        0,
+        0,
+        static_cast<int>(36 * scaleX),
+        static_cast<int>(41 * scaleY)
     );
 }
 
@@ -219,9 +227,25 @@ Marco::Marco(TextureManager* texMgr, AudioManager* audMgr)
     this->animation.setTexture(&tex);
     this->animation.setFrameCount(12);
     this->animation.setLoop(true);
+    // --- Display crop ---
+    // marco.png: 433x41 sheet, 12 frames of 36x41 each.
+    // If the character art has empty padding inside each frame,
+    // trim it here so the sprite looks tighter and centered.
+    //   cropLeft = pixels to skip from LEFT  edge of each frame
+    //   cropTop  = pixels to skip from TOP   edge of each frame
+    //   displayWidth  = visible width  (0 = show rest of frame after cropLeft)
+    //   displayHeight = visible height (0 = show rest of frame after cropTop)
+    //
+    // HOW TO TUNE: open marco.png in an image editor, zoom into one frame,
+    // and measure how many pixels of empty space are on each side.
+    // Example: if 4px empty on left, 4px empty on right, character is 28px wide:
+    //   setDisplayCrop(4, 0, 28, 0)
+    // Set all to 0 to show the full 36x41 frame with no trimming.
+    this->animation.setDisplayCrop(0, 0, 32, 0);
     this->sprite.setTexture(tex);
     this->sprite.setScale(3.5f, 3.5f);
-    this->sprite.setTextureRect(IntRect(0, 0, 32, 32));
+    // Match the actual sprite sheet frame size (36x41, not 32x32)
+    this->sprite.setTextureRect(IntRect(0, 0, 36, 41));
     this->position = sf::Vector2f(200.f, 300.f);
     this->updateBoundingBox();
 }
@@ -230,7 +254,8 @@ Marco::~Marco() {}
 
 void Marco::updateSprite() {
     int frameIndex = 0;
-    this->sprite.setTextureRect(IntRect(frameIndex * 32, 0, 32, 32));
+    // Frame stride = 36px (matches sprite sheet layout: 433px / 12 frames)
+    this->sprite.setTextureRect(IntRect(frameIndex * 36, 0, 36, 41));
 }
 
 void Marco::activatePowerUp() {
@@ -255,21 +280,10 @@ void Marco::activatePowerUp() {
 //   The fire timer inside each Weapon handles the actual rate limiting.
 // ============================================================
 void Marco::handleInput() {
-    // Movement
-    if (Keyboard::isKeyPressed(Keyboard::Left)) {
-        this->setDirectionAndVelocity(DIR_LEFT);
-    } else if (Keyboard::isKeyPressed(Keyboard::Right)) {
-        this->setDirectionAndVelocity(DIR_RIGHT);
-    } else {
-        this->decelerate();
-    }
-
-    // Jump
-    if (Keyboard::isKeyPressed(Keyboard::Space) ||
-        Keyboard::isKeyPressed(Keyboard::Up))
-    {
-        this->handleJump();
-    }
+    // WHY: Movement is NOT polled here.
+    // CharacterManager::update() already polls Left/Right keys and calls
+    // setDirectionAndVelocity()/decelerate() every frame.
+    // Polling movement here too would DOUBLE the acceleration (2x speed bug).
 
     // ── SHOOT ────────────────────────────────────────────────────────────
     // Z key fires the current weapon.
@@ -284,10 +298,10 @@ void Marco::handleInput() {
         if (this->pm != nullptr && this->currentWeapon != nullptr) {
             int oppositeDir = (this->direction == DIR_RIGHT) ? DIR_LEFT : DIR_RIGHT;
             sf::Vector2f origin = ProjectileManager::calcBarrelTip(
-                this->position, oppositeDir, 32.f, 20.f
+                this->position, oppositeDir, 36.f, 20.f
             );
             this->currentWeapon->fire(origin, oppositeDir,
-                                       this->aimController.getAngle(), this->pm);
+                this->aimController.getAngle(), this->pm);
         }
         // Check if 10 seconds elapsed
         if (this->dualFireTimer.getElapsedTime().asSeconds() >= 10.f) {
@@ -326,17 +340,13 @@ Tarma::Tarma(TextureManager* texMgr, AudioManager* audMgr)
 }
 
 Tarma::~Tarma() {}
-void Tarma::updateSprite()     { this->sprite.setTextureRect(IntRect(0, 0, 32, 32)); }
-void Tarma::activatePowerUp()  { this->immunityActive = true; this->immunityTimer.restart(); }
+void Tarma::updateSprite() { this->sprite.setTextureRect(IntRect(0, 0, 32, 32)); }
+void Tarma::activatePowerUp() { this->immunityActive = true; this->immunityTimer.restart(); }
 bool Tarma::hasVehicleSurvival() const { return true; }
-void Tarma::onVehicleDestroyed()       { this->exitVehicle(); }
+void Tarma::onVehicleDestroyed() { this->exitVehicle(); }
 
 void Tarma::handleInput() {
-    if (Keyboard::isKeyPressed(Keyboard::Left))       this->setDirectionAndVelocity(DIR_LEFT);
-    else if (Keyboard::isKeyPressed(Keyboard::Right)) this->setDirectionAndVelocity(DIR_RIGHT);
-    else                                               this->decelerate();
-    if (Keyboard::isKeyPressed(Keyboard::Space) || Keyboard::isKeyPressed(Keyboard::Up))
-        this->handleJump();
+    // WHY: Movement handled by CharacterManager::update() — do NOT poll here.
     if (Keyboard::isKeyPressed(Keyboard::Z)) this->shoot();
     if (Keyboard::isKeyPressed(Keyboard::X)) this->throwGrenade();
 }
@@ -361,15 +371,11 @@ Eri::Eri(TextureManager* texMgr, AudioManager* audMgr)
 }
 
 Eri::~Eri() {}
-void Eri::updateSprite()    { this->sprite.setTextureRect(IntRect(0, 0, 32, 32)); }
+void Eri::updateSprite() { this->sprite.setTextureRect(IntRect(0, 0, 32, 32)); }
 void Eri::activatePowerUp() { this->doubleGrenadeActive = true; this->doubleGrenadeTimer.restart(); }
 
 void Eri::handleInput() {
-    if (Keyboard::isKeyPressed(Keyboard::Left))       this->setDirectionAndVelocity(DIR_LEFT);
-    else if (Keyboard::isKeyPressed(Keyboard::Right)) this->setDirectionAndVelocity(DIR_RIGHT);
-    else                                               this->decelerate();
-    if (Keyboard::isKeyPressed(Keyboard::Space) || Keyboard::isKeyPressed(Keyboard::Up))
-        this->handleJump();
+    // WHY: Movement handled by CharacterManager::update() — do NOT poll here.
     if (Keyboard::isKeyPressed(Keyboard::Z)) this->shoot();
     if (Keyboard::isKeyPressed(Keyboard::X)) this->throwGrenade();
 }
@@ -396,16 +402,12 @@ Fio::Fio(TextureManager* texMgr, AudioManager* audMgr)
 }
 
 Fio::~Fio() {}
-void Fio::updateSprite()    { this->sprite.setTextureRect(IntRect(0, 0, 32, 32)); }
+void Fio::updateSprite() { this->sprite.setTextureRect(IntRect(0, 0, 32, 32)); }
 void Fio::activatePowerUp() { this->superchargedActive = true; this->superchargedTimer.restart(); }
-void Fio::pickUpWeapon()    { /* +50% ammo bonus handled on weapon pickup */ }
+void Fio::pickUpWeapon() { /* +50% ammo bonus handled on weapon pickup */ }
 
 void Fio::handleInput() {
-    if (Keyboard::isKeyPressed(Keyboard::Left))       this->setDirectionAndVelocity(DIR_LEFT);
-    else if (Keyboard::isKeyPressed(Keyboard::Right)) this->setDirectionAndVelocity(DIR_RIGHT);
-    else                                               this->decelerate();
-    if (Keyboard::isKeyPressed(Keyboard::Space) || Keyboard::isKeyPressed(Keyboard::Up))
-        this->handleJump();
+    // WHY: Movement handled by CharacterManager::update() — do NOT poll here.
     if (Keyboard::isKeyPressed(Keyboard::Z)) this->shoot();
     if (Keyboard::isKeyPressed(Keyboard::X)) this->throwGrenade();
 }
@@ -434,19 +436,19 @@ void PlayerSoldier::throwGrenade() {
     sf::Vector2f origin = ProjectileManager::calcBarrelTip(
         this->position,
         this->direction,
-        32.f,    // sprite width
+        36.f,    // sprite frame width (marco.png: 36px per frame)
         24.f     // hand height from top of sprite
     );
 
     // WHY 45°? Maximum range for a ballistic throw.
     // The grenade arc looks natural and clears most obstacles.
-    const float LOB_ANGLE  = 45.f;
+    const float LOB_ANGLE = 45.f;
     const int   NADE_DAMAGE = 20;   // PDF: grenade damage = 20 HP
     const int   BLAST_RADIUS = 3;   // PDF: blast radius = 3 blocks
 
     this->pm->spawnExplosive(origin, this->direction,
-                              LOB_ANGLE, NADE_DAMAGE,
-                              BLAST_RADIUS, false);
+        LOB_ANGLE, NADE_DAMAGE,
+        BLAST_RADIUS, false);
 }
 
 // ── Eri::throwGrenade() ───────────────────────────────────────────────
@@ -460,11 +462,11 @@ void Eri::throwGrenade() {
     this->grenadeCount--;
 
     sf::Vector2f origin = ProjectileManager::calcBarrelTip(
-        this->position, this->direction, 32.f, 24.f
+        this->position, this->direction, 36.f, 24.f
     );
 
     this->pm->spawnExplosive(origin, this->direction,
-                              45.f, 20, 3, false);
+        45.f, 20, 3, false);
 
     // Power-up: second grenade at shallower angle = lands ~2 blocks farther
     // Cost: 1 extra grenade (costs 2 total), only if active AND enough count
@@ -475,7 +477,7 @@ void Eri::throwGrenade() {
         // WHY 30°? tan(30°) ≈ 0.577 vs tan(45°) = 1.0 — roughly 2 blocks extra
         // range at standard throw velocity.
         this->pm->spawnExplosive(origin, this->direction,
-                                  30.f, 20, 3, false);
+            30.f, 20, 3, false);
 
         if (this->doubleGrenadeTimer.getElapsedTime().asSeconds() >= 10.f)
             this->doubleGrenadeActive = false;

@@ -2,7 +2,6 @@
 #include <SFML/Graphics.hpp>
 
 // WHY: Precision 2D vector for physics, NEAT inputs, noise sampling
-// Using double for accuracy in calculations
 class Vector2d {
 public:
     double x;
