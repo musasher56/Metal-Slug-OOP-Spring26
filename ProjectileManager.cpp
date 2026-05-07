@@ -6,6 +6,7 @@ ProjectileManager::ProjectileManager(TextureManager* t, AudioManager* a)
     : activeCount(0), texMgr(t), audMgr(a)
 {
     for (int i = 0; i < MAX_PROJ; i++) this->slots[i] = nullptr;
+    this->texMgr->loadTexture("bullet", "resources/Sprites/bullet.png");
 }
 
 ProjectileManager::~ProjectileManager() { this->clearAll(); }
@@ -116,22 +117,36 @@ void ProjectileManager::postEntityUpdate(float scrollX, float scrollY, Level* lv
 }
 
 void ProjectileManager::draw(RenderWindow& window, float scrollX, float scrollY) {
-    RectangleShape rect(sf::Vector2f(8.f, 6.f));   
+    Texture& bulletTex = this->texMgr->getTexture("bullet");
+    float texW = static_cast<float>(bulletTex.getSize().x);
+    float texH = static_cast<float>(bulletTex.getSize().y);
+
+    Sprite bulletSprite;
+    bulletSprite.setTexture(bulletTex);
+    bulletSprite.setScale(0.2f, 0.2f);
+    bulletSprite.setOrigin(texW * 0.5f, texH * 0.5f);
+
+    RectangleShape explosiveRect(sf::Vector2f(10.f, 8.f));
 
     for (int i = 0; i < this->activeCount; i++) {
         Projectile* p = this->slots[i];
         if (p == nullptr || !p->getStatus()) continue;
 
-        rect.setPosition(p->position.x - scrollX, p->position.y - scrollY);
-
         if (p->isExplosive) {
-            rect.setFillColor(Color(255, 140, 0));
+            explosiveRect.setPosition(p->position.x - scrollX,
+                p->position.y - scrollY);
+            explosiveRect.setFillColor(Color(255, 140, 0));
+            window.draw(explosiveRect);
         }
         else {
-            rect.setFillColor(Color(255, 255, 0));
-        }
+            float rot = atan2f(p->velocityY, p->velocityX) * 180.f / 3.14159f;
+            bulletSprite.setRotation(rot);
 
-        window.draw(rect);
+            bulletSprite.setPosition(
+                p->position.x + 4.f - scrollX,
+                p->position.y + 3.f - scrollY);
+            window.draw(bulletSprite);
+        }
     }
 }
 

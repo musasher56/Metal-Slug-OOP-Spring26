@@ -300,6 +300,24 @@ void PlayState::renderHitboxes(RenderWindow& window) {
             window.draw(rect);
         }
     }
+
+    if (this->projectileManager != nullptr) {
+        Projectile** projs = this->projectileManager->getSlots();
+        int pCount = this->projectileManager->getActiveCount();
+        for (int i = 0; i < pCount; i++) {
+            Projectile* p = projs[i];
+            if (p == nullptr || !p->getStatus()) continue;
+
+            IntRect box = p->getBoundingBox();
+            RectangleShape rect(sf::Vector2f((float)box.width, (float)box.height));
+            rect.setPosition((float)box.left - this->scroll,
+                (float)box.top - this->scrollY);
+            rect.setFillColor(Color(255, 255, 0, 80));
+            rect.setOutlineColor(Color(255, 255, 0));
+            rect.setOutlineThickness(1.f);
+            window.draw(rect);
+        }
+    }
 }
 
 void PlayState::handleEvent(Event& event) {

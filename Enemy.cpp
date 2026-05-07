@@ -30,9 +30,9 @@ Enemy::Enemy(TextureManager* texMgr, AudioManager* audMgr)
 {
     this->maxVelocity = 2.f;
     this->baseMaxVelocity = 2.f;
-    this->currentHP = 1;
-    this->health = 1;
-    this->maxHealth = 1;
+    this->currentHP = 3;
+    this->health = 3;
+    this->maxHealth = 3;
     this->lives = 1;
     this->scoreValue = 100;
 
