@@ -40,8 +40,11 @@ public:
     void draw(RenderWindow& window, float scrollX, float scrollY);
 
     int  checkEntityCollisions(DamagableEntity** targets, int targetCount);
+    int  checkPlayerBulletHits(DamagableEntity** targets, int targetCount);
+    bool checkEnemyBulletHitPlayer(DamagableEntity* player);
 
     int  getActiveCount() const { return this->activeCount; }
+    Projectile** getSlots() { return this->slots; }
     void clearAll();
 
 private:

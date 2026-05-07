@@ -42,6 +42,8 @@ set(SOURCES
         Soldier.cpp
         PlayerSoldier.cpp
         TransformationState.cpp
+        Enemy.cpp
+        EnemyManager.cpp
         Gravity.cpp
         Weapon.cpp
         Grenade.cpp

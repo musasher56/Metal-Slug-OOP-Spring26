@@ -4,6 +4,7 @@
 #include "PlayerSoldier.h"
 #include "Level.h"
 #include "BlockManager.h"
+#include "EnemyManager.h"
 #include <SFML/Graphics.hpp>
 
 class CharacterManager;
@@ -14,7 +15,7 @@ class HUD;
 class PlayState : public GameState {
 private:
     void* entityManager;
-    void* enemyManager;
+    EnemyManager* enemyManager;
     void* enemyVehicleManager;
     ProjectileManager* projectileManager;
     void* collectibleManager;
@@ -42,6 +43,7 @@ private:
     sf::Vector2f   lastMouseWorld;
 
     bool       debugMode;
+    bool       showHitboxes;
     sf::Font   debugFont;
     sf::Text   debugText;
 
@@ -57,5 +59,7 @@ public:
 
 private:
     void renderDebug(RenderWindow& window);
+    void renderHitboxes(RenderWindow& window);
     void spawnTestBlocks();
+    void spawnTestEnemies();
 };

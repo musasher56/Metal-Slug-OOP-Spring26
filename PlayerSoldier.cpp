@@ -11,32 +11,32 @@ PlayerSoldier::PlayerSoldier(TextureManager* texMgr, AudioManager* audMgr)
     , currentWeapon(nullptr)
     , pistol(nullptr)
     , currentGrenade(nullptr)
-    , grenadeCount(10)      
+    , grenadeCount(10)
     , inVehicle(false)
     , currentVehicle(nullptr)
     , inventorySize(0)
     , isFat(false)
     , fatGravRadius(0.f)
     , aimController()
-    , pm(nullptr)           
+    , pm(nullptr)
 {
     for (int i = 0; i < 3; ++i) this->inventory[i] = nullptr;
 
-    
-    
-    
+
+
+
     this->pistol = new Pistol();
-    this->currentWeapon = this->pistol;  
+    this->currentWeapon = this->pistol;
 }
 
 PlayerSoldier::~PlayerSoldier() {
-    
-    
+
+
     if (this->pistol != nullptr) {
         delete this->pistol;
         this->pistol = nullptr;
     }
-    
+
     if (this->currentWeapon != nullptr && this->currentWeapon != this->pistol) {
         delete this->currentWeapon;
         this->currentWeapon = nullptr;
@@ -52,7 +52,7 @@ PlayerSoldier::~PlayerSoldier() {
             this->inventory[i] = nullptr;
         }
     }
-    
+
 }
 
 
@@ -104,33 +104,33 @@ void PlayerSoldier::updateAim(sf::Vector2f mousePos) {
 
 
 void PlayerSoldier::shoot() {
-    
+
     if (this->pm == nullptr) return;
 
-    
+
     if (this->currentWeapon == nullptr) return;
     if (!this->currentWeapon->hasAmmo())  return;
 
-    
+
     float angle = this->aimController.getAngle();
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
+
     sf::Vector2f origin = ProjectileManager::calcBarrelTip(
         this->position,
         this->direction,
-        36.f,    
-        20.f     
+        36.f,
+        20.f
     );
 
-    
+
     this->currentWeapon->fire(origin, this->direction, angle, this->pm);
 }
 
@@ -139,7 +139,7 @@ void PlayerSoldier::shoot() {
 
 void PlayerSoldier::switchWeapon(Weapon* w) {
     if (w == nullptr) return;
-    
+
     if (this->currentWeapon != nullptr &&
         this->currentWeapon != this->pistol &&
         this->inventorySize < 3)
@@ -199,20 +199,15 @@ void PlayerSoldier::onDeath() {
 }
 
 void PlayerSoldier::updateBoundingBox() {
-    
-    
-    
-    
-    
-    
     float scaleX = std::abs(this->sprite.getScale().x);
     float scaleY = std::abs(this->sprite.getScale().y);
-    this->boundingBox = IntRect(
-        0,
-        0,
-        static_cast<int>(36 * scaleX),
-        static_cast<int>(41 * scaleY)
-    );
+    int w = static_cast<int>(36 * scaleX);
+    int h = static_cast<int>(41 * scaleY);
+    int left = 0;
+    if (this->direction == DIR_LEFT) {
+        left = -w;
+    }
+    this->boundingBox = IntRect(left, 0, w, h);
 }
 
 
@@ -227,24 +222,24 @@ Marco::Marco(TextureManager* texMgr, AudioManager* audMgr)
     this->animation.setTexture(&tex);
     this->animation.setFrameCount(12);
     this->animation.setLoop(true);
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     this->animation.setDisplayCrop(0, 0, 32, 0);
     this->sprite.setTexture(tex);
     this->sprite.setScale(3.5f, 3.5f);
-    
+
     this->sprite.setTextureRect(IntRect(0, 0, 36, 41));
     this->position = sf::Vector2f(200.f, 300.f);
     this->updateBoundingBox();
@@ -254,7 +249,7 @@ Marco::~Marco() {}
 
 void Marco::updateSprite() {
     int frameIndex = 0;
-    
+
     this->sprite.setTextureRect(IntRect(frameIndex * 36, 0, 36, 41));
 }
 
@@ -280,20 +275,20 @@ void Marco::activatePowerUp() {
 
 
 void Marco::handleInput() {
-    
-    
-    
-    
 
-    
-    
-    
+
+
+
+
+
+
+
     if (Keyboard::isKeyPressed(Keyboard::Z)) {
         this->shoot();
     }
 
-    
-    
+
+
     if (this->dualFireActive && Keyboard::isKeyPressed(Keyboard::Z)) {
         if (this->pm != nullptr && this->currentWeapon != nullptr) {
             int oppositeDir = (this->direction == DIR_RIGHT) ? DIR_LEFT : DIR_RIGHT;
@@ -303,20 +298,20 @@ void Marco::handleInput() {
             this->currentWeapon->fire(origin, oppositeDir,
                 this->aimController.getAngle(), this->pm);
         }
-        
+
         if (this->dualFireTimer.getElapsedTime().asSeconds() >= 10.f) {
             this->dualFireActive = false;
         }
     }
 
-    
+
     if (Keyboard::isKeyPressed(Keyboard::X)) {
         this->throwGrenade();
     }
 }
 
 void Marco::meleeAttack() {
-    Soldier::meleeAttack();  
+    Soldier::meleeAttack();
 }
 
 
@@ -346,7 +341,7 @@ bool Tarma::hasVehicleSurvival() const { return true; }
 void Tarma::onVehicleDestroyed() { this->exitVehicle(); }
 
 void Tarma::handleInput() {
-    
+
     if (Keyboard::isKeyPressed(Keyboard::Z)) this->shoot();
     if (Keyboard::isKeyPressed(Keyboard::X)) this->throwGrenade();
 }
@@ -375,7 +370,7 @@ void Eri::updateSprite() { this->sprite.setTextureRect(IntRect(0, 0, 32, 32)); }
 void Eri::activatePowerUp() { this->doubleGrenadeActive = true; this->doubleGrenadeTimer.restart(); }
 
 void Eri::handleInput() {
-    
+
     if (Keyboard::isKeyPressed(Keyboard::Z)) this->shoot();
     if (Keyboard::isKeyPressed(Keyboard::X)) this->throwGrenade();
 }
@@ -404,10 +399,10 @@ Fio::Fio(TextureManager* texMgr, AudioManager* audMgr)
 Fio::~Fio() {}
 void Fio::updateSprite() { this->sprite.setTextureRect(IntRect(0, 0, 32, 32)); }
 void Fio::activatePowerUp() { this->superchargedActive = true; this->superchargedTimer.restart(); }
-void Fio::pickUpWeapon() {  }
+void Fio::pickUpWeapon() {}
 
 void Fio::handleInput() {
-    
+
     if (Keyboard::isKeyPressed(Keyboard::Z)) this->shoot();
     if (Keyboard::isKeyPressed(Keyboard::X)) this->throwGrenade();
 }
@@ -430,21 +425,21 @@ void PlayerSoldier::throwGrenade() {
 
     this->grenadeCount--;
 
-    
-    
-    
+
+
+
     sf::Vector2f origin = ProjectileManager::calcBarrelTip(
         this->position,
         this->direction,
-        36.f,    
-        24.f     
+        36.f,
+        24.f
     );
 
-    
-    
+
+
     const float LOB_ANGLE = 45.f;
-    const int   NADE_DAMAGE = 20;   
-    const int   BLAST_RADIUS = 3;   
+    const int   NADE_DAMAGE = 20;
+    const int   BLAST_RADIUS = 3;
 
     this->pm->spawnExplosive(origin, this->direction,
         LOB_ANGLE, NADE_DAMAGE,
@@ -458,7 +453,7 @@ void Eri::throwGrenade() {
     if (this->pm == nullptr)     return;
     if (this->grenadeCount <= 0) return;
 
-    
+
     this->grenadeCount--;
 
     sf::Vector2f origin = ProjectileManager::calcBarrelTip(
@@ -468,14 +463,14 @@ void Eri::throwGrenade() {
     this->pm->spawnExplosive(origin, this->direction,
         45.f, 20, 3, false);
 
-    
-    
+
+
     if (this->doubleGrenadeActive && this->grenadeCount >= 1) {
         this->grenadeCount--;
 
-        
-        
-        
+
+
+
         this->pm->spawnExplosive(origin, this->direction,
             30.f, 20, 3, false);
 
