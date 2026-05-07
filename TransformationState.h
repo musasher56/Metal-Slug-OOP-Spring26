@@ -1,16 +1,16 @@
 #pragma once
 #include "Constants.h"
 
-// Forward declaration to avoid circular dependency
+
 class Soldier;
 
-// WHY: TransformationState implements State pattern for Soldier transformations
-// States: Normal, Undead, Mummy - each with different effects and expiry behavior
+
+
 class TransformationState {
 protected:
-    int type;  // TransformationType constant
+    int type;  
     Clock durationTimer;
-    float duration;  // 10s for both UNDEAD and MUMMY
+    float duration;  
 
 public:
     TransformationState(int transformType);
@@ -23,13 +23,13 @@ public:
     bool isExpired() const;
 };
 
-// WHY: NormalState is the default transformation state - a static singleton
-// Never deleted by setTransformationState() - FIX #4
+
+
 class NormalState : public TransformationState {
 private:
     static NormalState* instance;
     
-    NormalState();  // Private constructor for singleton
+    NormalState();  
 
 public:
     static NormalState* getInstance();
@@ -39,11 +39,11 @@ public:
     virtual void update(Soldier* s, float dt);
 };
 
-// WHY: UndeadState applies 50% walk-speed penalty, expires after 10s
-// Set by Zombie collision - player becomes undead temporarily
+
+
 class UndeadState : public TransformationState {
 private:
-    float speedMultiplier;  // 0.50 = 50% speed
+    float speedMultiplier;  
 
 public:
     UndeadState();
@@ -53,11 +53,11 @@ public:
     virtual void update(Soldier* s, float dt);
 };
 
-// WHY: MummyState forces knife-only combat, expires after 10s
-// Set by MummyWarrior collision - player can only use melee
+
+
 class MummyState : public TransformationState {
 private:
-    bool weaponLocked;  // true - disables shoot()
+    bool weaponLocked;  
 
 public:
     MummyState();

@@ -4,8 +4,8 @@
 class ProjectileManager;
 class PlayerSoldier;
 
-// WHY: Vehicle is abstract base for all vehicles (ground, aerial, aquatic)
-// Uses virtual inheritance from DamagableEntity to resolve diamond problem in AmphibiousSlug
+
+
 class Vehicle : virtual public DamagableEntity {
 protected:
     int maxHealth;
@@ -14,7 +14,7 @@ protected:
     float velocityX;
     float velocityY;
     float fireRate;
-    int mode;  // VehicleMode: 0=GROUND, 1=AERIAL, 2=AQUATIC
+    int mode;  
 
 public:
     Vehicle(TextureManager* texMgr, AudioManager* audMgr);
@@ -32,7 +32,7 @@ protected:
     void applyTarmaBuffs();
 };
 
-// WHY: GroundVehicle adds ground physics
+
 class GroundVehicle : virtual public Vehicle {
 protected:
     void applyGroundPhysics(Level* lvl);
@@ -44,7 +44,7 @@ public:
     virtual void shoot(ProjectileManager* pm) = 0;
 };
 
-// WHY: AerialVehicle adds aerial physics
+
 class AerialVehicle : virtual public Vehicle {
 protected:
     void applyAerialPhysics();
@@ -56,7 +56,7 @@ public:
     virtual void shoot(ProjectileManager* pm) = 0;
 };
 
-// WHY: AquaticVehicle adds aquatic physics
+
 class AquaticVehicle : virtual public Vehicle {
 protected:
     void applyAquaticPhysics();

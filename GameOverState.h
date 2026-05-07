@@ -1,7 +1,7 @@
 #pragma once
 #include "GameState.h"
 
-// WHY: GameOverState handles the game over screen with final score display
+
 class GameOverState : public GameState {
 private:
     int finalScore;

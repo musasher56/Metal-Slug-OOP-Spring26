@@ -1,11 +1,11 @@
 #pragma once
 #include "Entity.h"
 
-// Forward declarations
+
 class CharacterManager;
 
-// WHY: Collectible is the abstract base class for all pickup items
-// Extends Entity with bounding box for collision detection
+
+
 class Collectible : public Entity {
 protected:
     IntRect boundingBox;
@@ -22,8 +22,8 @@ public:
     IntRect getBoundingBox() const;
 };
 
-// ========== InteractableObject : Entity ==========
-// Requires player interaction (key press) rather than walk-over pickup
+
+
 class InteractableObject : public Entity {
 protected:
     IntRect boundingBox;
@@ -42,8 +42,8 @@ public:
     IntRect getBoundingBox() const;
 };
 
-// ========== Food : Collectible ==========
-// isTurkey: +3 saturation  fruit: +2 saturation
+
+
 class Food : public Collectible {
 private:
     bool isTurkey;
@@ -56,11 +56,11 @@ public:
     virtual void onPickup(CharacterManager* cm);
 };
 
-// ========== SupplyCrate : Collectible ==========
-// Contains random weapon and ammo
+
+
 class SupplyCrate : public Collectible {
 private:
-    int containedWeapon;  // WeaponType
+    int containedWeapon;  
     int containedAmmo;
     int handGrenades;
     int fireBombGrenades;
@@ -70,11 +70,11 @@ public:
     virtual ~SupplyCrate();
 
     virtual void onPickup(CharacterManager* cm);
-    void generateContents();  // 90% HMG/Flame/Rocket  10% Laser
+    void generateContents();  
 };
 
-// ========== POWPrisoner : InteractableObject ==========
-// Requires key-press to free (was walk-over - corrected per spec)
+
+
 class POWPrisoner : public InteractableObject {
 private:
     bool freed;
@@ -84,5 +84,5 @@ public:
     virtual ~POWPrisoner();
 
     virtual void onInteract(CharacterManager* cm);
-    void free(CharacterManager* cm);  // Spawns SupplyCrate
+    void free(CharacterManager* cm);  
 };

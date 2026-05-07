@@ -6,7 +6,7 @@ using namespace sf;
 class Level;
 class TextureManager;
 
-// WHY: LevelManager owns and manages the current Level
+
 class LevelManager {
 private:
     Level* level;

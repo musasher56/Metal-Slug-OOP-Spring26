@@ -2,41 +2,41 @@
 #include <iostream>
 #include <fstream>
 
-// ============================================================
-// PlayerSoldier
-// ============================================================
+
+
+
 
 PlayerSoldier::PlayerSoldier(TextureManager* texMgr, AudioManager* audMgr)
     : Soldier(texMgr, audMgr)
     , currentWeapon(nullptr)
     , pistol(nullptr)
     , currentGrenade(nullptr)
-    , grenadeCount(10)      // PDF: starting grenades = 10
+    , grenadeCount(10)      
     , inVehicle(false)
     , currentVehicle(nullptr)
     , inventorySize(0)
     , isFat(false)
     , fatGravRadius(0.f)
     , aimController()
-    , pm(nullptr)           // set later via setProjectileManager()
+    , pm(nullptr)           
 {
     for (int i = 0; i < 3; ++i) this->inventory[i] = nullptr;
 
-    // WHY create Pistol here?
-    //   Pistol is always available (infinite ammo, default weapon per PDF).
-    //   Without this, currentWeapon is nullptr and shoot() silently does nothing.
+    
+    
+    
     this->pistol = new Pistol();
-    this->currentWeapon = this->pistol;  // start with pistol equipped
+    this->currentWeapon = this->pistol;  
 }
 
 PlayerSoldier::~PlayerSoldier() {
-    // WHY null-check before delete?  Defensive programming — if constructor
-    // threw partway through, some pointers may still be nullptr.
+    
+    
     if (this->pistol != nullptr) {
         delete this->pistol;
         this->pistol = nullptr;
     }
-    // Don't double-delete if currentWeapon == pistol
+    
     if (this->currentWeapon != nullptr && this->currentWeapon != this->pistol) {
         delete this->currentWeapon;
         this->currentWeapon = nullptr;
@@ -52,94 +52,94 @@ PlayerSoldier::~PlayerSoldier() {
             this->inventory[i] = nullptr;
         }
     }
-    // pm is NOT owned here — never delete it
+    
 }
 
-// ============================================================
-// setProjectileManager
-// ============================================================
-// Call once from PlayState after creating the player:
-//
-//   Marco* marco = new Marco(texMgr, audMgr);
-//   marco->setProjectileManager(&pm);   // pm is your ProjectileManager
-//
+
+
+
+
+
+
+
+
 void PlayerSoldier::setProjectileManager(ProjectileManager* manager) {
     this->pm = manager;
 }
 
-// ============================================================
-// updateAim
-// ============================================================
-// Call every frame from PlayState or CharacterManager:
-//
-//   sf::Vector2f mouseWorld(
-//       Mouse::getPosition(window).x + scroll,   // convert screen→world
-//       Mouse::getPosition(window).y
-//   );
-//   player->updateAim(mouseWorld);
-//
-// WHY add scroll to mouse X?
-//   Mouse::getPosition returns screen-space coordinates (0..SCREEN_W).
-//   Your entities live in world-space (position.x includes scroll offset).
-//   Adding scroll converts mouse to world-space so the angle is correct
-//   even when the camera has moved right.
-// ============================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void PlayerSoldier::updateAim(sf::Vector2f mousePos) {
     this->aimController.update(mousePos, this->position, this->direction);
 }
 
-// ============================================================
-// shoot
-// ============================================================
-// HOW SHOOTING WORKS — full pipeline:
-//
-//   1. Guard: need a weapon, ammo, and a ProjectileManager
-//   2. Calculate barrel tip (spawn origin just past sprite edge)
-//   3. Pass origin + direction + angle to weapon->fire()
-//   4. Weapon calls pm->spawnStraight() or pm->spawnExplosive()
-//   5. ProjectileManager adds it to the pool
-//   6. Next frame: ProjectileManager::update() moves it
-//                  ProjectileManager::draw()   renders it
-//
-// KEYBINDING: call shoot() from handleInput() when Space/Z is pressed.
-// ============================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void PlayerSoldier::shoot() {
-    // Guard 1: no pm set yet (PlayState hasn't called setProjectileManager)
+    
     if (this->pm == nullptr) return;
 
-    // Guard 2: no weapon or out of ammo
+    
     if (this->currentWeapon == nullptr) return;
     if (!this->currentWeapon->hasAmmo())  return;
 
-    // Step 1: Get current aim angle (0° = horizontal, 90° = straight up)
+    
     float angle = this->aimController.getAngle();
 
-    // Step 2: Calculate barrel tip — where the bullet spawns
-    // WHY not just use this->position?
-    //   position is the TOP-LEFT of the sprite.  Spawning there puts bullets
-    //   at the player's feet.  calcBarrelTip offsets to the gun barrel.
-    //
-    // 36.f  = sprite frame width in pixels (matches marco.png frame size)
-    // 20.f  = barrel height from top of sprite (tune this visually)
-    // If your sprite is scaled (e.g. 3.5x), the pixel offset is already in
-    // world-space because position.x/y track world coords, not sprite coords.
+    
+    
+    
+    
+    
+    
+    
+    
+    
     sf::Vector2f origin = ProjectileManager::calcBarrelTip(
         this->position,
         this->direction,
-        36.f,    // sprite frame width (marco.png: 36px per frame)
-        20.f     // barrel Y offset from top of sprite
+        36.f,    
+        20.f     
     );
 
-    // Step 3: Fire — weapon decides projectile type (straight vs explosive)
+    
     this->currentWeapon->fire(origin, this->direction, angle, this->pm);
 }
 
-// ============================================================
-// switchWeapon
-// ============================================================
+
+
+
 void PlayerSoldier::switchWeapon(Weapon* w) {
     if (w == nullptr) return;
-    // Store old non-pistol weapon in inventory
+    
     if (this->currentWeapon != nullptr &&
         this->currentWeapon != this->pistol &&
         this->inventorySize < 3)
@@ -149,9 +149,9 @@ void PlayerSoldier::switchWeapon(Weapon* w) {
     this->currentWeapon = w;
 }
 
-// ============================================================
-// Vehicle
-// ============================================================
+
+
+
 void PlayerSoldier::enterVehicle(Vehicle* v) {
     if (v == nullptr || this->inVehicle) return;
     this->currentVehicle = v;
@@ -166,9 +166,9 @@ void PlayerSoldier::exitVehicle() {
     this->inVehicle = false;
 }
 
-// ============================================================
-// Save / Load
-// ============================================================
+
+
+
 void PlayerSoldier::saveData(std::ofstream& out) {
     if (!out.is_open()) return;
     out.write(reinterpret_cast<const char*>(&this->lives), sizeof(int));
@@ -199,12 +199,12 @@ void PlayerSoldier::onDeath() {
 }
 
 void PlayerSoldier::updateBoundingBox() {
-    // WHY store (0,0) as local offset instead of position.x/y?
-    //   DamagableEntity::getBoundingBox() adds position to boundingBox.left/top.
-    //   The old code stored world coords here, causing a DOUBLE offset bug:
-    //   getBoundingBox returned (pos + pos, pos + pos, w, h) — wrong!
-    //   Now we store a local (0,0) offset so getBoundingBox correctly returns
-    //   (pos.x, pos.y, w, h) in world space.
+    
+    
+    
+    
+    
+    
     float scaleX = std::abs(this->sprite.getScale().x);
     float scaleY = std::abs(this->sprite.getScale().y);
     this->boundingBox = IntRect(
@@ -215,9 +215,9 @@ void PlayerSoldier::updateBoundingBox() {
     );
 }
 
-// ============================================================
-// Marco
-// ============================================================
+
+
+
 Marco::Marco(TextureManager* texMgr, AudioManager* audMgr)
     : PlayerSoldier(texMgr, audMgr)
     , fireRateMultiplier(1.25f)
@@ -227,24 +227,24 @@ Marco::Marco(TextureManager* texMgr, AudioManager* audMgr)
     this->animation.setTexture(&tex);
     this->animation.setFrameCount(12);
     this->animation.setLoop(true);
-    // --- Display crop ---
-    // marco.png: 433x41 sheet, 12 frames of 36x41 each.
-    // If the character art has empty padding inside each frame,
-    // trim it here so the sprite looks tighter and centered.
-    //   cropLeft = pixels to skip from LEFT  edge of each frame
-    //   cropTop  = pixels to skip from TOP   edge of each frame
-    //   displayWidth  = visible width  (0 = show rest of frame after cropLeft)
-    //   displayHeight = visible height (0 = show rest of frame after cropTop)
-    //
-    // HOW TO TUNE: open marco.png in an image editor, zoom into one frame,
-    // and measure how many pixels of empty space are on each side.
-    // Example: if 4px empty on left, 4px empty on right, character is 28px wide:
-    //   setDisplayCrop(4, 0, 28, 0)
-    // Set all to 0 to show the full 36x41 frame with no trimming.
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     this->animation.setDisplayCrop(0, 0, 32, 0);
     this->sprite.setTexture(tex);
     this->sprite.setScale(3.5f, 3.5f);
-    // Match the actual sprite sheet frame size (36x41, not 32x32)
+    
     this->sprite.setTextureRect(IntRect(0, 0, 36, 41));
     this->position = sf::Vector2f(200.f, 300.f);
     this->updateBoundingBox();
@@ -254,7 +254,7 @@ Marco::~Marco() {}
 
 void Marco::updateSprite() {
     int frameIndex = 0;
-    // Frame stride = 36px (matches sprite sheet layout: 433px / 12 frames)
+    
     this->sprite.setTextureRect(IntRect(frameIndex * 36, 0, 36, 41));
 }
 
@@ -263,37 +263,37 @@ void Marco::activatePowerUp() {
     this->dualFireTimer.restart();
 }
 
-// ============================================================
-// Marco::handleInput
-// ============================================================
-// THIS IS WHERE SHOOTING IS TRIGGERED.
-//
-// Key bindings (Metal Slug standard):
-//   Left  / Right arrow  → move
-//   Space or Up arrow    → jump
-//   Z  (or LCtrl)        → shoot current weapon
-//   X  (or LAlt)         → throw grenade
-//
-// WHY check Keyboard::isKeyPressed here instead of in events?
-//   isKeyPressed gives you HELD state (true every frame the key is down).
-//   This is correct for weapons like HMG that fire continuously while held.
-//   The fire timer inside each Weapon handles the actual rate limiting.
-// ============================================================
-void Marco::handleInput() {
-    // WHY: Movement is NOT polled here.
-    // CharacterManager::update() already polls Left/Right keys and calls
-    // setDirectionAndVelocity()/decelerate() every frame.
-    // Polling movement here too would DOUBLE the acceleration (2x speed bug).
 
-    // ── SHOOT ────────────────────────────────────────────────────────────
-    // Z key fires the current weapon.
-    // shoot() → calcBarrelTip() → currentWeapon->fire() → pm->spawnStraight()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void Marco::handleInput() {
+    
+    
+    
+    
+
+    
+    
+    
     if (Keyboard::isKeyPressed(Keyboard::Z)) {
         this->shoot();
     }
 
-    // Marco power-up: dual-direction fire
-    // When active, shoot() fires normally AND we also fire the opposite direction
+    
+    
     if (this->dualFireActive && Keyboard::isKeyPressed(Keyboard::Z)) {
         if (this->pm != nullptr && this->currentWeapon != nullptr) {
             int oppositeDir = (this->direction == DIR_RIGHT) ? DIR_LEFT : DIR_RIGHT;
@@ -303,25 +303,25 @@ void Marco::handleInput() {
             this->currentWeapon->fire(origin, oppositeDir,
                 this->aimController.getAngle(), this->pm);
         }
-        // Check if 10 seconds elapsed
+        
         if (this->dualFireTimer.getElapsedTime().asSeconds() >= 10.f) {
             this->dualFireActive = false;
         }
     }
 
-    // Throw grenade
+    
     if (Keyboard::isKeyPressed(Keyboard::X)) {
         this->throwGrenade();
     }
 }
 
 void Marco::meleeAttack() {
-    Soldier::meleeAttack();  // Marco's melee pierces shields (handled in collision)
+    Soldier::meleeAttack();  
 }
 
-// ============================================================
-// Tarma
-// ============================================================
+
+
+
 Tarma::Tarma(TextureManager* texMgr, AudioManager* audMgr)
     : PlayerSoldier(texMgr, audMgr)
     , vehicleFireRateBonus(0.25f)
@@ -346,14 +346,14 @@ bool Tarma::hasVehicleSurvival() const { return true; }
 void Tarma::onVehicleDestroyed() { this->exitVehicle(); }
 
 void Tarma::handleInput() {
-    // WHY: Movement handled by CharacterManager::update() — do NOT poll here.
+    
     if (Keyboard::isKeyPressed(Keyboard::Z)) this->shoot();
     if (Keyboard::isKeyPressed(Keyboard::X)) this->throwGrenade();
 }
 
-// ============================================================
-// Eri
-// ============================================================
+
+
+
 Eri::Eri(TextureManager* texMgr, AudioManager* audMgr)
     : PlayerSoldier(texMgr, audMgr)
     , blastRadiusMultiplier(1.50f)
@@ -375,15 +375,15 @@ void Eri::updateSprite() { this->sprite.setTextureRect(IntRect(0, 0, 32, 32)); }
 void Eri::activatePowerUp() { this->doubleGrenadeActive = true; this->doubleGrenadeTimer.restart(); }
 
 void Eri::handleInput() {
-    // WHY: Movement handled by CharacterManager::update() — do NOT poll here.
+    
     if (Keyboard::isKeyPressed(Keyboard::Z)) this->shoot();
     if (Keyboard::isKeyPressed(Keyboard::X)) this->throwGrenade();
 }
 
 
-// ============================================================
-// Fio
-// ============================================================
+
+
+
 Fio::Fio(TextureManager* texMgr, AudioManager* audMgr)
     : PlayerSoldier(texMgr, audMgr)
     , ammoBonusMultiplier(1.50f)
@@ -404,61 +404,61 @@ Fio::Fio(TextureManager* texMgr, AudioManager* audMgr)
 Fio::~Fio() {}
 void Fio::updateSprite() { this->sprite.setTextureRect(IntRect(0, 0, 32, 32)); }
 void Fio::activatePowerUp() { this->superchargedActive = true; this->superchargedTimer.restart(); }
-void Fio::pickUpWeapon() { /* +50% ammo bonus handled on weapon pickup */ }
+void Fio::pickUpWeapon() {  }
 
 void Fio::handleInput() {
-    // WHY: Movement handled by CharacterManager::update() — do NOT poll here.
+    
     if (Keyboard::isKeyPressed(Keyboard::Z)) this->shoot();
     if (Keyboard::isKeyPressed(Keyboard::X)) this->throwGrenade();
 }
 
-// ============================================================
-// REPLACE your existing throwGrenade() in PlayerSoldier.cpp with this.
-// Also replace Eri::throwGrenade() with the version below.
-// Everything else in PlayerSoldier.cpp stays the same.
-// ============================================================
 
-// ── Base PlayerSoldier::throwGrenade() ────────────────────────────────
-// WHY 45° and not the aim angle?
-//   Aim angle controls the gun barrel. Grenades are lobbed — thrown in a
-//   fixed arc. 45° gives maximum range, which feels natural for a lob throw.
-//   The horizontal component is determined by facing direction.
-//   Damage: 20 HP per PDF.  Blast radius: 3 blocks per PDF.
+
+
+
+
+
+
+
+
+
+
+
 void PlayerSoldier::throwGrenade() {
     if (this->pm == nullptr)          return;
     if (this->grenadeCount <= 0)      return;
 
     this->grenadeCount--;
 
-    // Spawn origin: player's hands, slightly forward and above center
-    // WHY 24.f Y offset? Grenades come from the hand, not the gun barrel.
-    // 24px from top of 64px sprite puts it at roughly chest/hand height.
+    
+    
+    
     sf::Vector2f origin = ProjectileManager::calcBarrelTip(
         this->position,
         this->direction,
-        36.f,    // sprite frame width (marco.png: 36px per frame)
-        24.f     // hand height from top of sprite
+        36.f,    
+        24.f     
     );
 
-    // WHY 45°? Maximum range for a ballistic throw.
-    // The grenade arc looks natural and clears most obstacles.
+    
+    
     const float LOB_ANGLE = 45.f;
-    const int   NADE_DAMAGE = 20;   // PDF: grenade damage = 20 HP
-    const int   BLAST_RADIUS = 3;   // PDF: blast radius = 3 blocks
+    const int   NADE_DAMAGE = 20;   
+    const int   BLAST_RADIUS = 3;   
 
     this->pm->spawnExplosive(origin, this->direction,
         LOB_ANGLE, NADE_DAMAGE,
         BLAST_RADIUS, false);
 }
 
-// ── Eri::throwGrenade() ───────────────────────────────────────────────
-// Eri carries double grenades and her power-up throws 2 for cost of 1.
-// Second grenade lands 2 blocks farther (slightly lower angle = more range).
+
+
+
 void Eri::throwGrenade() {
     if (this->pm == nullptr)     return;
     if (this->grenadeCount <= 0) return;
 
-    // Normal throw
+    
     this->grenadeCount--;
 
     sf::Vector2f origin = ProjectileManager::calcBarrelTip(
@@ -468,14 +468,14 @@ void Eri::throwGrenade() {
     this->pm->spawnExplosive(origin, this->direction,
         45.f, 20, 3, false);
 
-    // Power-up: second grenade at shallower angle = lands ~2 blocks farther
-    // Cost: 1 extra grenade (costs 2 total), only if active AND enough count
+    
+    
     if (this->doubleGrenadeActive && this->grenadeCount >= 1) {
         this->grenadeCount--;
 
-        // 30° = shallower arc = travels farther horizontally before landing
-        // WHY 30°? tan(30°) ≈ 0.577 vs tan(45°) = 1.0 — roughly 2 blocks extra
-        // range at standard throw velocity.
+        
+        
+        
         this->pm->spawnExplosive(origin, this->direction,
             30.f, 20, 3, false);
 

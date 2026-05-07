@@ -29,13 +29,13 @@ public:
     void spawnExplosive(sf::Vector2f origin, int dir, float angle,
         int dmg, int blastRadius, bool fromEnemy = false);
 
-    // Phase 1: Move all projectiles (no tile collision yet)
+    
     void update(float scroll, Level* lvl);
 
-    // Phase 3: Tile collision + bounds + cleanup
-    // Call AFTER checkEntityCollisions so destroyed blocks
-    // have cleared their grid cells before tile check runs
-   // FIX: added scrollY for correct projectile Y bounds checking
+    
+    
+    
+   
     void postEntityUpdate(float scrollX, float scrollY, Level* lvl);
     void draw(RenderWindow& window, float scrollX, float scrollY);
 

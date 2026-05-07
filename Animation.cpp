@@ -38,23 +38,23 @@ void Animation::applyToSprite(Sprite& sprite) {
     if (this->texture == nullptr) return;
     sprite.setTexture(*this->texture);
     if (this->frameCount > 1 && this->texture->getSize().x > 0) {
-        // WHY use FRAME_W directly instead of dividing texture width?
-        // Dividing total texture width by frameCount only works when frames
-        // start at x=0 and are packed with no padding. When a spritesheet has
-        // an offset (e.g. block frames start at x=16, y=285) we must use the
-        // known frame width and the stored srcOffset instead.
+        
+        
+        
+        
+        
         int frameWidth = (int)this->texture->getSize().x / this->frameCount;
         int frameHeight = (int)this->texture->getSize().y;
-        // If a src offset is set, use fixed frame size from offset
+        
         if (this->srcOffsetX != 0 || this->srcOffsetY != 0) {
-            // frameWidth derived from offset: total usable width after offsetX / frames
+            
             frameWidth = ((int)this->texture->getSize().x - this->srcOffsetX) / this->frameCount;
             frameHeight = (int)this->texture->getSize().y - this->srcOffsetY;
         }
 
-        // Apply display crop: trim empty space from each frame.
-        // cropLeft/cropTop shift the visible window inside the frame.
-        // displayWidth/displayHeight override the visible area (0 = use full).
+        
+        
+        
         int rectX = this->srcOffsetX + this->currentFrame * frameWidth + this->cropLeft;
         int rectY = this->srcOffsetY + this->cropTop;
         int rectW = (this->displayWidth > 0) ? this->displayWidth : (frameWidth - this->cropLeft);

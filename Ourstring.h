@@ -1,6 +1,6 @@
 #pragma once
 
-// WHY: Manual string helpers to avoid <cstring> dependency (strict constraint)
+
 inline int strLen(const char* str) {
     int len = 0;
     while (str[len] != '\0') len++;

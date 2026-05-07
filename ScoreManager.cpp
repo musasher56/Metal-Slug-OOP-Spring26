@@ -7,7 +7,7 @@ ScoreManager::~ScoreManager() {
 }
 
 void ScoreManager::addKill(int enemyType, bool isAerial, bool isMelee) {
-    // WHY: Add base score for enemy type using if-else chain (no switch — P1 violation)
+    
     int baseScore = 50;
     if (enemyType == ENEMY_REBEL) {
         baseScore = 50;

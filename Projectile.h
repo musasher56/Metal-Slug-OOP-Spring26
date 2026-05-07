@@ -37,7 +37,7 @@ protected:
 
 private:
     void checkTileCollision(Level* lvl);
-    // FIX: added scrollY so Y bounds use camera position, not SCREEN_H
+    
     void checkBounds(float scrollX, float scrollY);
 };
 

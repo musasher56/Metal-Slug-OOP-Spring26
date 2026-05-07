@@ -116,7 +116,7 @@ void ProjectileManager::postEntityUpdate(float scrollX, float scrollY, Level* lv
 }
 
 void ProjectileManager::draw(RenderWindow& window, float scrollX, float scrollY) {
-    RectangleShape rect(sf::Vector2f(8.f, 6.f));   // CHANGED: was (16.f, 24.f)
+    RectangleShape rect(sf::Vector2f(8.f, 6.f));   
 
     for (int i = 0; i < this->activeCount; i++) {
         Projectile* p = this->slots[i];

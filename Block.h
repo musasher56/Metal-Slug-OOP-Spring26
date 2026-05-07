@@ -30,10 +30,10 @@ public:
     bool isDestroying() const { return this->destroying; }
 };
 
-// =========================================================================
-// MountainBlock — indestructible visual + collision block for terrain.
-// 48x48 blocks (matches grid cell size) for smooth terrain.
-// =========================================================================
+
+
+
+
 class TextureManager;
 
 class MountainBlock {
@@ -43,7 +43,7 @@ private:
     float       worldY;
     bool        active;
 public:
-    static const int BLOCK_SIZE = 48;  // FIX: was 64, now 48 (matches grid cell)
+    static const int BLOCK_SIZE = 48;  
 
     MountainBlock(TextureManager* texMgr, float wx, float wy);
 

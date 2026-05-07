@@ -5,17 +5,17 @@
 #include "AudioManager.h"
 #include "Animation.h"
 
-// Forward declaration to avoid circular dependency
+
 class Level;
 
-// WHY: Entity is the root abstract class for all game objects
-// Provides common properties: position, sprite, animation, status
+
+
 class Entity {
 public:
     sf::Vector2f position;
     Sprite sprite;
     Animation animation;
-    bool status;  // active/inactive
+    bool status;  
 
 protected:
     TextureManager* textureManager;

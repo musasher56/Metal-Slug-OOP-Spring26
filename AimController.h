@@ -1,7 +1,7 @@
 #pragma once
 #include "Constants.h"
 
-// WHY: AimController translates mouse position into a world-space angle.
+
 class AimController {
 private:
     float currentAngle;

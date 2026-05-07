@@ -1,7 +1,7 @@
 #pragma once
 #include "GameState.h"
 
-// WHY: PausedState handles the pause overlay during gameplay
+
 class PausedState : public GameState {
 public:
     PausedState();

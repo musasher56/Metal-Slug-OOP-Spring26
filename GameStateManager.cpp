@@ -1,6 +1,6 @@
 #include "GameStateManager.h"
 
-// WHY: Initial capacity of 10 states is sufficient for stack-based state management
+
 GameStateManager::GameStateManager() 
     : stateStack(nullptr), stackSize(0), capacity(10) {
     this->stateStack = new GameState*[this->capacity];
@@ -10,7 +10,7 @@ GameStateManager::GameStateManager()
 }
 
 GameStateManager::~GameStateManager() {
-    // WHY: Pop and delete all states in the stack
+    
     while (this->stackSize > 0) {
         this->pop();
     }
@@ -23,7 +23,7 @@ GameStateManager::~GameStateManager() {
 void GameStateManager::push(GameState* state) {
     if (state == nullptr) return;
     
-    // WHY: Expand array if needed (double capacity strategy)
+    
     if (this->stackSize >= this->capacity) {
         int newCapacity = this->capacity * 2;
         GameState** newStack = new GameState*[newCapacity];
@@ -83,7 +83,7 @@ void GameStateManager::handleEvent(Event& event) {
 void GameStateManager::changeState(GameState* newState) {
     if (newState == nullptr) return;
     
-    // WHY: Pop current state and push new one (not stack-based, just replacement)
+    
     if (this->stackSize > 0) {
         this->pop();
     }

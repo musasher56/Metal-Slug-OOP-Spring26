@@ -13,9 +13,9 @@ class BlockManager {
 public:
     static const int MAX_BLOCKS = 128;
 
-    // =====================================================================
-    // MOUNTAIN TERRAIN
-    // =====================================================================
+    
+    
+    
     static const int MAX_MOUNTAIN_BLOCKS = 4096;
     static const int MOUNTAIN_COL_STEP = 48;
     static const int MOUNTAIN_HEIGHTMAP_LEN = 190;
@@ -41,7 +41,7 @@ public:
     void spawnBlock(float worldX, float worldY);
     void spawnPlatform(float startX, float startY, int count);
 
-    // Fill rows with visible dirt blocks for ground floor
+    
     void buildGroundTerrain(int surfaceRow, int depth);
 
     void buildMountainTerrain(float baseX, float baseY);

@@ -5,7 +5,7 @@ using namespace sf;
 
 class PlayerSoldier;
 
-// WHY: ScoreManager tracks score, combo multipliers, and kill bonuses
+
 class ScoreManager {
 private:
     int score;
