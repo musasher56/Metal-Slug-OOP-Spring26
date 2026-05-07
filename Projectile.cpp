@@ -36,7 +36,7 @@ void Projectile::update(float scroll, Level* lvl) {
 
     if (!this->status) return;
 
-    
+
     this->checkBounds(scroll, 0.f);
 }
 
@@ -88,7 +88,7 @@ void Projectile::checkBounds(float scrollX, float scrollY) {
         this->deactivate();
         return;
     }
-    
+
     if (this->position.y > scrollY + SCREEN_H + MARGIN) {
         this->deactivate();
     }
@@ -105,8 +105,8 @@ IntRect Projectile::getBoundingBox() const {
     return IntRect(
         static_cast<int>(this->position.x),
         static_cast<int>(this->position.y),
-        16,
-        24
+        8,
+        6
     );
 }
 
@@ -132,7 +132,7 @@ StraightProjectile::StraightProjectile(TextureManager* texMgr,
 
 StraightProjectile::~StraightProjectile() {}
 
-void StraightProjectile::move(float ) {
+void StraightProjectile::move(float) {
     this->position.x += this->velocityX;
     this->position.y += this->velocityY;
 }
@@ -150,7 +150,7 @@ BallisticProjectile::BallisticProjectile(TextureManager* texMgr, AudioManager* a
 
 BallisticProjectile::~BallisticProjectile() {}
 
-void BallisticProjectile::move(float ) {
+void BallisticProjectile::move(float) {
     this->velocityY += this->gravity;
     this->position.x += this->velocityX;
     this->position.y += this->velocityY;

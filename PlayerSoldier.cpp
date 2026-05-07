@@ -126,8 +126,8 @@ void PlayerSoldier::shoot() {
     sf::Vector2f origin = ProjectileManager::calcBarrelTip(
         this->position,
         this->direction,
-        36.f,
-        20.f
+        60.f,
+        52.f
     );
 
 
