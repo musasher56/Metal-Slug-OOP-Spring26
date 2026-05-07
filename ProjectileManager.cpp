@@ -173,6 +173,78 @@ int ProjectileManager::checkEntityCollisions(DamagableEntity** targets,
     return totalDamage;
 }
 
+int ProjectileManager::checkPlayerBulletHits(DamagableEntity** targets,
+    int targetCount)
+{
+    int hits = 0;
+
+    for (int p = 0; p < this->activeCount; ) {
+        Projectile* proj = this->slots[p];
+        if (proj == nullptr || !proj->getStatus()) { p++; continue; }
+
+        if (proj->isFromEnemy()) { p++; continue; }
+
+        IntRect projBox = proj->getBoundingBox();
+        bool hit = false;
+
+        for (int e = 0; e < targetCount && !hit; e++) {
+            if (targets[e] == nullptr || !targets[e]->isAlive()) continue;
+
+            IntRect entBox = targets[e]->getBoundingBox();
+
+            bool overlapX = (projBox.left < entBox.left + entBox.width) &&
+                (projBox.left + projBox.width > entBox.left);
+            bool overlapY = (projBox.top < entBox.top + entBox.height) &&
+                (projBox.top + projBox.height > entBox.top);
+
+            if (overlapX && overlapY) {
+                targets[e]->takeDamage(proj->getDamage());
+                hits++;
+                proj->deactivate();
+                hit = true;
+            }
+        }
+
+        if (!proj->getStatus()) this->removeAt(p);
+        else                    p++;
+    }
+
+    return hits;
+}
+
+bool ProjectileManager::checkEnemyBulletHitPlayer(DamagableEntity* player) {
+    if (player == nullptr || !player->isAlive()) return false;
+
+    IntRect playerBox = player->getBoundingBox();
+
+    for (int p = 0; p < this->activeCount; ) {
+        Projectile* proj = this->slots[p];
+        if (proj == nullptr || !proj->getStatus()) { p++; continue; }
+
+        if (!proj->isFromEnemy()) { p++; continue; }
+
+        IntRect projBox = proj->getBoundingBox();
+
+        bool overlapX = (projBox.left < playerBox.left + playerBox.width) &&
+            (projBox.left + projBox.width > playerBox.left);
+        bool overlapY = (projBox.top < playerBox.top + playerBox.height) &&
+            (projBox.top + projBox.height > playerBox.top);
+
+        if (overlapX && overlapY) {
+            player->takeDamage(proj->getDamage());
+            proj->deactivate();
+            if (!proj->getStatus()) {
+                this->removeAt(p);
+            }
+            return true;
+        }
+
+        p++;
+    }
+
+    return false;
+}
+
 void ProjectileManager::removeAt(int i) {
     delete this->slots[i];
     this->slots[i] = nullptr;

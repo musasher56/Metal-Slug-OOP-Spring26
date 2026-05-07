@@ -19,6 +19,7 @@ PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
     gameWindow(nullptr),
     lastMouseWorld(0.f, 0.f),
     debugMode(true)
+    , showHitboxes(true)
 {
     this->id = GSTATE_PLAY;
 
@@ -27,6 +28,8 @@ PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
     this->scoreManager = new ScoreManager();
     this->hud = new HUD();
     this->projectileManager = new ProjectileManager(texMgr, audMgr);
+    this->enemyManager = new EnemyManager(texMgr, audMgr);
+    this->enemyManager->setProjectileManager(this->projectileManager);
 
     PlayerSoldier* player = this->characterManager->getCurrentCharacter();
     if (player != nullptr)
@@ -63,30 +66,32 @@ PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
             this->texManager->loadTexture("dirt", "resources/Sprites/dirt.png");
 
             int cellSize = lvl->getCellSize();
-            int groundRow = lvl->getHeight() - 1;         
-            int surfaceRow = groundRow - 2;               
-            float surfaceY = (float)(surfaceRow * cellSize); 
+            int groundRow = lvl->getHeight() - 1;
+            int surfaceRow = groundRow - 2;
+            float surfaceY = (float)(surfaceRow * cellSize);
 
-            
-            
-            
+
+
+
             this->blockManager->buildGroundTerrain(surfaceRow, 3);
 
-            
+
             this->blockManager->buildMountainTerrain(4000.f, surfaceY);
 
             if (player != nullptr) {
-                
+
                 player->position = sf::Vector2f(200.f, surfaceY - 140.f);
                 player->updateBoundingBox();
             }
 
             this->spawnTestBlocks();
+            this->spawnTestEnemies();
         }
     }
 }
 
 PlayState::~PlayState() {
+    if (this->enemyManager) { delete this->enemyManager; this->enemyManager = nullptr; }
     if (this->blockManager) { delete this->blockManager;      this->blockManager = nullptr; }
     if (this->projectileManager) { delete this->projectileManager; this->projectileManager = nullptr; }
     if (this->levelManager) { delete this->levelManager;      this->levelManager = nullptr; }
@@ -115,9 +120,15 @@ void PlayState::update(float dt) {
     if (player != nullptr)
         player->handleInput();
 
+    if (player != nullptr)
+        player->updateBoundingBox();
+
     if (this->blockManager) {
         this->blockManager->update(this->scroll, this->scrollY);
     }
+
+    if (this->enemyManager)
+        this->enemyManager->update(this->scroll, this->scrollY, lvl, player);
 
     if (this->projectileManager && lvl != nullptr)
         this->projectileManager->update(this->scroll, lvl);
@@ -130,8 +141,23 @@ void PlayState::update(float dt) {
         }
     }
 
+    if (this->enemyManager && this->projectileManager) {
+        DamagableEntity** enemies = this->enemyManager->getDamagableSlots();
+        int eCount = this->enemyManager->getActiveCount();
+        if (eCount > 0) {
+            this->projectileManager->checkPlayerBulletHits(enemies, eCount);
+        }
+    }
+
+    if (this->projectileManager && player != nullptr) {
+        this->projectileManager->checkEnemyBulletHitPlayer(player);
+    }
+
     if (this->projectileManager && lvl != nullptr)
         this->projectileManager->postEntityUpdate(this->scroll, this->scrollY, lvl);
+
+    if (this->enemyManager)
+        this->enemyManager->cleanup();
 
     if (this->blockManager) {
         this->blockManager->cleanup();
@@ -173,7 +199,7 @@ void PlayState::render(RenderWindow& window) {
     float groundY = 0.f;
     Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
     if (lvl != nullptr) {
-        int surfaceRow = lvl->getHeight() - 3; 
+        int surfaceRow = lvl->getHeight() - 3;
         groundY = (float)(surfaceRow * lvl->getCellSize());
     }
 
@@ -193,9 +219,11 @@ void PlayState::render(RenderWindow& window) {
 
     if (this->levelManager)      this->levelManager->draw(window, this->scroll, this->scrollY);
     if (this->blockManager)      this->blockManager->draw(window, this->scroll, this->scrollY);
+    if (this->enemyManager)      this->enemyManager->draw(window, this->scroll, this->scrollY);
     if (this->characterManager)  this->characterManager->draw(window, this->scroll, this->scrollY);
     if (this->projectileManager) this->projectileManager->draw(window, this->scroll, this->scrollY);
     if (this->hud)               this->hud->draw(window);
+    if (this->showHitboxes)    this->renderHitboxes(window);
     if (this->debugMode)         this->renderDebug(window);
 }
 
@@ -212,10 +240,10 @@ void PlayState::renderDebug(RenderWindow& window) {
     sprintf(line, "Projectiles: %d\n",
         this->projectileManager ? this->projectileManager->getActiveCount() : -1);
     append(line);
-    sprintf(line, "Blocks: %d / %d  Mountain: %d\n",
+    sprintf(line, "Blocks: %d / %d  Enemies: %d\n",
         this->blockManager ? this->blockManager->getActiveCount() : -1,
         this->blockManager ? this->blockManager->getTotalCount() : -1,
-        this->blockManager ? 0 : 0);
+        this->enemyManager ? this->enemyManager->getActiveCount() : -1);
     append(line);
     sprintf(line, "Aim: %.1f deg  |  Mouse: (%.0f, %.0f)\n",
         player ? player->getAimAngle() : -1.f,
@@ -230,18 +258,55 @@ void PlayState::renderDebug(RenderWindow& window) {
         sprintf(line, "Player: NULL\n");
     }
     append(line);
-    sprintf(line, "Z=Shoot  X=Grenade  Arrows=Move  Space=Jump");
+    sprintf(line, "Z=Shoot  X=Grenade  Arrows=Move  Space=Jump  H=Hitboxes");
     append(line);
 
     this->debugText.setString(buf);
-    RectangleShape bg(sf::Vector2f(400.f, 110.f));
+    RectangleShape bg(sf::Vector2f(400.f, 130.f));
     bg.setFillColor(Color(0, 0, 0, 170));
     bg.setPosition(5.f, 5.f);
     window.draw(bg);
     window.draw(this->debugText);
 }
 
+void PlayState::renderHitboxes(RenderWindow& window) {
+    PlayerSoldier* player = this->characterManager
+        ? this->characterManager->getCurrentCharacter() : nullptr;
+
+    if (player != nullptr) {
+        IntRect box = player->getBoundingBox();
+        RectangleShape rect(sf::Vector2f((float)box.width, (float)box.height));
+        rect.setPosition((float)box.left - this->scroll,
+            (float)box.top - this->scrollY);
+        rect.setFillColor(Color(0, 255, 0, 50));
+        rect.setOutlineColor(Color(0, 255, 0));
+        rect.setOutlineThickness(2.f);
+        window.draw(rect);
+    }
+
+    if (this->enemyManager != nullptr) {
+        DamagableEntity** enemies = this->enemyManager->getDamagableSlots();
+        int count = this->enemyManager->getActiveCount();
+        for (int i = 0; i < count; i++) {
+            DamagableEntity* e = enemies[i];
+            if (e == nullptr) continue;
+            IntRect box = e->getBoundingBox();
+            RectangleShape rect(sf::Vector2f((float)box.width, (float)box.height));
+            rect.setPosition((float)box.left - this->scroll,
+                (float)box.top - this->scrollY);
+            rect.setFillColor(Color(255, 50, 50, 50));
+            rect.setOutlineColor(Color(255, 50, 50));
+            rect.setOutlineThickness(2.f);
+            window.draw(rect);
+        }
+    }
+}
+
 void PlayState::handleEvent(Event& event) {
+    if (event.type == Event::KeyPressed && event.key.code == Keyboard::H) {
+        this->showHitboxes = !this->showHitboxes;
+    }
+
     if (this->characterManager)
         this->characterManager->handleInput(event);
 }
@@ -255,33 +320,64 @@ void PlayState::spawnTestBlocks() {
     Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
     if (lvl == nullptr) return;
 
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
 
     this->blockManager->spawnPlatform(
         static_cast<float>(8 * 48),
-        static_cast<float>(34 * 48),   
+        static_cast<float>(34 * 48),
         8
     );
 
     this->blockManager->spawnPlatform(
         static_cast<float>(22 * 48),
-        static_cast<float>(33 * 48),   
+        static_cast<float>(33 * 48),
         7
     );
     this->blockManager->spawnPlatform(
         static_cast<float>(32 * 48),
-        static_cast<float>(33 * 48),   
+        static_cast<float>(33 * 48),
         4
     );
 
     this->blockManager->spawnPlatform(
         static_cast<float>(42 * 48),
-        static_cast<float>(34 * 48),   
+        static_cast<float>(34 * 48),
         10
     );
+}
+
+void PlayState::spawnTestEnemies() {
+    if (this->enemyManager == nullptr) return;
+
+    Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
+    if (lvl == nullptr) return;
+
+    int cellSize = lvl->getCellSize();
+    int surfaceRow = lvl->getHeight() - 3;
+    float surfaceY = (float)(surfaceRow * cellSize);
+
+    float rebelFootOffset = 140.f;
+    this->enemyManager->spawnRebel(15.f * 48.f, surfaceY - rebelFootOffset);
+    this->enemyManager->spawnRebel(35.f * 48.f, surfaceY - rebelFootOffset);
+
+    float platY1 = 34.f * 48.f;
+    float platY2 = 33.f * 48.f;
+    this->enemyManager->spawnRebel(10.f * 48.f, platY1 - rebelFootOffset);
+    this->enemyManager->spawnRebel(24.f * 48.f, platY2 - rebelFootOffset);
+    this->enemyManager->spawnRebel(44.f * 48.f, platY1 - rebelFootOffset);
+
+    float mtBaseX = 4000.f;
+    float mtTop30 = surfaceY - 11.f * 48.f;
+    float mtTop65 = surfaceY - 25.f * 48.f;
+    float mtTop90 = surfaceY - 25.f * 48.f;
+    float mtTop140 = surfaceY - 19.f * 48.f;
+    this->enemyManager->spawnRebel(mtBaseX + 30.f * 48.f, mtTop30 - rebelFootOffset);
+    this->enemyManager->spawnRebel(mtBaseX + 65.f * 48.f, mtTop65 - rebelFootOffset);
+    this->enemyManager->spawnRebel(mtBaseX + 90.f * 48.f, mtTop90 - rebelFootOffset);
+    this->enemyManager->spawnRebel(mtBaseX + 140.f * 48.f, mtTop140 - rebelFootOffset);
 }

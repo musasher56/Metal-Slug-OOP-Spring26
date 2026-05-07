@@ -46,15 +46,15 @@ void Soldier::draw(RenderWindow& window, float scrollX, float scrollY) {
 }
 
 void Soldier::takeDamage(int amount) {
-    
-    
-    
-    
-    
+
+
+
+
+
     if (amount < 0) return;
 
     if (this->transformState != nullptr) {
-        
+
     }
 
     this->currentHP -= amount;
@@ -64,14 +64,14 @@ void Soldier::takeDamage(int amount) {
         this->onDeath();
     }
     else if (this->currentHP == 1) {
-        
+
     }
     else if (this->currentHP == 2) {
-        
+
     }
 
-    
-    
+
+
     this->health = this->currentHP;
 }
 
@@ -95,12 +95,15 @@ int Soldier::getCurrentHP() const {
 
 void Soldier::respawn() {
     this->currentHP = 3;
-    this->health = this->maxHealth;
+    this->health = 3;
+    this->maxHealth = 3;
     this->position.x = 100.f;
     this->position.y = 300.f;
     this->velocityX = 0.f;
     this->velocityY = 0.f;
+    this->direction = DIR_RIGHT;
     this->onGround = false;
+    this->status = true;
 }
 
 void Soldier::setTransformationState(TransformationState* newState) {
@@ -122,7 +125,7 @@ TransformationState* Soldier::getTransformationState() const {
 
 void Soldier::handleJump() {
     if (this->onGround) {
-        this->velocityY = -20.f;  
+        this->velocityY = -20.f;
         this->onGround = false;
     }
 }
@@ -142,9 +145,9 @@ void Soldier::handleCollision(Level* lvl) {
     float scaleX = std::abs(this->sprite.getScale().x);
     float scaleY = std::abs(this->sprite.getScale().y);
     float playerLeft = this->position.x;
-    
-    
-    
+
+
+
     float playerRight = this->position.x + 34.f * scaleX;
     float playerTop = this->position.y;
     float playerBottom = this->position.y + 40.f * scaleY;
