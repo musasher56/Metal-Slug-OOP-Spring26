@@ -2,21 +2,21 @@
 #include "Level.h"
 #include "TextureManager.h"
 
-// =========================================================================
-// HEIGHTMAP — GENTLE CLIMB → HUGE PLATEAU → GENTLE DESCENT
-// =========================================================================
+
+
+
 const int BlockManager::heightmap[BlockManager::MOUNTAIN_HEIGHTMAP_LEN] = {
-    // flat ground entry (cols 0-9)
+    
      1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 
-     // gentle climb: +1 every 2 columns (cols 10-59)
+     
       1, 1, 2, 2, 3, 3, 4, 4, 5, 5,
       6, 6, 7, 7, 8, 8, 9, 9,10,10,
      11,11,12,12,13,13,14,14,15,15,
      16,16,17,17,18,18,19,19,20,20,
      21,21,22,22,23,23,24,24,25,25,
 
-     // FLAT PLATEAU — boss fight arena (cols 60-129)
+     
      25,25,25,25,25,25,25,25,25,25,
      25,25,25,25,25,25,25,25,25,25,
      25,25,25,25,25,25,25,25,25,25,
@@ -25,17 +25,17 @@ const int BlockManager::heightmap[BlockManager::MOUNTAIN_HEIGHTMAP_LEN] = {
      25,25,25,25,25,25,25,25,25,25,
      25,25,25,25,25,25,25,25,25,25,
 
-     // gentle descent: -1 every 2 columns (cols 130-179)
+     
      25,25,24,24,23,23,22,22,21,21,
      20,20,19,19,18,18,17,17,16,16,
      15,15,14,14,13,13,12,12,11,11,
      10,10, 9, 9, 8, 8, 7, 7, 6, 6,
       5, 5, 4, 4, 3, 3, 2, 2, 1, 1,
 
-      // flat ground exit (cols 180-189)
+      
        1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 };
-// =========================================================================
+
 
 BlockManager::BlockManager(TextureManager* texMgr, AudioManager* audMgr, Level* lvl)
     : blockCount(0)
@@ -108,10 +108,10 @@ void BlockManager::spawnPlatform(float startX, float startY, int count) {
     }
 }
 
-// FIX: Fill the ground floor with visible dirt blocks.
-// surfaceRow = the TOP row of the ground (player walks on top of this).
-// depth = how many rows thick (default 3 = surface + 2 underground rows).
-// Blocks: 240 cols × 3 rows = 720 blocks.
+
+
+
+
 void BlockManager::buildGroundTerrain(int surfaceRow, int depth) {
     if (this->level == nullptr) return;
 
@@ -136,7 +136,7 @@ void BlockManager::buildGroundTerrain(int surfaceRow, int depth) {
 }
 
 void BlockManager::buildMountainTerrain(float baseX, float baseY) {
-    int bsz = MountainBlock::BLOCK_SIZE;  // 48
+    int bsz = MountainBlock::BLOCK_SIZE;  
     int cellSize = 48;
 
     for (int col = 0; col < MOUNTAIN_HEIGHTMAP_LEN && this->mountainBlockCount < MAX_MOUNTAIN_BLOCKS; col++) {

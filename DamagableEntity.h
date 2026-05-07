@@ -1,8 +1,8 @@
 #pragma once
 #include "Entity.h"
 
-// WHY: DamagableEntity extends Entity with health, bounding box, score
-// Base class for Soldier, Vehicle, EnemyVehicle - anything that can take damage
+
+
 class DamagableEntity : public Entity {
 protected:
     int health;

@@ -19,28 +19,27 @@ __pycache__/
 .mypy_cache/
 .pytest_cache/
 .gradle/
-julia-*/
-zig*/
-
-# Editors
-.vscode/
-.idea/
-*.swp
-*.swo
-*.tmp
 
 # Logs and temp files
 *.log
 *.tmp
+*.swp
+*.swo
 
-# System files
-.DS_Store
-Thumbs.db
+# Environment
 .env
 .env.local
 *.env.*
 
-# Coverage
+# Editors
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Coverage reports
 coverage/
 htmlcov/
 .coverage
@@ -69,7 +68,6 @@ htmlcov/
 *.tar.xz
 *.tar.zst
 ```
-/MetalSlug.pdb
-/MetalSlug.ilk
-/resources
 /.vs
+/MetalSlug.ilk
+/MetalSlug.pdb

@@ -26,15 +26,15 @@ void Vehicle::ejectDriver() {
 }
 
 void Vehicle::onDeath() {
-    // WHY: Handle vehicle destruction
+    
     if (this->driver != nullptr) {
         this->driver->exitVehicle();
     }
 }
 
 void Vehicle::applyTarmaBuffs() {
-    // WHY: Apply Tarma's vehicle buffs if driver is Tarma
-    // Implemented in Tarma class
+    
+    
 }
 
 GroundVehicle::GroundVehicle(TextureManager* texMgr, AudioManager* audMgr)
@@ -46,8 +46,8 @@ GroundVehicle::~GroundVehicle() {
 }
 
 void GroundVehicle::applyGroundPhysics(Level* lvl) {
-    // WHY: Apply ground physics (gravity, collision)
-    // Stub - implemented in concrete classes
+    
+    
 }
 
 AerialVehicle::AerialVehicle(TextureManager* texMgr, AudioManager* audMgr)
@@ -59,8 +59,8 @@ AerialVehicle::~AerialVehicle() {
 }
 
 void AerialVehicle::applyAerialPhysics() {
-    // WHY: Apply aerial physics
-    // Stub - implemented in concrete classes
+    
+    
 }
 
 AquaticVehicle::AquaticVehicle(TextureManager* texMgr, AudioManager* audMgr)
@@ -72,6 +72,6 @@ AquaticVehicle::~AquaticVehicle() {
 }
 
 void AquaticVehicle::applyAquaticPhysics() {
-    // WHY: Apply aquatic physics
-    // Stub - implemented in concrete classes
+    
+    
 }

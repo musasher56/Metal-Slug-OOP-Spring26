@@ -1,7 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 
-// WHY: Precision 2D vector for physics, NEAT inputs, noise sampling
+
 class Vector2d {
 public:
     double x;
@@ -16,5 +16,5 @@ public:
     bool operator==(const Vector2d& other) const;
 };
 
-// WHY: SFML Vector2f wrapper alias for entity positions (SFML uses float)
+
 typedef sf::Vector2f Vector2f;

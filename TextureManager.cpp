@@ -34,8 +34,8 @@ bool TextureManager::loadTexture(const char* filename) {
     return true;
 }
 
-// WHY: 2-parameter overload stores the texture under a custom key (e.g. "dirt")
-// but loads it from a full filepath (e.g. "resources/Sprites/dirt.png").
+
+
 bool TextureManager::loadTexture(const char* key, const char* filepath) {
     int idx = findSlot(key);
     if (idx != -1) return true;

@@ -4,7 +4,7 @@ DamagableEntity::DamagableEntity(TextureManager* texMgr, AudioManager* audMgr)
     : Entity(texMgr, audMgr)
     , health(3)
     , maxHealth(3)
-    , boundingBox(0, 0, 32, 64)  // LOCAL offset and size — NOT world position
+    , boundingBox(0, 0, 32, 64)  
     , scoreValue(0)
 {}
 

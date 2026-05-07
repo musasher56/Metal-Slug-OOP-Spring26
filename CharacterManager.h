@@ -9,7 +9,7 @@ class TextureManager;
 class AudioManager;
 class FusionCompanion;
 
-// WHY: CharacterManager owns up to 4 PlayerSoldiers and manages character switching
+
 class CharacterManager {
 private:
     PlayerSoldier* characters[4];
@@ -18,7 +18,7 @@ private:
     int rings;
     Clock switchTimer;
     Clock invincibilityTimer;
-    FusionCompanion* fusionCompanion;  // FusionCompanion* - stubbed
+    FusionCompanion* fusionCompanion;  
     bool fusionAvailable;
     Clock fusionCooldown;
     TextureManager* texManager;

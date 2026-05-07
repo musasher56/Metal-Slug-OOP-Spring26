@@ -29,12 +29,12 @@ void Game::run() {
         float dt = clock.restart().asSeconds();
         this->handleEvents();
 
-        // WHY break here before update/render?
-        //   Escape sets running=false AND calls window.close().
-        //   Without this break, the same frame still calls update() then
-        //   render() which calls window.draw() on a closed window.
-        //   On Mac that triggers the "app closed unexpectedly" crash dialog.
-        //   Checking here lets the loop exit cleanly before touching the window again.
+        
+        
+        
+        
+        
+        
         if (!this->running || !this->window.isOpen()) break;
 
         this->update(dt);

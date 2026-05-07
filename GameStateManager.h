@@ -1,11 +1,11 @@
 #pragma once
 #include "GameState.h"
 
-// WHY: GameStateManager manages the stack of GameStates (Menu, Play, Paused, etc.)
-// Stack-based approach allows pause overlay without losing game state
+
+
 class GameStateManager {
 private:
-    GameState** stateStack;  // WHY: Manual array to avoid <vector>
+    GameState** stateStack;  
     int stackSize;
     int capacity;
 

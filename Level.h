@@ -16,7 +16,7 @@ public:
     int    getHeight()   const { return this->height; }
     int    getWidth()    const { return this->width; }
     int    getCellSize() const { return this->cell_size; }
-    char** getLvl()      const { return this->lvl; } // needed for gravity checks
+    char** getLvl()      const { return this->lvl; } 
 
     bool isSolid(int row, int col) const {
         if (row < 0 || row >= this->height || col < 0 || col >= this->width)
@@ -30,5 +30,5 @@ public:
         this->lvl[row][col] = solid ? 'g' : '\0';
     }
 
-//Affan Commit test
+
 };

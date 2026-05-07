@@ -2,9 +2,9 @@
 #include "CharacterManager.h"
 
 HUD::HUD() : score(0), hp(3), redHueAlpha(0.0f) {
-    // WHY: Load default font
+    
     if (!this->font.loadFromFile("resources/Fonts/arial.ttf")) {
-        // Fallback to default if custom font fails
+        
     }
 }
 
@@ -12,15 +12,15 @@ HUD::~HUD() {
 }
 
 void HUD::update(CharacterManager* cm, int levelNum) {
-    // WHY: Update HUD stats from character manager
+    
     if (cm != nullptr) {
-        this->score = cm->getKills() * 50;  // Simplified score
+        this->score = cm->getKills() * 50;  
         this->hp = cm->getHealthPoints();
     }
 }
 
 void HUD::draw(RenderWindow& window) {
-    // WHY: Render HUD elements
+    
     Text scoreText("Score: " + std::to_string(this->score), this->font, 24);
     scoreText.setPosition(10, 10);
     scoreText.setFillColor(Color::White);

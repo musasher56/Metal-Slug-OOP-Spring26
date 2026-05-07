@@ -5,7 +5,7 @@ using namespace sf;
 
 class CharacterManager;
 
-// WHY: HUD displays score, HP, and other gameplay info
+
 class HUD {
 private:
     int score;

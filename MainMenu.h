@@ -17,7 +17,7 @@ private:
     char options[4][MAX_NAME_LEN];
     int selectedOption;
     int gameMode;
-    int menuState; // 0=splash, 1=main
+    int menuState; 
 
     TextureManager* texManager;
     AudioManager* audManager;
@@ -32,7 +32,7 @@ private:
     Clock videoTimer;
     float splashDuration;
 
-    // Video frames (optional)
+    
     Texture videoFrames[270];
     int totalVideoFrames;
     int currentFrame;

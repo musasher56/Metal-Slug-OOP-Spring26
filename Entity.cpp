@@ -8,7 +8,7 @@ Entity::Entity(TextureManager* texMgr, AudioManager* audMgr)
 {}
 
 Entity::~Entity() {
-    // WHY: Entity does not own textureManager or audioManager (shared pointers)
+    
     this->textureManager = nullptr;
     this->audioManager = nullptr;
 }

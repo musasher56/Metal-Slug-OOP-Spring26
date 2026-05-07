@@ -1,6 +1,6 @@
 #include "MainMenu.h"
 #include <cstdio>
-//test
+
 MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
     : selectedOption(0)
     , gameMode(MODE_SURVIVAL)
@@ -122,7 +122,7 @@ void MainMenu::draw(RenderWindow& window) {
 }
 
 void MainMenu::drawSplash(RenderWindow& window) {
-    // WHY: pure fullscreen video — zero text, zero overlay
+    
     if (this->videoLoaded)
         window.draw(this->videoSprite);
 }

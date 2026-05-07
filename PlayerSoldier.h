@@ -6,7 +6,7 @@
 #include "Vehicle.h"
 #include "ProjectileManager.h"
 
-// WHY: PlayerSoldier is the abstract base class for all player characters
+
 class PlayerSoldier : public Soldier {
 protected:
     Weapon*           currentWeapon;
@@ -54,7 +54,7 @@ public:
     virtual void handleInput() = 0;
 };
 
-// ========== Marco ==========
+
 class Marco : public PlayerSoldier {
 private:
     float fireRateMultiplier;
@@ -69,7 +69,7 @@ public:
     virtual void meleeAttack();
 };
 
-// ========== Tarma ==========
+
 class Tarma : public PlayerSoldier {
 private:
     float vehicleFireRateBonus;
@@ -86,7 +86,7 @@ public:
     void onVehicleDestroyed();
 };
 
-// ========== Eri ==========
+
 class Eri : public PlayerSoldier {
 private:
     float blastRadiusMultiplier;
@@ -101,7 +101,7 @@ public:
     virtual void throwGrenade();
 };
 
-// ========== Fio ==========
+
 class Fio : public PlayerSoldier {
 private:
     float ammoBonusMultiplier;

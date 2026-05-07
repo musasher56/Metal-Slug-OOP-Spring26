@@ -1,9 +1,9 @@
 #include "Weapon.h"
 #include "ProjectileManager.h"
 
-// ============================================================
-// Weapon (base)
-// ============================================================
+
+
+
 
 Weapon::Weapon(int weaponType, int dmg, float rate, int amm)
     : ammo(amm), fireRate(rate), damage(dmg), type(weaponType)
@@ -22,9 +22,9 @@ void Weapon::addAmmo(int amount) {
     if (this->ammo != -1) this->ammo += amount;
 }
 
-// ============================================================
-// ProjectileWeapon
-// ============================================================
+
+
+
 
 ProjectileWeapon::ProjectileWeapon(int wt, int dmg, float rate, int amm, int pc)
     : Weapon(wt, dmg, rate, amm), projectileClass(pc)
@@ -32,9 +32,9 @@ ProjectileWeapon::ProjectileWeapon(int wt, int dmg, float rate, int amm, int pc)
 
 ProjectileWeapon::~ProjectileWeapon() {}
 
-// ============================================================
-// Pistol
-// ============================================================
+
+
+
 
 Pistol::Pistol()
     : ProjectileWeapon(WEAPON_PISTOL, 3, 4.f, -1, PROJ_STRAIGHT)
@@ -45,7 +45,7 @@ Pistol::~Pistol() {}
 
 void Pistol::fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm) {
     if (!pm || !this->hasAmmo()) return;
-    // 4 shots/s → minimum 0.25s between shots
+    
     if (this->fireTimer.getElapsedTime().asSeconds() < 1.f / this->fireRate) return;
 
     pm->spawnStraight(origin, dir, angle, this->damage, false);
@@ -54,9 +54,9 @@ void Pistol::fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* 
 
 void Pistol::update() {}
 
-// ============================================================
-// HeavyMachineGun
-// ============================================================
+
+
+
 
 HeavyMachineGun::HeavyMachineGun()
     : ProjectileWeapon(WEAPON_HMG, 3, 8.f, 100, PROJ_STRAIGHT)
@@ -75,9 +75,9 @@ void HeavyMachineGun::fire(sf::Vector2f origin, int dir, float angle, Projectile
 
 void HeavyMachineGun::update() {}
 
-// ============================================================
-// RocketLauncher
-// ============================================================
+
+
+
 
 RocketLauncher::RocketLauncher()
     : ProjectileWeapon(WEAPON_ROCKET_LAUNCHER, 5, 0.5f, 10, PROJ_EXPLOSIVE)
@@ -97,9 +97,9 @@ void RocketLauncher::fire(sf::Vector2f origin, int dir, float angle, ProjectileM
 
 void RocketLauncher::update() {}
 
-// ============================================================
-// FlameShot  (stream zone — no projectile spawned)
-// ============================================================
+
+
+
 
 FlameShot::FlameShot()
     : Weapon(WEAPON_FLAME_SHOT, 2, 1.f, 50), streamLength(5)
@@ -110,15 +110,15 @@ FlameShot::~FlameShot() {}
 void FlameShot::fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm) {
     if (!this->hasAmmo()) return;
     this->ammo--;
-    // TODO: em->applyStreamDamage(origin, dir, streamLength)
+    
     (void)origin; (void)dir; (void)angle; (void)pm;
 }
 
 void FlameShot::update() {}
 
-// ============================================================
-// LaserGun  (instant ray-cast — no projectile spawned)
-// ============================================================
+
+
+
 
 LaserGun::LaserGun()
     : Weapon(WEAPON_LASER_GUN, 999, 0.5f, 20)
@@ -129,7 +129,7 @@ LaserGun::~LaserGun() {}
 void LaserGun::fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm) {
     if (!this->hasAmmo()) return;
     this->ammo--;
-    // TODO: em->applyRaycastDamage(origin, dir)
+    
     (void)origin; (void)dir; (void)angle; (void)pm;
 }
 

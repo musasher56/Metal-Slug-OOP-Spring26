@@ -46,15 +46,15 @@ void Soldier::draw(RenderWindow& window, float scrollX, float scrollY) {
 }
 
 void Soldier::takeDamage(int amount) {
-    // WHY: Do NOT call DamagableEntity::takeDamage(amount) at the end.
-    // DamagableEntity::takeDamage() also does this->health -= amount,
-    // and Soldier::health == DamagableEntity::health (inherited).
-    // Calling it here would subtract damage TWICE (double damage bug).
-    // Soldier manages its own HP via currentHP; we skip the base call.
+    
+    
+    
+    
+    
     if (amount < 0) return;
 
     if (this->transformState != nullptr) {
-        // Transformation state may modify incoming damage
+        
     }
 
     this->currentHP -= amount;
@@ -64,14 +64,14 @@ void Soldier::takeDamage(int amount) {
         this->onDeath();
     }
     else if (this->currentHP == 1) {
-        // Critical state visual (stub — handled by state timer)
+        
     }
     else if (this->currentHP == 2) {
-        // Injured state visual (stub — handled by state timer)
+        
     }
 
-    // Sync DamagableEntity::health with Soldier::currentHP so
-    // isAlive() and getBoundingBox() work correctly
+    
+    
     this->health = this->currentHP;
 }
 
@@ -122,7 +122,7 @@ TransformationState* Soldier::getTransformationState() const {
 
 void Soldier::handleJump() {
     if (this->onGround) {
-        this->velocityY = -20.f;  // CHANGED: was -15.f (higher jump to reach row 10 blocks)
+        this->velocityY = -20.f;  
         this->onGround = false;
     }
 }
@@ -142,9 +142,9 @@ void Soldier::handleCollision(Level* lvl) {
     float scaleX = std::abs(this->sprite.getScale().x);
     float scaleY = std::abs(this->sprite.getScale().y);
     float playerLeft = this->position.x;
-    // Frame dimensions from sprite sheet: 36 wide x 41 tall (marco.png).
-    // Using 34 wide (2px forgiving padding on each side) and 40 tall
-    // (1px forgiving at feet) for smoother platformer feel.
+    
+    
+    
     float playerRight = this->position.x + 34.f * scaleX;
     float playerTop = this->position.y;
     float playerBottom = this->position.y + 40.f * scaleY;

@@ -1,7 +1,7 @@
 #pragma once
 #include "Constants.h"
 
-// WHY: Stub AudioManager to avoid SFML audio dependency (OpenAL runtime issue on macOS)
+
 class AudioManager {
 public:
     AudioManager();

@@ -2,9 +2,9 @@
 #include "Level.h"
 #include "TextureManager.h"
 
-// =========================================================================
-// Block — destructible terrain block (inherits DamagableEntity)
-// =========================================================================
+
+
+
 
 Block::Block(TextureManager* texMgr, AudioManager* audMgr,
     float worldX, float worldY, Level* lvl)
@@ -112,9 +112,9 @@ void Block::updateBoundingBox() {
     this->boundingBox = IntRect(0, 0, cellSize, cellSize);
 }
 
-// =========================================================================
-// MountainBlock — indestructible visual + collision block for terrain.
-// =========================================================================
+
+
+
 
 MountainBlock::MountainBlock(TextureManager* texMgr, float wx, float wy)
     : worldX(wx), worldY(wy), active(true)

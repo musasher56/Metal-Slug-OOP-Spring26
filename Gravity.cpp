@@ -17,13 +17,13 @@ Gravity::Gravity(float gravAcc, float termVel, float jumpStr)
 bool Gravity::checkFloor(char** lvl, int lvlH, int lvlW, int cellSize,
                           float x, float offsetY, int entityW, int entityH)
 {
-    // WHY: 3-point check same as tumblepop — left edge, center, right edge
+    
     int row = (int)(offsetY + entityH) / cellSize;
     int lc  = (int)(x)                / cellSize;
     int mc  = (int)(x + entityW / 2)  / cellSize;
     int rc  = (int)(x + entityW)      / cellSize;
 
-    // WHY: clamp indices — never read outside array bounds
+    
     if (row < 0)     row = 0;
     if (row >= lvlH) row = lvlH - 1;
     if (lc  < 0)     lc  = 0;
@@ -52,17 +52,17 @@ void Gravity::update(float& x, float& y, float& velY, bool& onGround,
 
     float offsetY = y + velY;
 
-    // WHY: the fix — include velY==0 case so player standing still stays grounded
-    // Without this, every frame: land→velY=0→movingDown=false→onGround=false→
-    // gravity adds 1→falls 1px→snaps back. This makes onGround flicker every
-    // frame, causing Space to randomly fail to jump.
+    
+    
+    
+    
     bool movingDownOrStill = (velY >= 0);
 
     bool floor = this->checkFloor(lvl, lvlH, lvlW, cellSize,
                                   x, offsetY, entityW, entityH);
 
     if (floor && movingDownOrStill) {
-        // WHY: snap entity to exact block top — prevents sinking
+        
         int row     = (int)(offsetY + entityH) / cellSize;
         if (row >= lvlH) row = lvlH - 1;
         y           = (float)(row * cellSize - entityH);
@@ -75,7 +75,7 @@ void Gravity::update(float& x, float& y, float& velY, bool& onGround,
         this->grounded = false;
     }
 
-    // WHY: accumulate gravity every airborne frame
+    
     if (!onGround) {
         velY += this->gravAcc;
         if (velY > this->termVel) velY = this->termVel;

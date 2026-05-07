@@ -1,6 +1,6 @@
 #include "Collectible.h"
 
-// ========== Collectible Implementation ==========
+
 
 Collectible::Collectible(TextureManager* texMgr, AudioManager* audMgr)
     : Entity(texMgr, audMgr)
@@ -10,7 +10,7 @@ Collectible::Collectible(TextureManager* texMgr, AudioManager* audMgr)
 Collectible::~Collectible() {}
 
 void Collectible::update(float scroll, void* lvl) {
-    // WHY: Collectibles don't move or update - just sit there waiting for pickup
+    
     (void)scroll;
     (void)lvl;
 }
@@ -25,7 +25,7 @@ IntRect Collectible::getBoundingBox() const {
     return this->boundingBox;
 }
 
-// ========== InteractableObject Implementation ==========
+
 
 InteractableObject::InteractableObject(TextureManager* texMgr, AudioManager* audMgr)
     : Entity(texMgr, audMgr)
@@ -42,7 +42,7 @@ bool InteractableObject::isInRange(sf::Vector2f pos) const {
 }
 
 void InteractableObject::update(float scroll, void* lvl) {
-    // WHY: Interactables don't move - just wait for player interaction
+    
     (void)scroll;
     (void)lvl;
 }
@@ -57,12 +57,12 @@ IntRect InteractableObject::getBoundingBox() const {
     return this->boundingBox;
 }
 
-// ========== Food Implementation ==========
+
 
 Food::Food(TextureManager* texMgr, AudioManager* audMgr, bool turkey)
     : Collectible(texMgr, audMgr)
     , isTurkey(turkey)
-    , saturation(turkey ? 3 : 2)  // Turkey: +3, Fruit: +2
+    , saturation(turkey ? 3 : 2)  
 {}
 
 Food::~Food() {}
@@ -70,14 +70,14 @@ Food::~Food() {}
 void Food::onPickup(CharacterManager* cm) {
     if (cm == nullptr) return;
     
-    // WHY: Restore saturation to player character
-    // Actual implementation needs CharacterManager to modify current character
-    // cm->getCurrentCharacter()->saturation += this->saturation;
     
-    this->status = false;  // Deactivate collectible
+    
+    
+    
+    this->status = false;  
 }
 
-// ========== SupplyCrate Implementation ==========
+
 
 SupplyCrate::SupplyCrate(TextureManager* texMgr, AudioManager* audMgr)
     : Collectible(texMgr, audMgr)
@@ -92,16 +92,16 @@ SupplyCrate::~SupplyCrate() {}
 void SupplyCrate::onPickup(CharacterManager* cm) {
     if (cm == nullptr) return;
     
-    // WHY: Give contents to player
-    // Actual implementation needs CharacterManager to modify current character's inventory
-    // cm->getCurrentCharacter()->addAmmo(this->containedAmmo);
-    // cm->getCurrentCharacter()->addGrenades(this->handGrenades);
     
-    this->status = false;  // Deactivate collectible
+    
+    
+    
+    
+    this->status = false;  
 }
 
 void SupplyCrate::generateContents() {
-    // WHY: 90% HMG/Flame/Rocket, 10% Laser
+    
     int rand = std::rand() % 100;
     if (rand < 30) {
         this->containedWeapon = WEAPON_HMG;
@@ -117,11 +117,11 @@ void SupplyCrate::generateContents() {
         this->containedAmmo = 20;
     }
     
-    this->handGrenades = 2 + (std::rand() % 3);  // 2-4 grenades
-    this->fireBombGrenades = std::rand() % 2;    // 0-1 fire bombs
+    this->handGrenades = 2 + (std::rand() % 3);  
+    this->fireBombGrenades = std::rand() % 2;    
 }
 
-// ========== POWPrisoner Implementation ==========
+
 
 POWPrisoner::POWPrisoner(TextureManager* texMgr, AudioManager* audMgr)
     : InteractableObject(texMgr, audMgr)
@@ -139,9 +139,9 @@ void POWPrisoner::onInteract(CharacterManager* cm) {
 void POWPrisoner::free(CharacterManager* cm) {
     this->freed = true;
     
-    // WHY: Spawns SupplyCrate when freed
-    // Actual implementation needs CollectibleManager to spawn crate at this position
-    // cm->spawnSupplyCrate(this->position);
     
-    this->status = false;  // Deactivate prisoner
+    
+    
+    
+    this->status = false;  
 }

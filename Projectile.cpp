@@ -2,9 +2,9 @@
 #include "Level.h"
 #include <cmath>
 
-// ============================================================
-// Projectile  (base)
-// ============================================================
+
+
+
 
 Projectile::Projectile(TextureManager* texMgr, AudioManager* audMgr)
     : Entity(texMgr, audMgr)
@@ -36,7 +36,7 @@ void Projectile::update(float scroll, Level* lvl) {
 
     if (!this->status) return;
 
-    // FIX: pass scrollY for correct Y bounds
+    
     this->checkBounds(scroll, 0.f);
 }
 
@@ -70,9 +70,9 @@ void Projectile::checkTileCollision(Level* lvl) {
     }
 }
 
-// FIX: Y bounds now use scrollY so bullets survive with vertical scrolling.
-// BEFORE: position.y > SCREEN_H + 300 → bullet at y=1752 killed instantly
-// AFTER:  position.y > scrollY + SCREEN_H + 300 → bullet lives when on screen
+
+
+
 void Projectile::checkBounds(float scrollX, float scrollY) {
     const float MARGIN = 300.f;
 
@@ -88,7 +88,7 @@ void Projectile::checkBounds(float scrollX, float scrollY) {
         this->deactivate();
         return;
     }
-    // FIX: use scrollY instead of raw 0 — works with vertical camera
+    
     if (this->position.y > scrollY + SCREEN_H + MARGIN) {
         this->deactivate();
     }
@@ -117,9 +117,9 @@ void Projectile::onImpact(EnemyManager* em, CharacterManager* cm) {
     (void)em; (void)cm;
 }
 
-// ============================================================
-// StraightProjectile
-// ============================================================
+
+
+
 
 StraightProjectile::StraightProjectile(TextureManager* texMgr,
     AudioManager* audMgr,
@@ -132,14 +132,14 @@ StraightProjectile::StraightProjectile(TextureManager* texMgr,
 
 StraightProjectile::~StraightProjectile() {}
 
-void StraightProjectile::move(float /*scroll*/) {
+void StraightProjectile::move(float ) {
     this->position.x += this->velocityX;
     this->position.y += this->velocityY;
 }
 
-// ============================================================
-// BallisticProjectile
-// ============================================================
+
+
+
 
 BallisticProjectile::BallisticProjectile(TextureManager* texMgr, AudioManager* audMgr)
     : Projectile(texMgr, audMgr)
@@ -150,15 +150,15 @@ BallisticProjectile::BallisticProjectile(TextureManager* texMgr, AudioManager* a
 
 BallisticProjectile::~BallisticProjectile() {}
 
-void BallisticProjectile::move(float /*scroll*/) {
+void BallisticProjectile::move(float ) {
     this->velocityY += this->gravity;
     this->position.x += this->velocityX;
     this->position.y += this->velocityY;
 }
 
-// ============================================================
-// ExplosiveProjectile
-// ============================================================
+
+
+
 
 ExplosiveProjectile::ExplosiveProjectile(TextureManager* texMgr, AudioManager* audMgr)
     : BallisticProjectile(texMgr, audMgr)

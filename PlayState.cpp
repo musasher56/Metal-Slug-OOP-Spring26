@@ -63,20 +63,20 @@ PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
             this->texManager->loadTexture("dirt", "resources/Sprites/dirt.png");
 
             int cellSize = lvl->getCellSize();
-            int groundRow = lvl->getHeight() - 1;         // row 39
-            int surfaceRow = groundRow - 2;               // row 37 (new walking surface)
-            float surfaceY = (float)(surfaceRow * cellSize); // 1776
+            int groundRow = lvl->getHeight() - 1;         
+            int surfaceRow = groundRow - 2;               
+            float surfaceY = (float)(surfaceRow * cellSize); 
 
-            // FIX: Fill 3 rows of visible dirt blocks for the ground floor.
-            // Row 37 = walking surface, rows 38-39 = underground depth.
-            // 240 cols × 3 rows = 720 blocks.
+            
+            
+            
             this->blockManager->buildGroundTerrain(surfaceRow, 3);
 
-            // Mountain starts from the new ground surface
+            
             this->blockManager->buildMountainTerrain(4000.f, surfaceY);
 
             if (player != nullptr) {
-                // FIX: Spawn on new surface (row 37 top = 1776, minus hitbox height 140)
+                
                 player->position = sf::Vector2f(200.f, surfaceY - 140.f);
                 player->updateBoundingBox();
             }
@@ -173,7 +173,7 @@ void PlayState::render(RenderWindow& window) {
     float groundY = 0.f;
     Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
     if (lvl != nullptr) {
-        int surfaceRow = lvl->getHeight() - 3; // row 37
+        int surfaceRow = lvl->getHeight() - 3; 
         groundY = (float)(surfaceRow * lvl->getCellSize());
     }
 
@@ -255,33 +255,33 @@ void PlayState::spawnTestBlocks() {
     Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
     if (lvl == nullptr) return;
 
-    // FIX: Platforms lowered from rows 27-30 to rows 33-34.
-    // With jump velocity -20, max jump height ≈ 250px.
-    // Player stands at y=1636, bottom at y=1776 (surface row 37).
-    // Player bottom at jump apex ≈ 1776 - 250 = 1526.
-    // Row 34 (y=1632): easy reach (bottom 1526 < 1632)
-    // Row 33 (y=1584): moderate reach (bottom 1526 < 1584, 58px margin)
+    
+    
+    
+    
+    
+    
 
     this->blockManager->spawnPlatform(
         static_cast<float>(8 * 48),
-        static_cast<float>(34 * 48),   // was 30
+        static_cast<float>(34 * 48),   
         8
     );
 
     this->blockManager->spawnPlatform(
         static_cast<float>(22 * 48),
-        static_cast<float>(33 * 48),   // was 28
+        static_cast<float>(33 * 48),   
         7
     );
     this->blockManager->spawnPlatform(
         static_cast<float>(32 * 48),
-        static_cast<float>(33 * 48),   // was 29
+        static_cast<float>(33 * 48),   
         4
     );
 
     this->blockManager->spawnPlatform(
         static_cast<float>(42 * 48),
-        static_cast<float>(34 * 48),   // was 27
+        static_cast<float>(34 * 48),   
         10
     );
 }
