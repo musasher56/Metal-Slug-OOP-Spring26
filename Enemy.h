@@ -72,3 +72,10 @@ public:
     virtual void updateAI(PlayerSoldier* player, Level* lvl);
     virtual void performAttack(PlayerSoldier* player);
 };
+
+class BazookaSoldier : public Enemy {
+public:
+    BazookaSoldier(TextureManager* texMgr, AudioManager* audMgr);
+    virtual ~BazookaSoldier();
+    virtual void performAttack(PlayerSoldier* player);
+};

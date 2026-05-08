@@ -373,11 +373,11 @@ RebelSoldier::RebelSoldier(TextureManager* texMgr, AudioManager* audMgr)
     : Enemy(texMgr, audMgr)
 {
     this->setEnemyType(ENEMY_REBEL);
-    this->maxHealth = 2;
-    this->currentHP = 2;
-    this->health = 2;
-    this->detectionRange = 350.f;
-    this->attackRange = 280.f;
+    this->maxHealth = 9;
+    this->currentHP = 9;
+    this->health = 9;
+    this->detectionRange = 600.f;
+    this->attackRange = 500.f;
     this->attackCooldown = 1.2f;
     this->maxVelocity = 3.5f;
     this->baseMaxVelocity = 3.5f;
@@ -452,4 +452,103 @@ void RebelSoldier::updateAI(PlayerSoldier* player, Level* lvl) {
 
 void RebelSoldier::performAttack(PlayerSoldier* player) {
     Enemy::performAttack(player);
+}
+
+// ============================================================
+// BazookaSoldier
+// ============================================================
+
+BazookaSoldier::BazookaSoldier(TextureManager* texMgr, AudioManager* audMgr)
+    : Enemy(texMgr, audMgr)
+{
+    this->setEnemyType(ENEMY_BAZOOKA);
+    this->maxHealth = 12;
+    this->currentHP = 12;
+    this->health = 12;
+    this->detectionRange = 700.f;
+    this->attackRange = 600.f;
+    this->attackCooldown = 3.0f;
+    this->maxVelocity = 2.0f;
+    this->baseMaxVelocity = 2.0f;
+    this->scoreValue = 200;
+    this->deathDuration = 1.5f;
+
+    this->frameW = 200;
+    this->frameH = 200;
+    this->baseFrameW = 200;
+    this->baseFrameH = 195;
+    this->walkFrames = 5;
+    this->shootFrames = 5;
+    this->deathFrames = 8;
+
+    Texture& walkTex = texMgr->getTexture("resources/Sprites/bazooka-walk.png");
+    this->walkAnim.setTexture(&walkTex);
+    this->walkAnim.setFrameCount(this->walkFrames);
+    this->walkAnim.setFrameDelay(8);
+    this->walkAnim.setFrameRect(0, 5, 7, 205, 195);
+    this->walkAnim.setFrameRect(1, 235, 2, 205, 200);
+    this->walkAnim.setFrameRect(2, 470, 2, 200, 200);
+    this->walkAnim.setFrameRect(3, 695, 7, 205, 195);
+    this->walkAnim.setFrameRect(4, 925, 12, 200, 190);
+    this->walkAnim.setLoop(true);
+
+    Texture& shootTex = texMgr->getTexture("resources/Sprites/bazooka-shoot.png");
+    this->shootAnim.setTexture(&shootTex);
+    this->shootAnim.setFrameCount(this->shootFrames);
+    this->shootAnim.setFrameDelay(6);
+    this->shootAnim.setFrameRect(0, 0, 29, 193, 219);
+    this->shootAnim.setFrameRect(1, 218, 0, 185, 248);
+    this->shootAnim.setFrameRect(2, 428, 0, 175, 248);
+    this->shootAnim.setFrameRect(3, 628, 0, 175, 248);
+    this->shootAnim.setFrameRect(4, 828, 0, 175, 248);
+    this->shootAnim.setLoop(false);
+
+    Texture& deathTex = texMgr->getTexture("resources/Sprites/rebel-death.png");
+    this->deathAnim.setTexture(&deathTex);
+    this->deathAnim.setFrameCount(this->deathFrames);
+    this->deathAnim.setFrameDelay(10);
+    this->deathAnim.setFrameRect(0, 5, 0, 62, 67);
+    this->deathAnim.setFrameRect(1, 78, 0, 72, 67);
+    this->deathAnim.setFrameRect(2, 158, 1, 74, 66);
+    this->deathAnim.setFrameRect(3, 243, 10, 82, 58);
+    this->deathAnim.setFrameRect(4, 335, 29, 80, 38);
+    this->deathAnim.setFrameRect(5, 425, 33, 88, 34);
+    this->deathAnim.setFrameRect(6, 523, 37, 90, 30);
+    this->deathAnim.setFrameRect(7, 623, 37, 90, 30);
+    this->deathAnim.setLoop(false);
+
+    this->sprite.setTexture(walkTex);
+    this->sprite.setTextureRect(IntRect(5, 7, 205, 195));
+    this->sprite.setScale(0.7f, 0.7f);
+    this->switchAnim(&this->walkAnim);
+    this->updateBoundingBox();
+}
+
+BazookaSoldier::~BazookaSoldier() {}
+
+void BazookaSoldier::performAttack(PlayerSoldier* player) {
+    if (this->pm == nullptr || player == nullptr) return;
+
+    float scaleX = std::abs(this->sprite.getScale().x);
+    sf::Vector2f origin = ProjectileManager::calcBarrelTip(
+        this->position,
+        this->faceRight ? DIR_RIGHT : DIR_LEFT,
+        (float)(this->frameW) * scaleX,
+        (float)(this->frameH) * 0.35f
+    );
+
+    // Calculate steep arc angle toward the player
+    float dy = player->getPosition().y - this->position.y;
+    float dx = fabsf(player->getPosition().x - this->position.x);
+    float angle = 45.f;  // default steep arc
+    if (dx > 0.f || dy != 0.f) {
+        angle = atan2f(-dy, dx) * 180.f / 3.14159f;
+        // Clamp to a steep arc: 30-70 degrees
+        if (angle < 30.f) angle = 30.f;
+        if (angle > 70.f) angle = 70.f;
+    }
+
+    int dir = this->faceRight ? DIR_RIGHT : DIR_LEFT;
+    // Spawn explosive projectile with blast radius 3, 5 damage
+    this->pm->spawnExplosive(origin, dir, angle, 5, 3, true);
 }

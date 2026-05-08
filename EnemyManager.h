@@ -22,6 +22,7 @@ public:
     void setProjectileManager(ProjectileManager* p);
 
     int spawnRebel(float x, float y);
+    int spawnBazooka(float x, float y);
 
     void update(float scrollX, float scrollY, Level* lvl, PlayerSoldier* player);
     void draw(RenderWindow& window, float scrollX, float scrollY);

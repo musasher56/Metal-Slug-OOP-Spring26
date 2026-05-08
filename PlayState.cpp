@@ -7,7 +7,7 @@
 #include "DamagableEntity.h"
 #include <cstdio>
 
-PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
+PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr)
     : entityManager(nullptr), enemyManager(nullptr), enemyVehicleManager(nullptr),
     projectileManager(nullptr), collectibleManager(nullptr),
     texManager(texMgr), audManager(audMgr),
@@ -24,16 +24,22 @@ PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
     this->id = GSTATE_PLAY;
 
     this->levelManager = new LevelManager();
-    this->characterManager = new CharacterManager(texMgr, audMgr);
+
+    // Pass startChar so CharacterManager begins on the character selected
+    // in CharSelectState rather than always defaulting to Marco (index 0).
+    this->characterManager = new CharacterManager(texMgr, audMgr, startChar);
     this->scoreManager = new ScoreManager();
     this->hud = new HUD();
     this->projectileManager = new ProjectileManager(texMgr, audMgr);
     this->enemyManager = new EnemyManager(texMgr, audMgr);
     this->enemyManager->setProjectileManager(this->projectileManager);
 
-    PlayerSoldier* player = this->characterManager->getCurrentCharacter();
-    if (player != nullptr)
-        player->setProjectileManager(this->projectileManager);
+    // Distribute the ProjectileManager to ALL four character slots at once.
+    // Previously only characters[0] (Marco) received it; every other character
+    // had pm = nullptr and would silently no-op on shoot().
+    if (this->characterManager != nullptr) {
+        this->characterManager->setProjectileManager(this->projectileManager);
+    }
 
     bool fontLoaded = this->debugFont.loadFromFile("/System/Library/Fonts/Helvetica.ttc");
     if (!fontLoaded) fontLoaded = this->debugFont.loadFromFile("/Library/Fonts/Arial.ttf");
@@ -89,10 +95,12 @@ PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
 
             this->blockManager->buildMountainTerrain(4000.f, surfaceY);
 
-            if (player != nullptr) {
-
-                player->position = sf::Vector2f(200.f, surfaceY - 140.f);
-                player->updateBoundingBox();
+            // Position ALL four character slots at the same spawn point so
+            // no character starts at the constructor-default (200, 300).
+            // initAllPositions also calls updateBoundingBox() on each slot.
+            if (this->characterManager != nullptr) {
+                sf::Vector2f spawnPos(200.f, surfaceY - 140.f);
+                this->characterManager->initAllPositions(spawnPos);
             }
 
             this->spawnTestBlocks();
@@ -270,7 +278,7 @@ void PlayState::renderDebug(RenderWindow& window) {
         sprintf(line, "Player: NULL\n");
     }
     append(line);
-    sprintf(line, "Z=Shoot  X=Grenade  Arrows=Move  Space=Jump  H=Hitboxes");
+    sprintf(line, "X=Shoot  C=Grenade  Arrows=Move  Space=Jump  Z=Switch  H=Hitboxes");
     append(line);
 
     this->debugText.setString(buf);
@@ -346,6 +354,18 @@ void PlayState::handleEvent(Event& event) {
         this->showHitboxes = !this->showHitboxes;
     }
 
+    // Tab cycles through unlocked characters.
+    // This is event-based (KeyPressed, not isKeyPressed) so it fires once
+    // per physical key press rather than every frame — important because a
+    // held Tab at 60fps would cycle through all four characters in under a
+    // second. switchCharacter() internally calls copyPhysicsFrom() so the
+    // incoming character inherits the outgoing one's position and momentum.
+    if (event.type == Event::KeyPressed && event.key.code == Keyboard::Z) {
+        if (this->characterManager != nullptr) {
+            this->characterManager->switchCharacter();
+        }
+    }
+
     if (this->characterManager)
         this->characterManager->handleInput(event);
 }
@@ -419,4 +439,8 @@ void PlayState::spawnTestEnemies() {
     this->enemyManager->spawnRebel(mtBaseX + 65.f * 48.f, mtTop65 - rebelFootOffset);
     this->enemyManager->spawnRebel(mtBaseX + 90.f * 48.f, mtTop90 - rebelFootOffset);
     this->enemyManager->spawnRebel(mtBaseX + 140.f * 48.f, mtTop140 - rebelFootOffset);
+
+    // Bazooka soldiers — longer range, explosive rockets
+    this->enemyManager->spawnBazooka(25.f * 48.f, surfaceY - rebelFootOffset);
+    this->enemyManager->spawnBazooka(50.f * 48.f, surfaceY - rebelFootOffset);
 }

@@ -51,7 +51,7 @@ private:
     Sprite     bloodOverlaySprite;
 
 public:
-    PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr);
+    PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr);
     virtual ~PlayState();
 
     virtual void update(float dt);
