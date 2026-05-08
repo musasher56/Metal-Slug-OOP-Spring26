@@ -989,3 +989,263 @@ void Martian::draw(RenderWindow& window, float scrollX, float scrollY) {
     this->sprite.setPosition(this->position.x - scrollX, drawY);
     window.draw(this->sprite);
 }
+
+// ============================================================
+// Paratrooper
+// ============================================================
+
+Paratrooper::Paratrooper(TextureManager* texMgr, AudioManager* audMgr)
+    : Enemy(texMgr, audMgr)
+    , paraState(0)        // start flying
+    , landY(0.f)
+    , fallSpeed(1.8f)     // slow descent: ~60 px/sec at 60fps
+    , swayTimer(0.f)
+    , startDescent(false) // wait for player to approach
+    , triggerX(0.f)       // set via setTriggerX()
+{
+    this->setEnemyType(ENEMY_PARATROOPER);
+    this->maxHealth = 5;
+    this->currentHP = 5;
+    this->health = 5;
+    this->detectionRange = 600.f;
+    this->attackRange = 500.f;
+    this->attackCooldown = 1.2f;
+    this->maxVelocity = 3.5f;
+    this->baseMaxVelocity = 3.5f;
+    this->scoreValue = 75;
+    this->deathDuration = 1.5f;
+    this->activated = true;  // always active — visible and swaying
+
+    // Bounding box / frame size matches rebel soldier (used after landing)
+    this->frameW = 70;
+    this->frameH = 66;
+    this->baseFrameW = 70;
+    this->baseFrameH = 62;
+    this->walkFrames = 9;
+    this->shootFrames = 10;
+    this->deathFrames = 8;
+
+    // Fly animation — paratrooper.png (single frame)
+    Texture& flyTex = texMgr->getTexture("resources/Sprites/paratrooper.png");
+    this->flyAnim.setTexture(&flyTex);
+    this->flyAnim.setFrameCount(1);
+    this->flyAnim.setFrameDelay(1);
+    this->flyAnim.setFrameRect(0, 181, 234, 681, 894);
+    this->flyAnim.setLoop(true);
+
+    // Walk animation — rebel-walk.png (9 frames, same as RebelSoldier)
+    Texture& walkTex = texMgr->getTexture("resources/Sprites/rebel-walk.png");
+    this->walkAnim.setTexture(&walkTex);
+    this->walkAnim.setFrameCount(this->walkFrames);
+    this->walkAnim.setFrameDelay(8);
+    this->walkAnim.setFrameRect(0, 0, 2, 58, 62);
+    this->walkAnim.setFrameRect(1, 61, 2, 63, 62);
+    this->walkAnim.setFrameRect(2, 125, 3, 71, 53);
+    this->walkAnim.setFrameRect(3, 197, 5, 70, 55);
+    this->walkAnim.setFrameRect(4, 269, 3, 63, 62);
+    this->walkAnim.setFrameRect(5, 333, 2, 58, 62);
+    this->walkAnim.setFrameRect(6, 588, 5, 58, 54);
+    this->walkAnim.setFrameRect(7, 653, 2, 58, 62);
+    this->walkAnim.setFrameRect(8, 711, 2, 58, 62);
+    this->walkAnim.setLoop(true);
+
+    // Shoot animation — rebel-shoot.png (10 frames, same as RebelSoldier)
+    Texture& shootTex = texMgr->getTexture("resources/Sprites/rebel-shoot.png");
+    this->shootAnim.setTexture(&shootTex);
+    this->shootAnim.setFrameCount(this->shootFrames);
+    this->shootAnim.setFrameDelay(6);
+    this->shootAnim.setFrameRect(0, 2, 13, 74, 63);
+    this->shootAnim.setFrameRect(1, 78, 13, 79, 63);
+    this->shootAnim.setFrameRect(2, 158, 13, 80, 63);
+    this->shootAnim.setFrameRect(3, 239, 10, 71, 66);
+    this->shootAnim.setFrameRect(4, 311, 0, 69, 76);
+    this->shootAnim.setFrameRect(5, 381, 0, 69, 76);
+    this->shootAnim.setFrameRect(6, 452, 3, 72, 73);
+    this->shootAnim.setFrameRect(7, 525, 13, 79, 63);
+    this->shootAnim.setFrameRect(8, 605, 13, 77, 63);
+    this->shootAnim.setFrameRect(9, 684, 13, 67, 63);
+    this->shootAnim.setLoop(false);
+
+    // Death animation — rebel-death.png (8 frames, same as RebelSoldier)
+    Texture& deathTex = texMgr->getTexture("resources/Sprites/rebel-death.png");
+    this->deathAnim.setTexture(&deathTex);
+    this->deathAnim.setFrameCount(this->deathFrames);
+    this->deathAnim.setFrameDelay(10);
+    this->deathAnim.setFrameRect(0, 5, 0, 62, 67);
+    this->deathAnim.setFrameRect(1, 78, 0, 72, 67);
+    this->deathAnim.setFrameRect(2, 158, 1, 74, 66);
+    this->deathAnim.setFrameRect(3, 243, 10, 82, 58);
+    this->deathAnim.setFrameRect(4, 335, 29, 80, 38);
+    this->deathAnim.setFrameRect(5, 425, 33, 88, 34);
+    this->deathAnim.setFrameRect(6, 523, 37, 90, 30);
+    this->deathAnim.setFrameRect(7, 623, 37, 90, 30);
+    this->deathAnim.setLoop(false);
+
+    // Start with parachute sprite displayed
+    this->sprite.setTexture(flyTex);
+    this->sprite.setTextureRect(IntRect(181, 234, 681, 894));
+    this->sprite.setScale(0.25f, 0.25f);
+    this->switchAnim(&this->flyAnim);
+    this->updateBoundingBox();
+}
+
+Paratrooper::~Paratrooper() {}
+
+void Paratrooper::setLandY(float y) {
+    this->landY = y;
+}
+
+void Paratrooper::setTriggerX(float x) {
+    this->triggerX = x;
+}
+
+void Paratrooper::applyGravity() {
+    if (this->paraState == 0) {
+        if (this->startDescent) {
+            // Slow, controlled descent with gentle sideways sway
+            this->velocityY = this->fallSpeed;
+            this->swayTimer += 0.03f;
+            this->velocityX = sinf(this->swayTimer) * 0.5f;
+        }
+        else {
+            // Waiting: hover in place with gentle sway, no descent
+            this->velocityY = 0.f;
+            this->swayTimer += 0.02f;
+            this->velocityX = sinf(this->swayTimer) * 0.3f;
+        }
+    }
+    else {
+        // Normal gravity when grounded
+        Soldier::applyGravity();
+    }
+}
+
+void Paratrooper::handleCollision(Level* lvl) {
+    if (this->paraState == 0) {
+        // Skip level collision while parachuting; landing is handled
+        // by the landY check in updateAI()
+        this->onGround = false;
+        return;
+    }
+    Enemy::handleCollision(lvl);
+}
+
+void Paratrooper::updateAI(PlayerSoldier* player, Level* lvl) {
+    if (this->dying) return;
+
+    if (this->paraState == 0) {
+        // Check if player has walked close enough to trigger descent
+        if (!this->startDescent && player != nullptr) {
+            float dx = fabsf(player->getPosition().x - this->position.x);
+            float dy = fabsf(player->getPosition().y - this->landY);
+            // Player must be within 800px horizontally AND within 500px
+            // vertically of the landing spot — means they're climbing
+            // the mountain toward the paratrooper
+            if (dx < 200.f && dy < 500.f) {
+                this->startDescent = true;
+            }
+        }
+
+        // If descent has started, check if reached landing position
+        if (this->startDescent && this->landY > 0.f && this->position.y >= this->landY) {
+            this->paraState = 1;   // transition to grounded
+            this->position.y = this->landY;
+            this->velocityY = 0.f;
+            this->velocityX = 0.f;
+            this->onGround = true;
+            this->faceRight = false;
+            this->switchAnim(&this->walkAnim);
+        }
+        // While flying: no attack, no chase — just descend (or hover)
+        return;
+    }
+
+    // Grounded: use normal rebel AI (patrol / chase / attack)
+    Enemy::updateAI(player, lvl);
+}
+
+void Paratrooper::performAttack(PlayerSoldier* player) {
+    // Same as rebel soldier — straight bullets
+    Enemy::performAttack(player);
+}
+
+void Paratrooper::onDeath() {
+    if (this->dying) return;
+    this->dying = true;
+    this->deathTimer.restart();
+    this->velocityX = 0.f;
+    // If still flying, switch to grounded so normal gravity + collision
+    // apply and the body falls naturally
+    this->paraState = 1;
+    this->switchAnim(&this->deathAnim);
+}
+
+void Paratrooper::draw(RenderWindow& window, float scrollX, float scrollY) {
+    if (!this->status) return;
+
+    if (this->dying) {
+        if (this->deathTimer.getElapsedTime().asSeconds() >= this->deathDuration) {
+            this->status = false;
+            return;
+        }
+    }
+
+    if (this->paraState == 0) {
+        // === FLYING: draw parachute sprite ===
+        this->flyAnim.update();
+        this->flyAnim.applyToSprite(this->sprite);
+
+        float flyScale = 0.25f;
+        if (this->faceRight) {
+            this->sprite.setScale(-flyScale, flyScale);
+        }
+        else {
+            this->sprite.setScale(flyScale, flyScale);
+        }
+
+        // The parachute frame (681x894) has the soldier at the bottom.
+        // Offset upward so the soldier body aligns with position.y
+        float spriteH = 894.f * flyScale;
+        float rebelVisH = 62.f * 2.25f;
+        float yOff = -(spriteH - rebelVisH);
+
+        float drawX = this->position.x - scrollX;
+        float drawY = this->position.y - scrollY + yOff;
+
+        this->sprite.setPosition(drawX, drawY);
+        window.draw(this->sprite);
+    }
+    else {
+        // === GROUNDED: draw like a rebel soldier ===
+        if (this->currentAnim != nullptr) {
+            this->currentAnim->update();
+            this->currentAnim->applyToSprite(this->sprite);
+        }
+
+        float scale = 2.25f;  // walk scale (default)
+        if (!this->dying) {
+            IntRect texRect = this->sprite.getTextureRect();
+            if (texRect.width > 100) {  // shoot frames are larger
+                scale = 1.1f;
+            }
+        }
+        else {
+            scale = this->deathSpriteScale;  // 2.0f
+        }
+
+        if (this->faceRight) {
+            this->sprite.setScale(-scale, scale);
+        }
+        else {
+            this->sprite.setScale(scale, scale);
+        }
+
+        float drawY = this->position.y - scrollY;
+        if (this->dying) {
+            drawY += 70.f;
+        }
+
+        this->sprite.setPosition(this->position.x - scrollX, drawY);
+        window.draw(this->sprite);
+    }
+}

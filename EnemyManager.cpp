@@ -173,6 +173,31 @@ int EnemyManager::spawnMartian(float x, float y) {
     return slot;
 }
 
+int EnemyManager::spawnParatrooper(float x, float y, float landY) {
+    int slot = this->findFreeSlot();
+    if (slot < 0) return -1;
+
+    Paratrooper* enemy = new Paratrooper(this->texMgr, this->audMgr);
+    enemy->position = sf::Vector2f(x, y);
+    enemy->setLandY(landY);
+    enemy->setPatrol(x, 80.f);
+    enemy->setProjectileManager(this->pm);
+    enemy->updateBoundingBox();
+
+    if (slot < this->activeCount) {
+        if (this->slots[slot] != nullptr) {
+            delete this->slots[slot];
+        }
+    }
+    else {
+        this->activeCount = slot + 1;
+    }
+
+    this->slots[slot] = enemy;
+    this->deSlots[slot] = enemy;
+    return slot;
+}
+
 void EnemyManager::update(float scrollX, float scrollY, Level* lvl,
     PlayerSoldier* player)
 {

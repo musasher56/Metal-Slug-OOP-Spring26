@@ -463,4 +463,13 @@ void PlayState::spawnTestEnemies() {
     float mtPeak = surfaceY - 25.f * 48.f;
     this->enemyManager->spawnMartian(mtBaseX + 140.f * 48.f, mtPeak - rebelFootOffset);
     this->enemyManager->spawnMartian(mtBaseX + 65.f * 48.f, mtTop65 - rebelFootOffset);
+
+    // ── Paratrooper — slow descent onto mountain peak, then fights ──────
+    float mtPeakk = surfaceY - 25.f * 48.f;
+    float paraLandingY = mtPeakk - rebelFootOffset;
+    this->enemyManager->spawnParatrooper(
+        mtBaseX + 80.f * 48.f,         // X: middle of mountain plateau
+        paraLandingY - 500.f,           // start 500px above the landing spot
+        paraLandingY                    // target landing Y on mountain top
+    );
 }

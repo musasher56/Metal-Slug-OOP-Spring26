@@ -7,12 +7,23 @@ class Level;
 class ProjectileManager {
 public:
     static const int MAX_PROJ = 64;
+    static const int MAX_BLASTS = 16;
 
 private:
     Projectile* slots[MAX_PROJ];
     int             activeCount;
     TextureManager* texMgr;
     AudioManager* audMgr;
+
+    // Blast effect pool
+    struct BlastEffect {
+        Animation anim;
+        float x;
+        float y;
+        bool active;
+    };
+    BlastEffect blasts[MAX_BLASTS];
+    int blastCount;
 
 public:
     ProjectileManager(TextureManager* t, AudioManager* a);
@@ -29,13 +40,10 @@ public:
     void spawnExplosive(sf::Vector2f origin, int dir, float angle,
         int dmg, int blastRadius, bool fromEnemy = false);
 
-    
+    void spawnBlast(float x, float y);
+
     void update(float scroll, Level* lvl);
 
-    
-    
-    
-   
     void postEntityUpdate(float scrollX, float scrollY, Level* lvl);
     void draw(RenderWindow& window, float scrollX, float scrollY);
 

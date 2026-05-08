@@ -112,3 +112,28 @@ public:
     virtual void performAttack(PlayerSoldier* player);
     virtual void draw(RenderWindow& window, float scrollX, float scrollY);
 };
+
+class Paratrooper : public Enemy {
+private:
+    int paraState;       // 0 = flying (parachute), 1 = grounded (rebel)
+    float landY;         // target Y where landing completes
+    float fallSpeed;     // slow descent speed while parachuting
+    Animation flyAnim;   // single-frame parachute animation
+    float swayTimer;     // timer for gentle left-right sway
+    bool startDescent;   // true once player is near mountain height
+    float triggerX;      // X position that triggers descent when player crosses it
+
+protected:
+    virtual void applyGravity();
+
+public:
+    Paratrooper(TextureManager* texMgr, AudioManager* audMgr);
+    virtual ~Paratrooper();
+    void setLandY(float y);
+    void setTriggerX(float x);
+    virtual void updateAI(PlayerSoldier* player, Level* lvl);
+    virtual void performAttack(PlayerSoldier* player);
+    virtual void onDeath();
+    virtual void draw(RenderWindow& window, float scrollX, float scrollY);
+    virtual void handleCollision(Level* lvl);
+};

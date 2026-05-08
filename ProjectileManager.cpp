@@ -3,10 +3,24 @@
 #include <cmath>
 
 ProjectileManager::ProjectileManager(TextureManager* t, AudioManager* a)
-    : activeCount(0), texMgr(t), audMgr(a)
+    : activeCount(0), texMgr(t), audMgr(a), blastCount(0)
 {
     for (int i = 0; i < MAX_PROJ; i++) this->slots[i] = nullptr;
     this->texMgr->loadTexture("bullet", "resources/Sprites/bullet.png");
+
+    // Load blast texture and init blast pool
+    this->texMgr->loadTexture("blast", "resources/Sprites/blast.png");
+    for (int i = 0; i < MAX_BLASTS; i++) {
+        this->blasts[i].active = false;
+        this->blasts[i].anim.setTexture(
+            &this->texMgr->getTexture("blast"));
+        this->blasts[i].anim.setFrameCount(3);
+        this->blasts[i].anim.setFrameDelay(6);
+        this->blasts[i].anim.setFrameRect(0, 75, 339, 278, 308);
+        this->blasts[i].anim.setFrameRect(1, 463, 353, 457, 287);
+        this->blasts[i].anim.setFrameRect(2, 984, 304, 505, 400);
+        this->blasts[i].anim.setLoop(false);
+    }
 }
 
 ProjectileManager::~ProjectileManager() { this->clearAll(); }
@@ -17,6 +31,10 @@ void ProjectileManager::clearAll() {
         this->slots[i] = nullptr;
     }
     this->activeCount = 0;
+    for (int i = 0; i < MAX_BLASTS; i++) {
+        this->blasts[i].active = false;
+    }
+    this->blastCount = 0;
 }
 
 sf::Vector2f ProjectileManager::calcBarrelTip(sf::Vector2f entityPos,
@@ -78,6 +96,19 @@ void ProjectileManager::spawnExplosive(sf::Vector2f origin, int dir,
     this->slots[this->activeCount++] = p;
 }
 
+void ProjectileManager::spawnBlast(float x, float y) {
+    // Find a free slot in the blast pool
+    for (int i = 0; i < MAX_BLASTS; i++) {
+        if (!this->blasts[i].active) {
+            this->blasts[i].x = x;
+            this->blasts[i].y = y;
+            this->blasts[i].active = true;
+            this->blasts[i].anim.reset();
+            return;
+        }
+    }
+}
+
 void ProjectileManager::update(float scroll, Level* lvl) {
     (void)lvl;
     for (int i = 0; i < this->activeCount; i++) {
@@ -98,7 +129,18 @@ void ProjectileManager::postEntityUpdate(float scrollX, float scrollY, Level* lv
         }
 
         if (lvl != nullptr) {
+            // Save position before collision check — if the projectile
+            // dies on impact, we know where to spawn the blast effect
+            float impactX = p->position.x;
+            float impactY = p->position.y;
+            bool wasExplosive = p->isExplosive;
+
             p->checkTileCollision(lvl);
+
+            if (!p->status && wasExplosive) {
+                // Grenade hit something — spawn blast at impact point
+                this->spawnBlast(impactX, impactY);
+            }
         }
 
         if (!p->status) {
@@ -113,6 +155,16 @@ void ProjectileManager::postEntityUpdate(float scrollX, float scrollY, Level* lv
         }
 
         i++;
+    }
+
+    // Update blast animations — remove finished ones
+    for (int b = 0; b < MAX_BLASTS; b++) {
+        if (this->blasts[b].active) {
+            this->blasts[b].anim.update();
+            if (this->blasts[b].anim.isFinished()) {
+                this->blasts[b].active = false;
+            }
+        }
     }
 }
 
@@ -146,7 +198,6 @@ void ProjectileManager::draw(RenderWindow& window, float scrollX, float scrollY)
 
         if (p->isExplosive) {
             if (hasGrenade) {
-                // Rotate grenade to match travel direction
                 float rot = atan2f(p->velocityY, p->velocityX) * 180.f / 3.14159f;
                 grenadeSprite.setRotation(rot);
                 grenadeSprite.setPosition(
@@ -155,7 +206,6 @@ void ProjectileManager::draw(RenderWindow& window, float scrollX, float scrollY)
                 window.draw(grenadeSprite);
             }
             else {
-                // Fallback: orange rectangle if grenade.png not found
                 RectangleShape explosiveRect(sf::Vector2f(10.f, 8.f));
                 explosiveRect.setPosition(p->position.x - scrollX,
                     p->position.y - scrollY);
@@ -172,6 +222,27 @@ void ProjectileManager::draw(RenderWindow& window, float scrollX, float scrollY)
                 p->position.y + 3.f - scrollY);
             window.draw(bulletSprite);
         }
+    }
+
+    // Draw blast effects
+    for (int b = 0; b < MAX_BLASTS; b++) {
+        if (!this->blasts[b].active) continue;
+
+        BlastEffect* blast = &this->blasts[b];
+        Sprite blastSprite;
+        blast->anim.applyToSprite(blastSprite);
+
+        // Center the blast frame on the impact point
+        IntRect rect = blastSprite.getTextureRect();
+        float blastScale = 0.8f;
+        blastSprite.setOrigin(
+            static_cast<float>(rect.width) * 0.5f,
+            static_cast<float>(rect.height) * 0.5f);
+        blastSprite.setScale(blastScale, blastScale);
+        blastSprite.setPosition(
+            blast->x - scrollX,
+            blast->y - 85.f - scrollY);
+        window.draw(blastSprite);
     }
 }
 
@@ -198,6 +269,10 @@ int ProjectileManager::checkEntityCollisions(DamagableEntity** targets,
                 (projBox.top + projBox.height > entBox.top);
 
             if (overlapX && overlapY) {
+                // Spawn blast if explosive hits a block
+                if (proj->isExplosive) {
+                    this->spawnBlast(proj->position.x, proj->position.y);
+                }
                 targets[e]->takeDamage(proj->getDamage());
                 totalDamage += proj->getDamage();
                 proj->onImpact(nullptr, nullptr);
@@ -238,6 +313,10 @@ int ProjectileManager::checkPlayerBulletHits(DamagableEntity** targets,
                 (projBox.top + projBox.height > entBox.top);
 
             if (overlapX && overlapY) {
+                // Spawn blast if explosive (grenade) hits an enemy
+                if (proj->isExplosive) {
+                    this->spawnBlast(proj->position.x, proj->position.y);
+                }
                 int bulletDir = (proj->velocityX > 0.f) ? 1 : -1;
                 targets[e]->takeDamageFrom(proj->getDamage(), bulletDir);
                 hits++;
@@ -272,6 +351,10 @@ bool ProjectileManager::checkEnemyBulletHitPlayer(DamagableEntity* player) {
             (projBox.top + projBox.height > playerBox.top);
 
         if (overlapX && overlapY) {
+            // Spawn blast if enemy grenade hits player
+            if (proj->isExplosive) {
+                this->spawnBlast(proj->position.x, proj->position.y);
+            }
             player->takeDamage(proj->getDamage());
             proj->deactivate();
             if (!proj->getStatus()) {

@@ -26,6 +26,7 @@ public:
     int spawnShielded(float x, float y);
     int spawnGrenade(float x, float y);
     int spawnMartian(float x, float y);
+    int spawnParatrooper(float x, float y, float landY);
 
     void update(float scrollX, float scrollY, Level* lvl, PlayerSoldier* player);
     void draw(RenderWindow& window, float scrollX, float scrollY);
