@@ -49,6 +49,17 @@ PlayState::PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr)
     this->scrollY = 0.f;
     this->bgTex.loadFromFile("resources/Sprites/background.png");
     this->bgSprite.setTexture(this->bgTex);
+
+    this->bloodOverlayTex.loadFromFile("resources/Sprites/blood-overlay.png");
+    this->bloodOverlaySprite.setTexture(this->bloodOverlayTex);
+    this->bloodOverlaySprite.setScale(
+        (float)SCREEN_W / (float)this->bloodOverlayTex.getSize().x * 1.1f,
+        (float)SCREEN_H / (float)this->bloodOverlayTex.getSize().y * 1.1f
+    );
+    this->bloodOverlaySprite.setPosition(
+        -(float)SCREEN_W * 0.05f,
+        -(float)SCREEN_H * 0.05f
+    );
     float texH = static_cast<float>(this->bgTex.getSize().y);
     if (texH > 0.f) {
         this->bgScaleY = (float)SCREEN_H / texH * 1.4f;
@@ -223,6 +234,7 @@ void PlayState::render(RenderWindow& window) {
     if (this->characterManager)  this->characterManager->draw(window, this->scroll, this->scrollY);
     if (this->projectileManager) this->projectileManager->draw(window, this->scroll, this->scrollY);
     if (this->hud)               this->hud->draw(window);
+    this->renderBloodOverlay(window);
     if (this->showHitboxes)    this->renderHitboxes(window);
     if (this->debugMode)         this->renderDebug(window);
 }
@@ -317,6 +329,15 @@ void PlayState::renderHitboxes(RenderWindow& window) {
             rect.setOutlineThickness(1.f);
             window.draw(rect);
         }
+    }
+}
+
+void PlayState::renderBloodOverlay(RenderWindow& window) {
+    PlayerSoldier* player = this->characterManager
+        ? this->characterManager->getCurrentCharacter() : nullptr;
+    if (player == nullptr) return;
+    if (player->getCurrentHP() <= 1) {
+        window.draw(this->bloodOverlaySprite);
     }
 }
 

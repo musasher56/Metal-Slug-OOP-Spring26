@@ -47,6 +47,9 @@ private:
     sf::Font   debugFont;
     sf::Text   debugText;
 
+    Texture    bloodOverlayTex;
+    Sprite     bloodOverlaySprite;
+
 public:
     PlayState(int mode, TextureManager* texMgr, AudioManager* audMgr);
     virtual ~PlayState();
@@ -60,6 +63,7 @@ public:
 private:
     void renderDebug(RenderWindow& window);
     void renderHitboxes(RenderWindow& window);
+    void renderBloodOverlay(RenderWindow& window);
     void spawnTestBlocks();
     void spawnTestEnemies();
 };

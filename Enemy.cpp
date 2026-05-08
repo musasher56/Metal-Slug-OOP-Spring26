@@ -256,7 +256,13 @@ void Enemy::draw(RenderWindow& window, float scrollX, float scrollY) {
     }
 
     this->applyDirectionFlip();
-    this->sprite.setPosition(this->position.x - scrollX, this->position.y - scrollY);
+
+    float drawY = this->position.y - scrollY;
+    if (this->dying) {
+        drawY += 70.f;
+    }
+
+    this->sprite.setPosition(this->position.x - scrollX, drawY);
     window.draw(this->sprite);
 }
 

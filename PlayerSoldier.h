@@ -9,18 +9,19 @@
 
 class PlayerSoldier : public Soldier {
 protected:
-    Weapon*           currentWeapon;
-    Pistol*           pistol;
-    Grenade*          currentGrenade;
+    Weapon* currentWeapon;
+    Pistol* pistol;
+    Grenade* currentGrenade;
     int               grenadeCount;
     bool              inVehicle;
-    Vehicle*          currentVehicle;
-    Weapon*           inventory[3];
+    Vehicle* currentVehicle;
+    Weapon* inventory[3];
     int               inventorySize;
     bool              isFat;
     float             fatGravRadius;
     Clock             stateTimer;
     AimController     aimController;
+    int               enemyBulletHits;
 
     ProjectileManager* pm;
 
@@ -31,6 +32,7 @@ public:
     void setProjectileManager(ProjectileManager* manager);
 
     float getAimAngle() const { return this->aimController.getAngle(); }
+    int  getEnemyBulletHits() const { return this->enemyBulletHits; }
 
     void switchWeapon(Weapon* w);
     void throwGrenade();
@@ -47,11 +49,12 @@ protected:
     void applyFannumTax(ProjectileManager* manager);
 
 public:
-    virtual void updateSprite()    = 0;
+    virtual void updateSprite() = 0;
     virtual void activatePowerUp() = 0;
     void onDeath();
     void updateBoundingBox();
     virtual void handleInput() = 0;
+    virtual void takeDamage(int amount);
 };
 
 

@@ -4,13 +4,18 @@
 AimController::AimController()
     : currentAngle(0.f)
     , facingDirection(DIR_RIGHT)
-{}
+{
+}
 
 void AimController::update(sf::Vector2f mousePos, sf::Vector2f charCenter, int dir) {
     this->facingDirection = dir;
 
     float dx = mousePos.x - charCenter.x;
     float dy = mousePos.y - charCenter.y;
+
+    if (dir == DIR_LEFT) {
+        dx = -dx;
+    }
 
     this->currentAngle = atan2f(-dy, dx) * 180.f / 3.14159f;
 }
@@ -20,22 +25,23 @@ float AimController::getAngle() const {
 }
 
 void AimController::drawAimLine(RenderWindow& window,
-                                  sf::Vector2f charCenter,
-                                  float scroll,
-                                  float lineLength) const
+    sf::Vector2f charCenter,
+    float scroll,
+    float lineLength) const
 {
     float rad = this->currentAngle * 3.14159f / 180.f;
+    float dirMul = (this->facingDirection == DIR_RIGHT) ? 1.f : -1.f;
 
     sf::Vector2f start(charCenter.x - scroll, charCenter.y);
 
     sf::Vector2f end(
-        start.x + cosf(rad) * lineLength,
+        start.x + dirMul * cosf(rad) * lineLength,
         start.y - sinf(rad) * lineLength
     );
 
     Vertex line[2];
     line[0] = Vertex(start, Color::Red);
-    line[1] = Vertex(end,   Color(255, 100, 0));
+    line[1] = Vertex(end, Color(255, 100, 0));
 
     window.draw(line, 2, Lines);
 

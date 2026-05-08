@@ -5,7 +5,6 @@
 
 
 
-
 PlayerSoldier::PlayerSoldier(TextureManager* texMgr, AudioManager* audMgr)
     : Soldier(texMgr, audMgr)
     , currentWeapon(nullptr)
@@ -19,18 +18,15 @@ PlayerSoldier::PlayerSoldier(TextureManager* texMgr, AudioManager* audMgr)
     , fatGravRadius(0.f)
     , aimController()
     , pm(nullptr)
+    , enemyBulletHits(0)
 {
     for (int i = 0; i < 3; ++i) this->inventory[i] = nullptr;
-
-
-
 
     this->pistol = new Pistol();
     this->currentWeapon = this->pistol;
 }
 
 PlayerSoldier::~PlayerSoldier() {
-
 
     if (this->pistol != nullptr) {
         delete this->pistol;
@@ -52,76 +48,24 @@ PlayerSoldier::~PlayerSoldier() {
             this->inventory[i] = nullptr;
         }
     }
-
 }
-
-
-
-
-
-
-
-
 
 void PlayerSoldier::setProjectileManager(ProjectileManager* manager) {
     this->pm = manager;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void PlayerSoldier::updateAim(sf::Vector2f mousePos) {
     this->aimController.update(mousePos, this->position, this->direction);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 void PlayerSoldier::shoot() {
 
     if (this->pm == nullptr) return;
 
-
     if (this->currentWeapon == nullptr) return;
     if (!this->currentWeapon->hasAmmo())  return;
 
-
     float angle = this->aimController.getAngle();
-
-
-
-
-
-
-
-
-
 
     sf::Vector2f origin = ProjectileManager::calcBarrelTip(
         this->position,
@@ -130,12 +74,8 @@ void PlayerSoldier::shoot() {
         52.f
     );
 
-
     this->currentWeapon->fire(origin, this->direction, angle, this->pm);
 }
-
-
-
 
 void PlayerSoldier::switchWeapon(Weapon* w) {
     if (w == nullptr) return;
@@ -148,9 +88,6 @@ void PlayerSoldier::switchWeapon(Weapon* w) {
     }
     this->currentWeapon = w;
 }
-
-
-
 
 void PlayerSoldier::enterVehicle(Vehicle* v) {
     if (v == nullptr || this->inVehicle) return;
@@ -165,9 +102,6 @@ void PlayerSoldier::exitVehicle() {
     this->currentVehicle = nullptr;
     this->inVehicle = false;
 }
-
-
-
 
 void PlayerSoldier::saveData(std::ofstream& out) {
     if (!out.is_open()) return;
@@ -195,7 +129,31 @@ void PlayerSoldier::applyFannumTax(ProjectileManager* manager) {
 
 void PlayerSoldier::onDeath() {
     this->lives--;
+    this->enemyBulletHits = 0;
     if (this->lives > 0) this->respawn();
+}
+
+void PlayerSoldier::takeDamage(int amount) {
+    if (amount < 0) return;
+
+    if (this->transformState != nullptr) {
+
+    }
+
+    this->enemyBulletHits += amount;
+
+    while (this->enemyBulletHits >= HITS_PER_HEART) {
+        this->enemyBulletHits -= HITS_PER_HEART;
+        this->currentHP -= 1;
+    }
+
+    if (this->currentHP < 0) this->currentHP = 0;
+
+    if (this->currentHP == 0) {
+        this->onDeath();
+    }
+
+    this->health = this->currentHP;
 }
 
 void PlayerSoldier::updateBoundingBox() {
@@ -210,7 +168,7 @@ void PlayerSoldier::updateBoundingBox() {
     this->boundingBox = IntRect(left, 0, w, h);
 }
 
-
+// ... rest of the file (Marco, Tarma, Eri, Fio, throwGrenade) remains UNCHANGED
 
 
 Marco::Marco(TextureManager* texMgr, AudioManager* audMgr)
