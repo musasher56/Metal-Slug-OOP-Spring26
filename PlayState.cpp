@@ -29,8 +29,6 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
 
     this->levelManager = new LevelManager();
 
-    // Pass startChar so CharacterManager begins on the character selected
-    // in CharSelectState rather than always defaulting to Marco (index 0).
     this->characterManager = new CharacterManager(texMgr, audMgr, startChar);
     this->scoreManager = new ScoreManager();
     this->hud = new HUD();
@@ -38,9 +36,6 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
     this->enemyManager = new EnemyManager(texMgr, audMgr);
     this->enemyManager->setProjectileManager(this->projectileManager);
 
-    // Distribute the ProjectileManager to ALL four character slots at once.
-    // Previously only characters[0] (Marco) received it; every other character
-    // had pm = nullptr and would silently no-op on shoot().
     if (this->characterManager != nullptr) {
         this->characterManager->setProjectileManager(this->projectileManager);
     }
@@ -99,9 +94,6 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
 
             this->blockManager->buildMountainTerrain(4000.f, surfaceY);
 
-            // Position ALL four character slots at the same spawn point so
-            // no character starts at the constructor-default (200, 300).
-            // initAllPositions also calls updateBoundingBox() on each slot.
             if (this->characterManager != nullptr) {
                 sf::Vector2f spawnPos(200.f, surfaceY - 140.f);
                 this->characterManager->initAllPositions(spawnPos);
@@ -128,12 +120,10 @@ void PlayState::update(float dt) {
     PlayerSoldier* player = this->characterManager ? this->characterManager->getCurrentCharacter() : nullptr;
     if (player != nullptr && player->getCurrentHP() == 0 && player->getLives() <= 0) {
         if (this->characterManager != nullptr && this->characterManager->anyCharacterAlive()) {
-            // Another character is alive — auto-switch to them
             this->characterManager->switchCharacter();
             player = this->characterManager->getCurrentCharacter();
         }
         else {
-            // No characters left — Game Over
             if (this->stateManager != nullptr) {
                 int finalScore = this->scoreManager ? this->scoreManager->getScore() : 0;
                 this->stateManager->changeState(new GameOverState(finalScore));
@@ -372,12 +362,6 @@ void PlayState::handleEvent(Event& event) {
         this->showHitboxes = !this->showHitboxes;
     }
 
-    // Tab cycles through unlocked characters.
-    // This is event-based (KeyPressed, not isKeyPressed) so it fires once
-    // per physical key press rather than every frame — important because a
-    // held Tab at 60fps would cycle through all four characters in under a
-    // second. switchCharacter() internally calls copyPhysicsFrom() so the
-    // incoming character inherits the outgoing one's position and momentum.
     if (event.type == Event::KeyPressed && event.key.code == Keyboard::Z) {
         if (this->characterManager != nullptr) {
             this->characterManager->switchCharacter();
@@ -397,29 +381,26 @@ void PlayState::spawnTestBlocks() {
     Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
     if (lvl == nullptr) return;
 
-
-
-
     this->blockManager->spawnPlatform(
         static_cast<float>(8 * 48),
-        static_cast<float>(34 * 48),
+        static_cast<float>(32 * 48),
         8
     );
 
     this->blockManager->spawnPlatform(
         static_cast<float>(22 * 48),
-        static_cast<float>(33 * 48),
+        static_cast<float>(30 * 48),
         7
     );
     this->blockManager->spawnPlatform(
         static_cast<float>(32 * 48),
-        static_cast<float>(33 * 48),
+        static_cast<float>(30 * 48),
         4
     );
 
     this->blockManager->spawnPlatform(
         static_cast<float>(42 * 48),
-        static_cast<float>(34 * 48),
+        static_cast<float>(30 * 48),
         10
     );
 }
@@ -435,44 +416,50 @@ void PlayState::spawnTestEnemies() {
     float surfaceY = (float)(surfaceRow * cellSize);
 
     float rebelFootOffset = 140.f;
+
+    // ── Ground level enemies ──────────────────────────────────────────────
     this->enemyManager->spawnMartian(15.f * 48.f, surfaceY - rebelFootOffset);
-  
     this->enemyManager->spawnRebel(35.f * 48.f, surfaceY - rebelFootOffset);
 
-    float platY1 = 34.f * 48.f;
-    float platY2 = 33.f * 48.f;
+    // ── Platform enemies ─────────────────────────────────────────────────
+    // Platform 1: col 8-15, row 32
+    float platY1 = 32.f * 48.f;
+    // Platforms 2,3,4: col 22-28 / 32-35 / 42-51, row 30
+    float platY2 = 30.f * 48.f;
+
     this->enemyManager->spawnRebel(10.f * 48.f, platY1 - rebelFootOffset);
     this->enemyManager->spawnRebel(24.f * 48.f, platY2 - rebelFootOffset);
-    this->enemyManager->spawnRebel(44.f * 48.f, platY1 - rebelFootOffset);
+    this->enemyManager->spawnRebel(34.f * 48.f, platY2 - rebelFootOffset);
+    this->enemyManager->spawnRebel(48.f * 48.f, platY2 - rebelFootOffset);
 
+    // ── Mountain enemies ─────────────────────────────────────────────────
     float mtBaseX = 4000.f;
     float mtTop30 = surfaceY - 11.f * 48.f;
     float mtTop65 = surfaceY - 25.f * 48.f;
     float mtTop90 = surfaceY - 25.f * 48.f;
     float mtTop140 = surfaceY - 19.f * 48.f;
     this->enemyManager->spawnRebel(mtBaseX + 30.f * 48.f, mtTop30 - rebelFootOffset);
- 
     this->enemyManager->spawnRebel(mtBaseX + 90.f * 48.f, mtTop90 - rebelFootOffset);
     this->enemyManager->spawnRebel(mtBaseX + 140.f * 48.f, mtTop140 - rebelFootOffset);
 
-    // Bazooka soldiers — longer range, explosive rockets
+    // ── Bazooka soldiers — longer range, explosive rockets ───────────────
     this->enemyManager->spawnBazooka(25.f * 48.f, surfaceY - rebelFootOffset);
     this->enemyManager->spawnBazooka(50.f * 48.f, surfaceY - rebelFootOffset);
 
-    // Bazooka on the mountain peak — rockets from high ground
+    // Bazooka on the mountain peak — rockets from high ground (disabled)
     ///this->enemyManager->spawnBazooka(mtBaseX + 65.f * 48.f, mtTop65 - rebelFootOffset);
 
-    // Shielded soldiers — block paths, shield absorbs 3 frontal hits
+    // ── Shielded soldiers — block paths, shield absorbs 3 frontal hits ───
     this->enemyManager->spawnShielded(20.f * 48.f, surfaceY - rebelFootOffset);
     this->enemyManager->spawnShielded(40.f * 48.f, surfaceY - rebelFootOffset);
     this->enemyManager->spawnShielded(mtBaseX + 90.f * 48.f, mtTop90 - rebelFootOffset);
 
-    // Grenade soldiers — lob grenades from elevated positions
-    this->enemyManager->spawnGrenade(10.f * 48.f, platY1 - rebelFootOffset);
-    this->enemyManager->spawnGrenade(32.f * 48.f, platY2 - rebelFootOffset);
+    // ── Grenade soldiers — lob grenades from elevated positions ──────────
+    this->enemyManager->spawnGrenade(12.f * 48.f, platY1 - rebelFootOffset);
+    this->enemyManager->spawnGrenade(33.f * 48.f, platY2 - rebelFootOffset);
     this->enemyManager->spawnGrenade(mtBaseX + 30.f * 48.f, mtTop30 - rebelFootOffset);
 
-    // Martian on top of the mountain — rapid energy blasts, high value target
+    // ── Martians — rapid energy blasts, high value targets ───────────────
     float mtPeak = surfaceY - 25.f * 48.f;
     this->enemyManager->spawnMartian(mtBaseX + 140.f * 48.f, mtPeak - rebelFootOffset);
     this->enemyManager->spawnMartian(mtBaseX + 65.f * 48.f, mtTop65 - rebelFootOffset);
