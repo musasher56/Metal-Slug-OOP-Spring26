@@ -4,6 +4,7 @@
 #include "AudioManager.h"
 #include "GameStateManager.h"
 #include "MenuState.h"
+#include "CharSelectState.h"
 #include "PlayState.h"
 #include "Level.h"
 
@@ -18,8 +19,9 @@ private:
     GameStateManager* stateManager;
     TextureManager* texManager;
     AudioManager* audManager;
-    
+
     int gameMode;
+    int selectedChar;   // 0=Marco, 1=Tarma, 2=Eri, 3=Fio (set by CharSelectState)
     bool running;
 
     void initialize();

@@ -101,6 +101,7 @@ public:
     virtual void updateSprite();
     virtual void activatePowerUp();
     virtual void handleInput();
+    virtual void meleeAttack();
     virtual void throwGrenade();
 };
 
@@ -117,5 +118,5 @@ public:
     virtual void updateSprite();
     virtual void activatePowerUp();
     virtual void handleInput();
-    void pickUpWeapon();
+    virtual void switchWeapon(Weapon* w);
 };

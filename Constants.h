@@ -90,6 +90,7 @@ const int GSTATE_PLAY = 1;
 const int GSTATE_PAUSED = 2;
 const int GSTATE_GAME_OVER = 3;
 const int GSTATE_LEADERBOARD = 4;
+const int GSTATE_CHAR_SELECT = 5;   // Character select screen (between mode select and PlayState)
 
 
 const int SCREEN_W = 1280;

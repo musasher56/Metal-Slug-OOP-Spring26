@@ -55,6 +55,8 @@ set(SOURCES
         HUD.cpp
         Vehicle.cpp
         ProjectileManager.cpp
+        Charselectstate.cpp
+        Charselectstate.h
 )
 
 # NOTE: MountainBlock is inside Block.h/Block.cpp, MountainManager is inside

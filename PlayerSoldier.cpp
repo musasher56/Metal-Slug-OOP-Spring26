@@ -241,13 +241,13 @@ void Marco::handleInput() {
 
 
 
-    if (Keyboard::isKeyPressed(Keyboard::Z)) {
+    if (Keyboard::isKeyPressed(Keyboard::X)) {
         this->shoot();
     }
 
 
 
-    if (this->dualFireActive && Keyboard::isKeyPressed(Keyboard::Z)) {
+    if (this->dualFireActive && Keyboard::isKeyPressed(Keyboard::X)) {
         if (this->pm != nullptr && this->currentWeapon != nullptr) {
             int oppositeDir = (this->direction == DIR_RIGHT) ? DIR_LEFT : DIR_RIGHT;
             sf::Vector2f origin = ProjectileManager::calcBarrelTip(
@@ -263,7 +263,7 @@ void Marco::handleInput() {
     }
 
 
-    if (Keyboard::isKeyPressed(Keyboard::X)) {
+    if (Keyboard::isKeyPressed(Keyboard::C)) {
         this->throwGrenade();
     }
 }
@@ -286,8 +286,17 @@ Tarma::Tarma(TextureManager* texMgr, AudioManager* audMgr)
     this->animation.setFrameCount(12);
     this->animation.setLoop(true);
     this->sprite.setTexture(tex);
-    this->sprite.setScale(0.2f, 0.2f);
-    this->sprite.setTextureRect(IntRect(0, 0, 32, 32));
+
+    // Match Marco's scale (3.5x) so handleCollision() computes a sane hitbox.
+    // At 0.2x the box was ~7px wide — smaller than a tile gap — causing
+    // the character to fall through the floor entirely.
+    // Tarma's unique properties (vehicleFireRateBonus, vehicleDurabilityBonus,
+    // immunityActive) are untouched.
+    this->sprite.setScale(3.5f, 3.5f);
+
+    // Use the same frame dimensions as Marco (36x41) so updateBoundingBox()
+    // and handleCollision() agree on the player's physical extent.
+    this->sprite.setTextureRect(IntRect(0, 0, 36, 41));
     this->position = sf::Vector2f(200.f, 300.f);
     this->updateBoundingBox();
 }
@@ -300,8 +309,8 @@ void Tarma::onVehicleDestroyed() { this->exitVehicle(); }
 
 void Tarma::handleInput() {
 
-    if (Keyboard::isKeyPressed(Keyboard::Z)) this->shoot();
-    if (Keyboard::isKeyPressed(Keyboard::X)) this->throwGrenade();
+    if (Keyboard::isKeyPressed(Keyboard::X)) this->shoot();
+    if (Keyboard::isKeyPressed(Keyboard::C)) this->throwGrenade();
 }
 
 
@@ -317,8 +326,12 @@ Eri::Eri(TextureManager* texMgr, AudioManager* audMgr)
     this->animation.setFrameCount(12);
     this->animation.setLoop(true);
     this->sprite.setTexture(tex);
-    this->sprite.setScale(0.2f, 0.2f);
-    this->sprite.setTextureRect(IntRect(0, 0, 32, 32));
+
+    // Same reasoning as Tarma: 3.5x scale gives a proper collision footprint.
+    // Eri's unique properties (blastRadiusMultiplier, doubleGrenadeActive,
+    // overridden throwGrenade) are untouched.
+    this->sprite.setScale(3.5f, 3.5f);
+    this->sprite.setTextureRect(IntRect(0, 0, 36, 41));
     this->position = sf::Vector2f(200.f, 300.f);
     this->updateBoundingBox();
 }
@@ -327,10 +340,14 @@ Eri::~Eri() {}
 void Eri::updateSprite() { this->sprite.setTextureRect(IntRect(0, 0, 32, 32)); }
 void Eri::activatePowerUp() { this->doubleGrenadeActive = true; this->doubleGrenadeTimer.restart(); }
 
+void Eri::meleeAttack() {
+    Soldier::meleeAttack();
+}
+
 void Eri::handleInput() {
 
-    if (Keyboard::isKeyPressed(Keyboard::Z)) this->shoot();
-    if (Keyboard::isKeyPressed(Keyboard::X)) this->throwGrenade();
+    if (Keyboard::isKeyPressed(Keyboard::X)) this->shoot();
+    if (Keyboard::isKeyPressed(Keyboard::C)) this->throwGrenade();
 }
 
 
@@ -348,8 +365,11 @@ Fio::Fio(TextureManager* texMgr, AudioManager* audMgr)
     this->animation.setFrameCount(12);
     this->animation.setLoop(true);
     this->sprite.setTexture(tex);
-    this->sprite.setScale(0.2f, 0.2f);
-    this->sprite.setTextureRect(IntRect(0, 0, 32, 32));
+
+    // Same fix as Tarma/Eri. Fio's unique properties (ammoBonusMultiplier,
+    // fireRateMultiplier, superchargedActive, pickUpWeapon) are untouched.
+    this->sprite.setScale(3.5f, 3.5f);
+    this->sprite.setTextureRect(IntRect(0, 0, 36, 41));
     this->position = sf::Vector2f(200.f, 300.f);
     this->updateBoundingBox();
 }
@@ -357,12 +377,17 @@ Fio::Fio(TextureManager* texMgr, AudioManager* audMgr)
 Fio::~Fio() {}
 void Fio::updateSprite() { this->sprite.setTextureRect(IntRect(0, 0, 32, 32)); }
 void Fio::activatePowerUp() { this->superchargedActive = true; this->superchargedTimer.restart(); }
-void Fio::pickUpWeapon() {}
+
+void Fio::switchWeapon(Weapon* w) {
+    // Fio gets 50% more ammo on pickup via ammoBonusMultiplier — hook here later.
+    // For now delegate to base class behaviour.
+    PlayerSoldier::switchWeapon(w);
+}
 
 void Fio::handleInput() {
 
-    if (Keyboard::isKeyPressed(Keyboard::Z)) this->shoot();
-    if (Keyboard::isKeyPressed(Keyboard::X)) this->throwGrenade();
+    if (Keyboard::isKeyPressed(Keyboard::X)) this->shoot();
+    if (Keyboard::isKeyPressed(Keyboard::C)) this->throwGrenade();
 }
 
 

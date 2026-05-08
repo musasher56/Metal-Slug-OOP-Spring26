@@ -1,14 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
 #pragma once
 #include "Entity.h"
 
@@ -20,7 +9,7 @@ protected:
     float fireRate;
     int   damage;
     int   type;
-    Clock fireTimer;   
+    Clock fireTimer;
 
 public:
     Weapon(int weaponType, int dmg, float rate, int amm);
@@ -36,6 +25,11 @@ public:
     int   getDamage()   const;
     float getFireRate() const;
     int   getType()     const;
+
+    // Allows character constructors to bake in per-character fire rate buffs/debuffs
+    // without exposing 'fireRate' as public. E.g. Marco's 1.25x multiplier is applied
+    // ONCE at construction time — the weapon itself then enforces its own cadence.
+    void  setFireRate(float r);
 };
 
 class ProjectileWeapon : public Weapon {

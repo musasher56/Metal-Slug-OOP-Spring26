@@ -178,7 +178,14 @@ void Soldier::handleCollision(Level* lvl) {
                 float overlapBottom = blockBottom - playerTop;
 
                 float minOverlap = overlapLeft;
-                int resolveDir = 0;
+                // IMPORTANT: must initialize to 1, NOT 0.
+                // The four directions are: 1=push-left, 2=push-right,
+                // 3=push-up (land on top), 4=push-down (hit ceiling).
+                // overlapLeft wins the comparison by default (it's the
+                // seed value for minOverlap), so its direction ID must
+                // already be set here. Starting at 0 means left-overlap
+                // wins silently but no branch fires — character phases through.
+                int resolveDir = 1;
 
                 if (overlapRight < minOverlap) {
                     minOverlap = overlapRight;
@@ -293,6 +300,25 @@ void Soldier::decelerate() {
             if (this->velocityX > 0.f) this->velocityX = 0.f;
         }
     }
+}
+
+void Soldier::copyPhysicsFrom(Soldier* other) {
+    // Transfers the complete physics snapshot from 'other' to this soldier.
+    // Called by CharacterManager::switchCharacter() so the incoming character
+    // appears exactly where the outgoing one was — same tile, same momentum,
+    // same facing direction — rather than teleporting to its constructor default.
+    //
+    // position is public on Entity so we assign it directly.
+    // velocityX/Y, onGround, direction are protected on Soldier, so this
+    // method lives here to legally access both sides without breaking
+    // encapsulation or requiring friend declarations.
+    if (other == nullptr) return;
+
+    this->position  = other->position;
+    this->velocityX = other->velocityX;
+    this->velocityY = other->velocityY;
+    this->onGround  = other->onGround;
+    this->direction = other->direction;
 }
 
 void Soldier::resolveBlockCollisions(DamagableEntity** blocks, int count) {

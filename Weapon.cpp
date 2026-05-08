@@ -17,6 +17,12 @@ int   Weapon::getDamage()  const { return this->damage;   }
 float Weapon::getFireRate()const { return this->fireRate; }
 int   Weapon::getType()    const { return this->type;     }
 
+void Weapon::setFireRate(float r) {
+    // Guard against nonsensical values — a fire rate of 0 or negative would
+    // make the weapon permanently locked (1/0 = inf cooldown).
+    if (r > 0.f) this->fireRate = r;
+}
+
 void Weapon::addAmmo(int amount) {
     if (amount < 0) return;
     if (this->ammo != -1) this->ammo += amount;

@@ -48,7 +48,13 @@ public:
     void setDirectionAndVelocity(int dir);
     void decelerate();
 
-    
+    // Copies world position, velocity, direction, and onGround flag from
+    // another Soldier. Used by CharacterManager on character switch so the
+    // incoming character seamlessly inherits the outgoing one's physics state
+    // instead of teleporting to its constructor-default (200, 300).
+    void copyPhysicsFrom(Soldier* other);
+
+
     void handleJump();
 
     
