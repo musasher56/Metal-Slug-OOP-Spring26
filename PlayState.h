@@ -8,6 +8,7 @@
 #include <SFML/Graphics.hpp>
 
 class CharacterManager;
+class GameStateManager;
 class LevelManager;
 class ScoreManager;
 class HUD;
@@ -49,11 +50,12 @@ private:
 
     Texture    bloodOverlayTex;
     Sprite     bloodOverlaySprite;
+    GameStateManager* stateManager;
 
 public:
     PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr);
     virtual ~PlayState();
-
+    void setStateManager(GameStateManager* mgr) { this->stateManager = mgr; }
     virtual void update(float dt);
     virtual void render(RenderWindow& window);
     virtual void handleEvent(Event& event);

@@ -135,6 +135,8 @@ void PlayerSoldier::onDeath() {
 
 void PlayerSoldier::takeDamage(int amount) {
     if (amount < 0) return;
+    // Skip damage during invincibility frames (granted after respawn)
+    if (this->isInvincible) return;
 
     if (this->transformState != nullptr) {
 

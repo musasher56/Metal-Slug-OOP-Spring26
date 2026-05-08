@@ -369,6 +369,10 @@ void Enemy::takeDamage(int amount) {
     }
 }
 
+// ============================================================
+// RebelSoldier
+// ============================================================
+
 RebelSoldier::RebelSoldier(TextureManager* texMgr, AudioManager* audMgr)
     : Enemy(texMgr, audMgr)
 {
@@ -551,4 +555,437 @@ void BazookaSoldier::performAttack(PlayerSoldier* player) {
     int dir = this->faceRight ? DIR_RIGHT : DIR_LEFT;
     // Spawn explosive projectile with blast radius 3, 5 damage
     this->pm->spawnExplosive(origin, dir, angle, 5, 3, true);
+}
+
+// ============================================================
+// ShieldedSoldier
+// ============================================================
+
+ShieldedSoldier::ShieldedSoldier(TextureManager* texMgr, AudioManager* audMgr)
+    : Enemy(texMgr, audMgr)
+    , hasShield(true)
+    , shieldHP(3)
+{
+    this->setEnemyType(ENEMY_SHIELDED);
+    this->maxHealth = 5;
+    this->currentHP = 5;
+    this->health = 5;
+    this->detectionRange = 500.f;
+    this->attackRange = 400.f;
+    this->attackCooldown = 1.5f;
+    this->maxVelocity = 2.5f;
+    this->baseMaxVelocity = 2.5f;
+    this->scoreValue = 75;
+    this->deathDuration = 1.5f;
+
+    this->frameW = 130;
+    this->frameH = 169;
+    this->baseFrameW = 128;
+    this->baseFrameH = 165;
+    this->walkFrames = 6;
+    this->shootFrames = 10;
+    this->deathFrames = 8;
+
+    // Walk animation — shielded-walk.png (6 frames)
+    Texture& walkTex = texMgr->getTexture("resources/Sprites/shielded-walk.png");
+    this->walkAnim.setTexture(&walkTex);
+    this->walkAnim.setFrameCount(this->walkFrames);
+    this->walkAnim.setFrameDelay(8);
+    this->walkAnim.setFrameRect(0, 0, 0, 131, 169);
+    this->walkAnim.setFrameRect(1, 131, 0, 126, 169);
+    this->walkAnim.setFrameRect(2, 260, 0, 128, 169);
+    this->walkAnim.setFrameRect(3, 393, 0, 127, 169);
+    this->walkAnim.setFrameRect(4, 521, 0, 129, 169);
+    this->walkAnim.setFrameRect(5, 655, 0, 131, 169);
+    this->walkAnim.setLoop(true);
+
+    // Shoot animation — shielded-shoot.png (10 frames)
+    Texture& shootTex = texMgr->getTexture("resources/Sprites/shielded-shoot.png");
+    this->shootAnim.setTexture(&shootTex);
+    this->shootAnim.setFrameCount(this->shootFrames);
+    this->shootAnim.setFrameDelay(6);
+    this->shootAnim.setFrameRect(0, 9, 17, 128, 163);
+    this->shootAnim.setFrameRect(1, 145, 17, 119, 163);
+    this->shootAnim.setFrameRect(2, 272, 19, 133, 160);
+    this->shootAnim.setFrameRect(3, 412, 17, 131, 163);
+    this->shootAnim.setFrameRect(4, 551, 17, 161, 163);
+    this->shootAnim.setFrameRect(5, 721, 17, 154, 163);
+    this->shootAnim.setFrameRect(6, 883, 4, 148, 175);
+    this->shootAnim.setFrameRect(7, 1039, 0, 144, 179);
+    this->shootAnim.setFrameRect(8, 1190, 0, 149, 179);
+    this->shootAnim.setFrameRect(9, 1347, 5, 155, 174);
+    this->shootAnim.setLoop(false);
+
+    // Death animation — shares rebel-death.png (8 frames)
+    Texture& deathTex = texMgr->getTexture("resources/Sprites/rebel-death.png");
+    this->deathAnim.setTexture(&deathTex);
+    this->deathAnim.setFrameCount(this->deathFrames);
+    this->deathAnim.setFrameDelay(10);
+    this->deathAnim.setFrameRect(0, 5, 0, 62, 67);
+    this->deathAnim.setFrameRect(1, 78, 0, 72, 67);
+    this->deathAnim.setFrameRect(2, 158, 1, 74, 66);
+    this->deathAnim.setFrameRect(3, 243, 10, 82, 58);
+    this->deathAnim.setFrameRect(4, 335, 29, 80, 38);
+    this->deathAnim.setFrameRect(5, 425, 33, 88, 34);
+    this->deathAnim.setFrameRect(6, 523, 37, 90, 30);
+    this->deathAnim.setFrameRect(7, 623, 37, 90, 30);
+    this->deathAnim.setLoop(false);
+
+    this->sprite.setTexture(walkTex);
+    this->sprite.setTextureRect(IntRect(0, 0, 131, 169));
+    this->sprite.setScale(0.85f, 0.85f);
+    this->switchAnim(&this->walkAnim);
+    this->updateBoundingBox();
+}
+
+ShieldedSoldier::~ShieldedSoldier() {}
+
+void ShieldedSoldier::performAttack(PlayerSoldier* player) {
+    // Shielded soldier shoots straight bullets like the rebel
+    Enemy::performAttack(player);
+}
+
+void ShieldedSoldier::takeDamageFrom(int amount, int bulletDir) {
+    if (this->dying) return;
+
+    // Shield blocks frontal bullets. The enemy's facing direction determines
+    // which side is "front". If the enemy faces right, bullets from the left
+    // are frontal. If the enemy faces left, bullets from the right are frontal.
+    if (this->hasShield && shieldHP > 0) {
+        // bulletDir > 0 means bullet travels right (came from left = frontal if enemy faces right)
+        // bulletDir < 0 means bullet travels left (came from right = frontal if enemy faces left)
+        bool bulletFromFront = (this->faceRight && bulletDir > 0) ||
+            (!this->faceRight && bulletDir < 0);
+
+        if (bulletFromFront) {
+            // Shield absorbs the hit
+            this->shieldHP--;
+            if (this->shieldHP <= 0) {
+                this->hasShield = false;
+            }
+            return;  // Damage blocked by shield
+        }
+    }
+
+    // No shield or hit from behind — take full damage
+    this->takeDamage(amount);
+}
+
+// ============================================================
+// GrenadeSoldier
+// ============================================================
+
+GrenadeSoldier::GrenadeSoldier(TextureManager* texMgr, AudioManager* audMgr)
+    : Enemy(texMgr, audMgr)
+{
+    this->setEnemyType(ENEMY_GRENADE);
+    this->maxHealth = 2;
+    this->currentHP = 2;
+    this->health = 2;
+    this->detectionRange = 550.f;
+    this->attackRange = 450.f;
+    this->attackCooldown = 2.5f;
+    this->maxVelocity = 2.8f;
+    this->baseMaxVelocity = 2.8f;
+    this->scoreValue = 100;
+    this->deathDuration = 1.5f;
+
+    this->frameW = 70;
+    this->frameH = 66;
+    this->baseFrameW = 70;
+    this->baseFrameH = 62;
+    this->walkFrames = 9;
+    this->shootFrames = 4;
+    this->deathFrames = 8;
+
+    // Walk animation — shares rebel-walk.png (9 frames)
+    Texture& walkTex = texMgr->getTexture("resources/Sprites/rebel-walk.png");
+    this->walkAnim.setTexture(&walkTex);
+    this->walkAnim.setFrameCount(this->walkFrames);
+    this->walkAnim.setFrameDelay(8);
+    this->walkAnim.setFrameRect(0, 0, 2, 58, 62);
+    this->walkAnim.setFrameRect(1, 61, 2, 63, 62);
+    this->walkAnim.setFrameRect(2, 125, 3, 71, 53);
+    this->walkAnim.setFrameRect(3, 197, 5, 70, 55);
+    this->walkAnim.setFrameRect(4, 269, 3, 63, 62);
+    this->walkAnim.setFrameRect(5, 333, 2, 58, 62);
+    this->walkAnim.setFrameRect(6, 588, 5, 58, 54);
+    this->walkAnim.setFrameRect(7, 653, 2, 58, 62);
+    this->walkAnim.setFrameRect(8, 711, 2, 58, 62);
+    this->walkAnim.setLoop(true);
+
+    // Shoot animation — grenade-shoot.png (4 frames)
+    Texture& shootTex = texMgr->getTexture("resources/Sprites/grenade-shoot.png");
+    this->shootAnim.setTexture(&shootTex);
+    this->shootAnim.setFrameCount(this->shootFrames);
+    this->shootAnim.setFrameDelay(10);
+    this->shootAnim.setFrameRect(0, 4, 5, 150, 133);
+    this->shootAnim.setFrameRect(1, 172, 0, 126, 138);
+    this->shootAnim.setFrameRect(2, 315, 0, 116, 138);
+    this->shootAnim.setFrameRect(3, 448, 15, 123, 123);
+    this->shootAnim.setLoop(false);
+
+    // Death animation — shares rebel-death.png (8 frames)
+    Texture& deathTex = texMgr->getTexture("resources/Sprites/rebel-death.png");
+    this->deathAnim.setTexture(&deathTex);
+    this->deathAnim.setFrameCount(this->deathFrames);
+    this->deathAnim.setFrameDelay(10);
+    this->deathAnim.setFrameRect(0, 5, 0, 62, 67);
+    this->deathAnim.setFrameRect(1, 78, 0, 72, 67);
+    this->deathAnim.setFrameRect(2, 158, 1, 74, 66);
+    this->deathAnim.setFrameRect(3, 243, 10, 82, 58);
+    this->deathAnim.setFrameRect(4, 335, 29, 80, 38);
+    this->deathAnim.setFrameRect(5, 425, 33, 88, 34);
+    this->deathAnim.setFrameRect(6, 523, 37, 90, 30);
+    this->deathAnim.setFrameRect(7, 623, 37, 90, 30);
+    this->deathAnim.setLoop(false);
+
+    this->sprite.setTexture(walkTex);
+    this->sprite.setTextureRect(IntRect(0, 2, 58, 62));
+    this->sprite.setScale(2.25f, 2.25f);
+    this->switchAnim(&this->walkAnim);
+    this->updateBoundingBox();
+}
+
+GrenadeSoldier::~GrenadeSoldier() {}
+
+void GrenadeSoldier::draw(RenderWindow& window, float scrollX, float scrollY) {
+    if (!this->status) return;
+
+    if (this->dying) {
+        if (this->deathTimer.getElapsedTime().asSeconds() >= this->deathDuration) {
+            this->status = false;
+            return;
+        }
+    }
+
+    if (this->currentAnim != nullptr) {
+        this->currentAnim->update();
+        this->currentAnim->applyToSprite(this->sprite);
+    }
+
+    // grenade-shoot.png frames are ~2x larger than rebel-walk.png frames,
+    // so use a smaller scale during the shoot animation to keep the visual
+    // size consistent with the walk animation.
+    float walkScale = 2.25f;
+    float shootScale = 1.1f;
+    float scale = (this->currentAnim == &this->shootAnim) ? shootScale : walkScale;
+
+    if (this->dying) {
+        scale = this->deathSpriteScale;
+    }
+
+    if (this->faceRight) {
+        this->sprite.setScale(-scale, scale);
+    }
+    else {
+        this->sprite.setScale(scale, scale);
+    }
+
+    float drawY = this->position.y - scrollY;
+    if (this->dying) {
+        drawY += 70.f;
+    }
+
+    this->sprite.setPosition(this->position.x - scrollX, drawY);
+    window.draw(this->sprite);
+}
+
+void GrenadeSoldier::performAttack(PlayerSoldier* player) {
+    if (this->pm == nullptr || player == nullptr) return;
+
+    float scaleX = std::abs(this->sprite.getScale().x);
+    sf::Vector2f origin = ProjectileManager::calcBarrelTip(
+        this->position,
+        this->faceRight ? DIR_RIGHT : DIR_LEFT,
+        (float)(this->frameW) * scaleX,
+        (float)(this->frameH) * 0.35f
+    );
+
+    // Lobs grenades in a parabolic arc toward the player
+    float dy = player->getPosition().y - this->position.y;
+    float dx = fabsf(player->getPosition().x - this->position.x);
+    float angle = 45.f;  // default grenade arc
+    if (dx > 0.f || dy != 0.f) {
+        angle = atan2f(-dy, dx) * 180.f / 3.14159f;
+        if (angle < 20.f) angle = 20.f;
+        if (angle > 70.f) angle = 70.f;
+    }
+
+    int dir = this->faceRight ? DIR_RIGHT : DIR_LEFT;
+    // Spawn explosive grenade: 3-block blast radius, 3 damage
+    this->pm->spawnExplosive(origin, dir, angle, 3, 3, true);
+}
+
+// ============================================================
+// Martian
+// ============================================================
+
+Martian::Martian(TextureManager* texMgr, AudioManager* audMgr)
+    : Enemy(texMgr, audMgr)
+    , inPodPhase(true)
+    , podHP(3)
+{
+    this->setEnemyType(ENEMY_MARTIAN);
+    this->maxHealth = 3;
+    this->currentHP = 3;
+    this->health = 3;
+    this->detectionRange = 600.f;
+    this->attackRange = 500.f;
+    this->attackCooldown = 1.8f;
+    this->maxVelocity = 3.0f;
+    this->baseMaxVelocity = 3.0f;
+    this->scoreValue = 200;
+    this->deathDuration = 2.0f;
+
+    this->frameW = 200;
+    this->frameH = 170;
+    this->baseFrameW = 200;
+    this->baseFrameH = 170;
+    this->walkFrames = 16;
+    this->shootFrames = 6;
+    this->deathFrames = 8;
+
+    // Walk animation — martian-walk.png (16 frames)
+    Texture& walkTex = texMgr->getTexture("resources/Sprites/martian-walk.png");
+    this->walkAnim.setTexture(&walkTex);
+    this->walkAnim.setFrameCount(this->walkFrames);
+    this->walkAnim.setFrameDelay(5);
+    this->walkAnim.setFrameRect(0, 0, 0, 196, 172);
+    this->walkAnim.setFrameRect(1, 216, 0, 200, 172);
+    this->walkAnim.setFrameRect(2, 436, 4, 200, 169);
+    this->walkAnim.setFrameRect(3, 656, 4, 204, 169);
+    this->walkAnim.setFrameRect(4, 880, 4, 208, 168);
+    this->walkAnim.setFrameRect(5, 1108, 4, 204, 168);
+    this->walkAnim.setFrameRect(6, 1332, 4, 204, 168);
+    this->walkAnim.setFrameRect(7, 1556, 4, 208, 168);
+    this->walkAnim.setFrameRect(8, 1784, 4, 208, 168);
+    this->walkAnim.setFrameRect(9, 2012, 4, 208, 168);
+    this->walkAnim.setFrameRect(10, 2240, 4, 208, 168);
+    this->walkAnim.setFrameRect(11, 2468, 4, 200, 168);
+    this->walkAnim.setFrameRect(12, 2692, 4, 200, 169);
+    this->walkAnim.setFrameRect(13, 2904, 4, 192, 168);
+    this->walkAnim.setFrameRect(14, 3116, 4, 192, 168);
+    this->walkAnim.setFrameRect(15, 3328, 4, 192, 168);
+    this->walkAnim.setLoop(true);
+
+    // Shoot animation — martian-shoot.png (6 frames)
+    Texture& shootTex = texMgr->getTexture("resources/Sprites/martian-shoot.png");
+    this->shootAnim.setTexture(&shootTex);
+    this->shootAnim.setFrameCount(this->shootFrames);
+    this->shootAnim.setFrameDelay(8);
+    this->shootAnim.setFrameRect(0, 0, 0, 276, 152);
+    this->shootAnim.setFrameRect(1, 296, 4, 280, 148);
+    this->shootAnim.setFrameRect(2, 596, 8, 300, 144);
+    this->shootAnim.setFrameRect(3, 916, 12, 312, 140);
+    this->shootAnim.setFrameRect(4, 1248, 8, 208, 144);
+    this->shootAnim.setFrameRect(5, 1476, 4, 212, 148);
+    this->shootAnim.setLoop(false);
+
+    // Death animation — martian-death.png (8 frames)
+    Texture& deathTex = texMgr->getTexture("resources/Sprites/martian-death.png");
+    this->deathAnim.setTexture(&deathTex);
+    this->deathAnim.setFrameCount(this->deathFrames);
+    this->deathAnim.setFrameDelay(10);
+    this->deathAnim.setFrameRect(0, 34, 80, 340, 368);
+    this->deathAnim.setFrameRect(1, 435, 75, 346, 374);
+    this->deathAnim.setFrameRect(2, 848, 80, 337, 375);
+    this->deathAnim.setFrameRect(3, 1227, 96, 262, 352);
+    this->deathAnim.setFrameRect(4, 47, 541, 329, 299);
+    this->deathAnim.setFrameRect(5, 468, 553, 307, 291);
+    this->deathAnim.setFrameRect(6, 831, 553, 307, 291);
+    this->deathAnim.setFrameRect(7, 1224, 640, 266, 200);
+    this->deathAnim.setLoop(false);
+
+    this->sprite.setTexture(walkTex);
+    this->sprite.setTextureRect(IntRect(0, 0, 196, 172));
+    this->sprite.setScale(0.65f, 0.65f);
+    this->switchAnim(&this->walkAnim);
+    this->updateBoundingBox();
+}
+
+Martian::~Martian() {}
+
+void Martian::updateAI(PlayerSoldier* player, Level* lvl) {
+    // Martian uses base AI but transitions from pod to on-foot phase
+    // when its pod HP is depleted
+    if (this->inPodPhase && this->podHP <= 0) {
+        this->inPodPhase = false;
+        // Slightly faster and more aggressive on foot
+        this->maxVelocity = 3.5f;
+        this->baseMaxVelocity = 3.5f;
+        this->attackCooldown = 1.0f;
+    }
+    Enemy::updateAI(player, lvl);
+}
+
+void Martian::performAttack(PlayerSoldier* player) {
+    if (this->pm == nullptr || player == nullptr) return;
+
+    float scaleX = std::abs(this->sprite.getScale().x);
+    sf::Vector2f origin = ProjectileManager::calcBarrelTip(
+        this->position,
+        this->faceRight ? DIR_RIGHT : DIR_LEFT,
+        (float)(this->frameW) * scaleX,
+        (float)(this->frameH) * 0.4f
+    );
+
+    // Martian fires energy blasts — two rapid straight shots
+    float angle = 0.f;
+    float dy = player->getPosition().y - this->position.y;
+    float dx = player->getPosition().x - this->position.x;
+    if (dx != 0.f || dy != 0.f) {
+        angle = atan2f(-dy, fabsf(dx)) * 180.f / 3.14159f;
+        if (angle < -15.f) angle = -15.f;
+        if (angle > 45.f) angle = 45.f;
+    }
+
+    int dir = this->faceRight ? DIR_RIGHT : DIR_LEFT;
+    this->pm->spawnStraight(origin, dir, angle, 2, true);
+}
+
+void Martian::draw(RenderWindow& window, float scrollX, float scrollY) {
+    if (!this->status) return;
+
+    if (this->dying) {
+        if (this->deathTimer.getElapsedTime().asSeconds() >= this->deathDuration) {
+            this->status = false;
+            return;
+        }
+    }
+
+    if (this->currentAnim != nullptr) {
+        this->currentAnim->update();
+        this->currentAnim->applyToSprite(this->sprite);
+    }
+
+    // Martian walk/shoot frames are ~200px wide, but death frames are ~340px
+    // wide and ~375px tall. Scale death down so it matches the alive size.
+    float scale = 0.65f;  // walk/shoot scale (matches constructor)
+    if (this->dying) {
+        // death frames are much larger; 0.40f keeps them close to alive size
+        scale = 0.40f;
+    }
+    else {
+        // shoot frames can be wider (276-312px), use slightly smaller scale
+        IntRect texRect = this->sprite.getTextureRect();
+        if (texRect.width > 250) {
+            scale = 0.70f;
+        }
+    }
+
+    if (this->faceRight) {
+        this->sprite.setScale(-scale, scale);
+    }
+    else {
+        this->sprite.setScale(scale, scale);
+    }
+
+    float drawY = this->position.y - scrollY;
+    if (this->dying) {
+        drawY -= 20.f;  // move death sprite up so it doesn't sink into ground
+    }
+
+    this->sprite.setPosition(this->position.x - scrollX, drawY);
+    window.draw(this->sprite);
 }

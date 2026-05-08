@@ -1,4 +1,6 @@
 #include "PlayState.h"
+#include "GameStateManager.h"
+#include "GameOverState.h"
 #include "CharacterManager.h"
 #include "LevelManager.h"
 #include "ScoreManager.h"
@@ -6,6 +8,8 @@
 #include "BlockManager.h"
 #include "DamagableEntity.h"
 #include <cstdio>
+
+
 
 PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr)
     : entityManager(nullptr), enemyManager(nullptr), enemyVehicleManager(nullptr),
@@ -19,7 +23,7 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
     gameWindow(nullptr),
     lastMouseWorld(0.f, 0.f),
     debugMode(true)
-    , showHitboxes(true)
+    , showHitboxes(true), stateManager(nullptr)
 {
     this->id = GSTATE_PLAY;
 
@@ -122,7 +126,21 @@ PlayState::~PlayState() {
 void PlayState::update(float dt) {
     Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
     PlayerSoldier* player = this->characterManager ? this->characterManager->getCurrentCharacter() : nullptr;
-
+    if (player != nullptr && player->getCurrentHP() == 0 && player->getLives() <= 0) {
+        if (this->characterManager != nullptr && this->characterManager->anyCharacterAlive()) {
+            // Another character is alive — auto-switch to them
+            this->characterManager->switchCharacter();
+            player = this->characterManager->getCurrentCharacter();
+        }
+        else {
+            // No characters left — Game Over
+            if (this->stateManager != nullptr) {
+                int finalScore = this->scoreManager ? this->scoreManager->getScore() : 0;
+                this->stateManager->changeState(new GameOverState(finalScore));
+            }
+            return;
+        }
+    }
     if (player != nullptr && this->gameWindow != nullptr) {
         sf::Vector2i mp = Mouse::getPosition(*this->gameWindow);
         sf::Vector2f mouseWorld(
@@ -344,7 +362,7 @@ void PlayState::renderBloodOverlay(RenderWindow& window) {
     PlayerSoldier* player = this->characterManager
         ? this->characterManager->getCurrentCharacter() : nullptr;
     if (player == nullptr) return;
-    if (player->getCurrentHP() <= 1) {
+    if (player->getCurrentHP() > 0 && player->getCurrentHP() <= 1) {
         window.draw(this->bloodOverlaySprite);
     }
 }
@@ -378,10 +396,6 @@ void PlayState::spawnTestBlocks() {
 
     Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
     if (lvl == nullptr) return;
-
-
-
-
 
 
 
@@ -421,7 +435,8 @@ void PlayState::spawnTestEnemies() {
     float surfaceY = (float)(surfaceRow * cellSize);
 
     float rebelFootOffset = 140.f;
-    this->enemyManager->spawnRebel(15.f * 48.f, surfaceY - rebelFootOffset);
+    this->enemyManager->spawnMartian(15.f * 48.f, surfaceY - rebelFootOffset);
+  
     this->enemyManager->spawnRebel(35.f * 48.f, surfaceY - rebelFootOffset);
 
     float platY1 = 34.f * 48.f;
@@ -436,11 +451,29 @@ void PlayState::spawnTestEnemies() {
     float mtTop90 = surfaceY - 25.f * 48.f;
     float mtTop140 = surfaceY - 19.f * 48.f;
     this->enemyManager->spawnRebel(mtBaseX + 30.f * 48.f, mtTop30 - rebelFootOffset);
-    this->enemyManager->spawnRebel(mtBaseX + 65.f * 48.f, mtTop65 - rebelFootOffset);
+ 
     this->enemyManager->spawnRebel(mtBaseX + 90.f * 48.f, mtTop90 - rebelFootOffset);
     this->enemyManager->spawnRebel(mtBaseX + 140.f * 48.f, mtTop140 - rebelFootOffset);
 
     // Bazooka soldiers — longer range, explosive rockets
     this->enemyManager->spawnBazooka(25.f * 48.f, surfaceY - rebelFootOffset);
     this->enemyManager->spawnBazooka(50.f * 48.f, surfaceY - rebelFootOffset);
+
+    // Bazooka on the mountain peak — rockets from high ground
+    ///this->enemyManager->spawnBazooka(mtBaseX + 65.f * 48.f, mtTop65 - rebelFootOffset);
+
+    // Shielded soldiers — block paths, shield absorbs 3 frontal hits
+    this->enemyManager->spawnShielded(20.f * 48.f, surfaceY - rebelFootOffset);
+    this->enemyManager->spawnShielded(40.f * 48.f, surfaceY - rebelFootOffset);
+    this->enemyManager->spawnShielded(mtBaseX + 90.f * 48.f, mtTop90 - rebelFootOffset);
+
+    // Grenade soldiers — lob grenades from elevated positions
+    this->enemyManager->spawnGrenade(10.f * 48.f, platY1 - rebelFootOffset);
+    this->enemyManager->spawnGrenade(32.f * 48.f, platY2 - rebelFootOffset);
+    this->enemyManager->spawnGrenade(mtBaseX + 30.f * 48.f, mtTop30 - rebelFootOffset);
+
+    // Martian on top of the mountain — rapid energy blasts, high value target
+    float mtPeak = surfaceY - 25.f * 48.f;
+    this->enemyManager->spawnMartian(mtBaseX + 140.f * 48.f, mtPeak - rebelFootOffset);
+    this->enemyManager->spawnMartian(mtBaseX + 65.f * 48.f, mtTop65 - rebelFootOffset);
 }

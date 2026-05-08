@@ -21,7 +21,9 @@ protected:
     float meleeDamage;
     float meleeCooldown;
     Clock meleeTimer;
-    TransformationState* transformState;  
+    TransformationState* transformState; 
+    Clock invincibilityClock;
+    bool  isInvincible;
 
 public:
     Soldier(TextureManager* texMgr, AudioManager* audMgr);
@@ -34,6 +36,7 @@ public:
     int getState() const;  
     int getLives() const;
     int getCurrentHP() const;
+    bool getIsInvincible() const { return this->isInvincible; }
     void respawn();
     void setTransformationState(TransformationState* newState);
     TransformationState* getTransformationState() const;

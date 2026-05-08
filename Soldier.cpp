@@ -14,7 +14,7 @@ Soldier::Soldier(TextureManager* texMgr, AudioManager* audMgr)
     , saturation(100)
     , meleeDamage(1.f)
     , meleeCooldown(0.5f)
-    , transformState(nullptr)
+    , transformState(nullptr), isInvincible(false)
 {
 }
 
@@ -26,6 +26,10 @@ Soldier::~Soldier() {
 }
 
 void Soldier::update(float scroll, Level* lvl) {
+    if (this->isInvincible && this->invincibilityClock.getElapsedTime().asSeconds() >= 2.0f) {
+        this->isInvincible = false;
+        
+    }
     this->handleStateTimers();
     this->applyGravity();
     this->applyMovement(scroll);
@@ -104,6 +108,9 @@ void Soldier::respawn() {
     this->direction = DIR_RIGHT;
     this->onGround = false;
     this->status = true;
+    // Grant 2 seconds of invincibility after respawn to prevent death loops
+    this->isInvincible = true;
+    this->invincibilityClock.restart();
 }
 
 void Soldier::setTransformationState(TransformationState* newState) {

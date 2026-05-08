@@ -190,7 +190,7 @@ ExplosiveProjectile::ExplosiveProjectile(TextureManager* texMgr, AudioManager* a
     if (grenadeLoaded) {
         Texture& gt = texMgr->getTexture("grenade");
         this->sprite.setTexture(gt);
-        this->sprite.setScale(2.5f, 2.5f);
+        this->sprite.setScale(0.05f, 0.05f);
     } else {
         // Fallback: bullet texture with orange tint so it's at least visible
         Texture& bt = texMgr->getTexture("bullet");

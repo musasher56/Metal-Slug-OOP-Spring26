@@ -126,17 +126,42 @@ void ProjectileManager::draw(RenderWindow& window, float scrollX, float scrollY)
     bulletSprite.setScale(0.2f, 0.2f);
     bulletSprite.setOrigin(texW * 0.5f, texH * 0.5f);
 
-    RectangleShape explosiveRect(sf::Vector2f(10.f, 8.f));
+    // Grenade sprite for explosive projectiles
+    bool hasGrenade = this->texMgr->loadTexture("grenade_draw", "resources/Sprites/grenade.png");
+    Sprite grenadeSprite;
+    float grenadeTexW = 16.f;
+    float grenadeTexH = 16.f;
+    if (hasGrenade) {
+        Texture& gt = this->texMgr->getTexture("grenade_draw");
+        grenadeSprite.setTexture(gt);
+        grenadeTexW = static_cast<float>(gt.getSize().x);
+        grenadeTexH = static_cast<float>(gt.getSize().y);
+        grenadeSprite.setOrigin(grenadeTexW * 0.5f, grenadeTexH * 0.5f);
+        grenadeSprite.setScale(0.08f, 0.08f);
+    }
 
     for (int i = 0; i < this->activeCount; i++) {
         Projectile* p = this->slots[i];
         if (p == nullptr || !p->getStatus()) continue;
 
         if (p->isExplosive) {
-            explosiveRect.setPosition(p->position.x - scrollX,
-                p->position.y - scrollY);
-            explosiveRect.setFillColor(Color(255, 140, 0));
-            window.draw(explosiveRect);
+            if (hasGrenade) {
+                // Rotate grenade to match travel direction
+                float rot = atan2f(p->velocityY, p->velocityX) * 180.f / 3.14159f;
+                grenadeSprite.setRotation(rot);
+                grenadeSprite.setPosition(
+                    p->position.x - scrollX,
+                    p->position.y - scrollY);
+                window.draw(grenadeSprite);
+            }
+            else {
+                // Fallback: orange rectangle if grenade.png not found
+                RectangleShape explosiveRect(sf::Vector2f(10.f, 8.f));
+                explosiveRect.setPosition(p->position.x - scrollX,
+                    p->position.y - scrollY);
+                explosiveRect.setFillColor(Color(255, 140, 0));
+                window.draw(explosiveRect);
+            }
         }
         else {
             float rot = atan2f(p->velocityY, p->velocityX) * 180.f / 3.14159f;
@@ -213,7 +238,8 @@ int ProjectileManager::checkPlayerBulletHits(DamagableEntity** targets,
                 (projBox.top + projBox.height > entBox.top);
 
             if (overlapX && overlapY) {
-                targets[e]->takeDamage(proj->getDamage());
+                int bulletDir = (proj->velocityX > 0.f) ? 1 : -1;
+                targets[e]->takeDamageFrom(proj->getDamage(), bulletDir);
                 hits++;
                 proj->deactivate();
                 hit = true;

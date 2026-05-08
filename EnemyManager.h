@@ -23,6 +23,9 @@ public:
 
     int spawnRebel(float x, float y);
     int spawnBazooka(float x, float y);
+    int spawnShielded(float x, float y);
+    int spawnGrenade(float x, float y);
+    int spawnMartian(float x, float y);
 
     void update(float scrollX, float scrollY, Level* lvl, PlayerSoldier* player);
     void draw(RenderWindow& window, float scrollX, float scrollY);

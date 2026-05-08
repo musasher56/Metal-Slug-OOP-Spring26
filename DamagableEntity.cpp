@@ -4,9 +4,10 @@ DamagableEntity::DamagableEntity(TextureManager* texMgr, AudioManager* audMgr)
     : Entity(texMgr, audMgr)
     , health(3)
     , maxHealth(3)
-    , boundingBox(0, 0, 32, 64)  
+    , boundingBox(0, 0, 32, 64)
     , scoreValue(0)
-{}
+{
+}
 
 DamagableEntity::~DamagableEntity() {}
 
@@ -18,6 +19,13 @@ void DamagableEntity::takeDamage(int amount) {
     if (this->health <= 0) {
         this->onDeath();
     }
+}
+
+void DamagableEntity::takeDamageFrom(int amount, int bulletDir) {
+    // Default: ignore bullet direction, just apply damage.
+    // ShieldedSoldier overrides this to block frontal bullets.
+    (void)bulletDir;
+    this->takeDamage(amount);
 }
 
 bool DamagableEntity::isAlive() const {

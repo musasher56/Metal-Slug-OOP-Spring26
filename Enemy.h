@@ -79,3 +79,36 @@ public:
     virtual ~BazookaSoldier();
     virtual void performAttack(PlayerSoldier* player);
 };
+
+class ShieldedSoldier : public Enemy {
+private:
+    bool hasShield;
+    int  shieldHP;
+
+public:
+    ShieldedSoldier(TextureManager* texMgr, AudioManager* audMgr);
+    virtual ~ShieldedSoldier();
+    virtual void performAttack(PlayerSoldier* player);
+    virtual void takeDamageFrom(int amount, int bulletDir);
+};
+
+class GrenadeSoldier : public Enemy {
+public:
+    GrenadeSoldier(TextureManager* texMgr, AudioManager* audMgr);
+    virtual ~GrenadeSoldier();
+    virtual void performAttack(PlayerSoldier* player);
+    virtual void draw(RenderWindow& window, float scrollX, float scrollY);
+};
+
+class Martian : public Enemy {
+private:
+    bool inPodPhase;
+    int  podHP;
+
+public:
+    Martian(TextureManager* texMgr, AudioManager* audMgr);
+    virtual ~Martian();
+    virtual void updateAI(PlayerSoldier* player, Level* lvl);
+    virtual void performAttack(PlayerSoldier* player);
+    virtual void draw(RenderWindow& window, float scrollX, float scrollY);
+};

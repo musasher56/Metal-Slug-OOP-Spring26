@@ -89,6 +89,7 @@ void Game::handleEvents() {
                                                     this->selectedChar,
                                                     this->texManager,
                                                     this->audManager);
+                    play->setStateManager(this->stateManager);
                     this->stateManager->push(play);
                 }
             }
