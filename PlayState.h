@@ -5,6 +5,7 @@
 #include "Level.h"
 #include "BlockManager.h"
 #include "EnemyManager.h"
+#include "EnemyVehicleManager.h"
 #include <SFML/Graphics.hpp>
 
 class CharacterManager;
@@ -17,7 +18,7 @@ class PlayState : public GameState {
 private:
     void* entityManager;
     EnemyManager* enemyManager;
-    void* enemyVehicleManager;
+    EnemyVehicleManager* enemyVehicleManager;
     ProjectileManager* projectileManager;
     void* collectibleManager;
 
@@ -51,6 +52,9 @@ private:
     Texture    bloodOverlayTex;
     Sprite     bloodOverlaySprite;
     GameStateManager* stateManager;
+
+    Clock flyingTaraClock;
+    int   flyingTaraPhase;
 
 public:
     PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr);

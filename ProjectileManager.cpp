@@ -77,6 +77,25 @@ void ProjectileManager::spawnStraight(sf::Vector2f origin, int dir,
     this->slots[this->activeCount++] = p;
 }
 
+
+void ProjectileManager::spawnBomb(sf::Vector2f origin, int dir,
+    float angle, int dmg, int blastRadius, bool fromEnemy)
+{
+    if (this->activeCount >= MAX_PROJ) return;
+
+    ExplosiveProjectile* p = new ExplosiveProjectile(this->texMgr, this->audMgr);
+    p->position = origin;
+    p->fromEnemy = fromEnemy;
+    p->damage = dmg;
+    p->blastRadius = blastRadius;
+    p->projectileClass = PROJ_BOMB;   // <-- marks it as a bomb, not grenade
+
+    float vx = 0.f, vy = 0.f;
+    ProjectileManager::angleToVelocity(angle, dir, 8.f, vx, vy);
+    p->setVelocity(vx, vy);
+
+    this->slots[this->activeCount++] = p;
+}
 void ProjectileManager::spawnExplosive(sf::Vector2f origin, int dir,
     float angle, int dmg,
     int blastRadius, bool fromEnemy)
@@ -192,31 +211,66 @@ void ProjectileManager::draw(RenderWindow& window, float scrollX, float scrollY)
         grenadeSprite.setScale(0.08f, 0.08f);
     }
 
+    // Bomb sprite for bomb projectiles
+    bool hasBomb = this->texMgr->loadTexture("bomb_draw", "resources/Sprites/bomb.png");
+    Sprite bombSprite;
+    float bombTexW = 16.f;
+    float bombTexH = 16.f;
+    if (hasBomb) {
+        Texture& bt = this->texMgr->getTexture("bomb_draw");
+        bombSprite.setTexture(bt);
+        bombSprite.setTextureRect(IntRect(0, 0, 108, 52));
+        bombTexW = 108.f;
+        bombTexH = 52.f;
+        bombSprite.setOrigin(bombTexW * 0.5f, bombTexH * 0.5f);
+        bombSprite.setScale(0.8f, 0.8f);
+    }
+
     for (int i = 0; i < this->activeCount; i++) {
         Projectile* p = this->slots[i];
         if (p == nullptr || !p->getStatus()) continue;
 
         if (p->isExplosive) {
-            if (hasGrenade) {
-                float rot = atan2f(p->velocityY, p->velocityX) * 180.f / 3.14159f;
-                grenadeSprite.setRotation(rot);
-                grenadeSprite.setPosition(
-                    p->position.x - scrollX,
-                    p->position.y - scrollY);
-                window.draw(grenadeSprite);
+            if (p->projectileClass == PROJ_BOMB) {
+                // Draw bomb sprite
+                if (hasBomb) {
+                    float rot = atan2f(p->velocityY, p->velocityX) * 180.f / 3.14159f;
+                    bombSprite.setRotation(rot);
+                    bombSprite.setPosition(
+                        p->position.x - scrollX,
+                        p->position.y - scrollY);
+                    window.draw(bombSprite);
+                }
+                else {
+                    RectangleShape bombRect(sf::Vector2f(20.f, 12.f));
+                    bombRect.setPosition(p->position.x - scrollX,
+                        p->position.y - scrollY);
+                    bombRect.setFillColor(Color(80, 80, 80));
+                    window.draw(bombRect);
+                }
             }
             else {
-                RectangleShape explosiveRect(sf::Vector2f(10.f, 8.f));
-                explosiveRect.setPosition(p->position.x - scrollX,
-                    p->position.y - scrollY);
-                explosiveRect.setFillColor(Color(255, 140, 0));
-                window.draw(explosiveRect);
+                // Draw grenade sprite
+                if (hasGrenade) {
+                    float rot = atan2f(p->velocityY, p->velocityX) * 180.f / 3.14159f;
+                    grenadeSprite.setRotation(rot);
+                    grenadeSprite.setPosition(
+                        p->position.x - scrollX,
+                        p->position.y - scrollY);
+                    window.draw(grenadeSprite);
+                }
+                else {
+                    RectangleShape explosiveRect(sf::Vector2f(10.f, 8.f));
+                    explosiveRect.setPosition(p->position.x - scrollX,
+                        p->position.y - scrollY);
+                    explosiveRect.setFillColor(Color(255, 140, 0));
+                    window.draw(explosiveRect);
+                }
             }
         }
         else {
             float rot = atan2f(p->velocityY, p->velocityX) * 180.f / 3.14159f;
             bulletSprite.setRotation(rot);
-
             bulletSprite.setPosition(
                 p->position.x + 4.f - scrollX,
                 p->position.y + 3.f - scrollY);

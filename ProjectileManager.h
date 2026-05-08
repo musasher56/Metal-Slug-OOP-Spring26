@@ -28,7 +28,8 @@ private:
 public:
     ProjectileManager(TextureManager* t, AudioManager* a);
     ~ProjectileManager();
-
+    void spawnBomb(sf::Vector2f origin, int dir, float angle,
+        int dmg, int blastRadius, bool fromEnemy = false);
     static sf::Vector2f calcBarrelTip(sf::Vector2f entityPos,
         int dir,
         float spriteWidth,

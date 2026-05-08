@@ -105,3 +105,4 @@ const int ENTITY_POOL_GROWTH = 100;
 
 
 const int HITS_PER_HEART = 3;
+const int PROJ_BOMB = 4;
