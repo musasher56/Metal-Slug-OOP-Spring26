@@ -17,6 +17,8 @@ Soldier::Soldier(TextureManager* texMgr, AudioManager* audMgr)
     , meleeCooldown(0.5f)
     , transformState(nullptr), isInvincible(false)
     , inWater(false)
+    , physW(34)   // matches original hardcoded value; subclasses override
+    , physH(40)   // matches original hardcoded value; subclasses override
 {
 }
 
@@ -186,13 +188,23 @@ void Soldier::handleCollision(Level* lvl) {
 
     float scaleX = std::abs(this->sprite.getScale().x);
     float scaleY = std::abs(this->sprite.getScale().y);
+
+    // ── CRITICAL: use physW/physH, NOT hardcoded values ──────────────────
+    // physW and physH are set per-character in each subclass constructor to
+    // match that character's actual sprite frame size.  Multiplying by the
+    // sprite's current scale gives the exact on-screen collision extent.
+    //
+    // Old code used: 34.f * scaleX, 40.f * scaleY
+    // That was fine for Marco (physW=34, physH=40, scale=3.5) but broke
+    // Fio (physH=18 at scale 8.0 → old formula gave 40*8=320px box height
+    // vs the 18*8=144px visual sprite → collision pushed Fio 176px up → float).
+    float colW = static_cast<float>(this->physW) * scaleX;
+    float colH = static_cast<float>(this->physH) * scaleY;
+
     float playerLeft = this->position.x;
-
-
-
-    float playerRight = this->position.x + 34.f * scaleX;
+    float playerRight = this->position.x + colW;
     float playerTop = this->position.y;
-    float playerBottom = this->position.y + 40.f * scaleY;
+    float playerBottom = this->position.y + colH;
 
     int cellSize = lvl->getCellSize();
     this->onGround = false;
@@ -220,27 +232,11 @@ void Soldier::handleCollision(Level* lvl) {
                 float overlapBottom = blockBottom - playerTop;
 
                 float minOverlap = overlapLeft;
-                // IMPORTANT: must initialize to 1, NOT 0.
-                // The four directions are: 1=push-left, 2=push-right,
-                // 3=push-up (land on top), 4=push-down (hit ceiling).
-                // overlapLeft wins the comparison by default (it's the
-                // seed value for minOverlap), so its direction ID must
-                // already be set here. Starting at 0 means left-overlap
-                // wins silently but no branch fires — character phases through.
-                int resolveDir = 1;
+                int   resolveDir = 1;
 
-                if (overlapRight < minOverlap) {
-                    minOverlap = overlapRight;
-                    resolveDir = 2;
-                }
-                if (overlapTop < minOverlap) {
-                    minOverlap = overlapTop;
-                    resolveDir = 3;
-                }
-                if (overlapBottom < minOverlap) {
-                    minOverlap = overlapBottom;
-                    resolveDir = 4;
-                }
+                if (overlapRight < minOverlap) { minOverlap = overlapRight;  resolveDir = 2; }
+                if (overlapTop < minOverlap) { minOverlap = overlapTop;    resolveDir = 3; }
+                if (overlapBottom < minOverlap) { minOverlap = overlapBottom; resolveDir = 4; }
 
                 if (resolveDir == 1) {
                     this->position.x -= minOverlap;
@@ -260,14 +256,17 @@ void Soldier::handleCollision(Level* lvl) {
                     this->velocityY = 0.f;
                 }
 
+                // Recompute after resolution so the next block uses the new position
                 playerLeft = this->position.x;
-                playerRight = this->position.x + 34.f * scaleX;
+                playerRight = this->position.x + colW;
                 playerTop = this->position.y;
-                playerBottom = this->position.y + 40.f * scaleY;
+                playerBottom = this->position.y + colH;
             }
         }
     }
 
+    // Ground probe: check one pixel below the collision box for a solid tile.
+    // Keeps onGround = true even when standing perfectly flush (no overlap).
     if (!this->onGround) {
         float probeY = playerBottom + 1.0f;
         int probeRow = static_cast<int>(probeY) / cellSize;
@@ -281,12 +280,14 @@ void Soldier::handleCollision(Level* lvl) {
         }
     }
 
+    // Left-edge world clamp
     if (this->position.x < 0.f) {
         this->position.x = 0.f;
         this->velocityX = 0.f;
     }
-    float maxPlayerX = (float)(lvl->getWidth()) * (float)(lvl->getCellSize())
-        - 36.f * scaleX;
+
+    // Right-edge world clamp (also uses physW so every character is clamped correctly)
+    float maxPlayerX = (float)(lvl->getWidth()) * (float)(lvl->getCellSize()) - colW;
     if (this->position.x > maxPlayerX) {
         this->position.x = maxPlayerX;
         this->velocityX = 0.f;

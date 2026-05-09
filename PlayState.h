@@ -6,6 +6,7 @@
 #include "BlockManager.h"
 #include "EnemyManager.h"
 #include "EnemyVehicleManager.h"
+#include "LevelConfig.h"
 #include <SFML/Graphics.hpp>
 
 class CharacterManager;
@@ -61,8 +62,15 @@ private:
     sf::ConvexShape waterShape;
     float waterBaseY;
 
+    // ── Level management ──
+    int startLevel;               // which level to begin at (0 = campaign, 1/2 = skip ahead)
+    int currentLevelIndex;
+    const LevelConfig* currentConfig;
+    bool levelTransitioning;
+    float levelTransitionTimer;
+
 public:
-    PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr);
+    PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr, int startLvl = 0);
     virtual ~PlayState();
     void setStateManager(GameStateManager* mgr) { this->stateManager = mgr; }
     virtual void update(float dt);
@@ -77,4 +85,8 @@ private:
     void renderBloodOverlay(RenderWindow& window);
     void spawnTestBlocks();
     void spawnTestEnemies();
+    void loadLevel(int levelIndex);
+    void checkLevelTransition();
+    void spawnEnemiesFromConfig();
+    void spawnPlatformsFromConfig();
 };

@@ -22,9 +22,9 @@ public:
     //   call, which creates a subtle point of failure if the key lookup has any
     //   edge case.  Returning the texture reference directly is safer and faster.
     Texture& loadTextureWithMask(const char* key,
-                                  const char* filepath,
-                                  sf::Color   maskColor = sf::Color::Black,
-                                  sf::Uint8   tolerance  = 50);
+        const char* filepath,
+        sf::Color   maskColor = sf::Color::Black,
+        sf::Uint8   tolerance = 50);
 
     // Creates a solid-colour 1×1 texture registered under `key`.
     // Used as a placeholder when a real sprite file is missing (e.g. blast.png).

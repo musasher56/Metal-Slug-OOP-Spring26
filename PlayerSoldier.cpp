@@ -25,12 +25,12 @@ PlayerSoldier::PlayerSoldier(TextureManager* texMgr, AudioManager* audMgr)
     , devWeaponIdx(0)
     , qWasPressed(false)
 {
-    for (int i = 0; i < 3; ++i) this->inventory[i]     = nullptr;
+    for (int i = 0; i < 3; ++i) this->inventory[i] = nullptr;
     for (int i = 0; i < 5; ++i) this->devWeaponPool[i] = nullptr;
 
-    this->pistol           = new Pistol();
+    this->pistol = new Pistol();
     this->devWeaponPool[0] = this->pistol;
-    this->currentWeapon    = this->pistol;
+    this->currentWeapon = this->pistol;
 
     this->devWeaponPool[1] = new HeavyMachineGun();
     this->devWeaponPool[2] = new RocketLauncher();
@@ -45,7 +45,7 @@ PlayerSoldier::~PlayerSoldier() {
 
     if (this->pistol != nullptr) {
         delete this->pistol;
-        this->pistol           = nullptr;
+        this->pistol = nullptr;
         this->devWeaponPool[0] = nullptr;
     }
     for (int i = 1; i < 5; ++i) {
@@ -67,7 +67,7 @@ PlayerSoldier::~PlayerSoldier() {
 }
 
 void PlayerSoldier::cycleWeapon() {
-    this->devWeaponIdx  = (this->devWeaponIdx + 1) % 5;
+    this->devWeaponIdx = (this->devWeaponIdx + 1) % 5;
     this->currentWeapon = this->devWeaponPool[this->devWeaponIdx];
 }
 
@@ -115,7 +115,7 @@ void PlayerSoldier::switchWeapon(Weapon* w) {
 void PlayerSoldier::enterVehicle(Vehicle* v) {
     if (v == nullptr || this->inVehicle) return;
     this->currentVehicle = v;
-    this->inVehicle      = true;
+    this->inVehicle = true;
     v->setDriver(this);
 }
 
@@ -123,27 +123,27 @@ void PlayerSoldier::exitVehicle() {
     if (!this->inVehicle || this->currentVehicle == nullptr) return;
     this->currentVehicle->ejectDriver();
     this->currentVehicle = nullptr;
-    this->inVehicle      = false;
+    this->inVehicle = false;
 }
 
 void PlayerSoldier::saveData(std::ofstream& out) {
     if (!out.is_open()) return;
-    out.write(reinterpret_cast<const char*>(&this->lives),        sizeof(int));
-    out.write(reinterpret_cast<const char*>(&this->currentHP),    sizeof(int));
+    out.write(reinterpret_cast<const char*>(&this->lives), sizeof(int));
+    out.write(reinterpret_cast<const char*>(&this->currentHP), sizeof(int));
     out.write(reinterpret_cast<const char*>(&this->grenadeCount), sizeof(int));
-    out.write(reinterpret_cast<const char*>(&this->inVehicle),    sizeof(bool));
-    out.write(reinterpret_cast<const char*>(&this->position.x),   sizeof(float));
-    out.write(reinterpret_cast<const char*>(&this->position.y),   sizeof(float));
+    out.write(reinterpret_cast<const char*>(&this->inVehicle), sizeof(bool));
+    out.write(reinterpret_cast<const char*>(&this->position.x), sizeof(float));
+    out.write(reinterpret_cast<const char*>(&this->position.y), sizeof(float));
 }
 
 void PlayerSoldier::loadData(std::ifstream& in) {
     if (!in.is_open()) return;
-    in.read(reinterpret_cast<char*>(&this->lives),        sizeof(int));
-    in.read(reinterpret_cast<char*>(&this->currentHP),    sizeof(int));
+    in.read(reinterpret_cast<char*>(&this->lives), sizeof(int));
+    in.read(reinterpret_cast<char*>(&this->currentHP), sizeof(int));
     in.read(reinterpret_cast<char*>(&this->grenadeCount), sizeof(int));
-    in.read(reinterpret_cast<char*>(&this->inVehicle),    sizeof(bool));
-    in.read(reinterpret_cast<char*>(&this->position.x),   sizeof(float));
-    in.read(reinterpret_cast<char*>(&this->position.y),   sizeof(float));
+    in.read(reinterpret_cast<char*>(&this->inVehicle), sizeof(bool));
+    in.read(reinterpret_cast<char*>(&this->position.x), sizeof(float));
+    in.read(reinterpret_cast<char*>(&this->position.y), sizeof(float));
 }
 
 void PlayerSoldier::applyFannumTax(ProjectileManager* manager) {
@@ -159,7 +159,7 @@ void PlayerSoldier::onDeath() {
 void PlayerSoldier::takeDamage(int amount) {
     if (amount < 0)         return;
     if (this->isInvincible) return;
-    if (this->transformState != nullptr) { }
+    if (this->transformState != nullptr) {}
 
     this->enemyBulletHits += amount;
     while (this->enemyBulletHits >= HITS_PER_HEART) {
@@ -174,8 +174,8 @@ void PlayerSoldier::takeDamage(int amount) {
 void PlayerSoldier::updateBoundingBox() {
     float scaleX = std::abs(this->sprite.getScale().x);
     float scaleY = std::abs(this->sprite.getScale().y);
-    int w    = static_cast<int>(this->physW * scaleX);
-    int h    = static_cast<int>(this->physH * scaleY);
+    int w = static_cast<int>(this->physW * scaleX);
+    int h = static_cast<int>(this->physH * scaleY);
     int left = (this->direction == DIR_LEFT) ? -w : 0;
     this->boundingBox = IntRect(left, 0, w, h);
 }
@@ -197,7 +197,7 @@ void PlayerSoldier::draw(RenderWindow& window, float scrollX, float scrollY) {
         scaleY
     );
     this->sprite.setPosition(this->position.x - scrollX,
-                             this->position.y - scrollY);
+        this->position.y - scrollY);
     window.draw(this->sprite);
 }
 
@@ -302,10 +302,10 @@ Tarma::Tarma(TextureManager* texMgr, AudioManager* audMgr)
 }
 
 Tarma::~Tarma() {}
-void Tarma::updateSprite()    {}
+void Tarma::updateSprite() {}
 void Tarma::activatePowerUp() { this->immunityActive = true; this->immunityTimer.restart(); }
 bool Tarma::hasVehicleSurvival() const { return true; }
-void Tarma::onVehicleDestroyed()       { this->exitVehicle(); }
+void Tarma::onVehicleDestroyed() { this->exitVehicle(); }
 
 void Tarma::handleInput() {
     bool qNow = Keyboard::isKeyPressed(Keyboard::Q);
@@ -353,9 +353,9 @@ Eri::Eri(TextureManager* texMgr, AudioManager* audMgr)
 }
 
 Eri::~Eri() {}
-void Eri::updateSprite()    {}
+void Eri::updateSprite() {}
 void Eri::activatePowerUp() { this->doubleGrenadeActive = true; this->doubleGrenadeTimer.restart(); }
-void Eri::meleeAttack()     { Soldier::meleeAttack(); }
+void Eri::meleeAttack() { Soldier::meleeAttack(); }
 
 void Eri::handleInput() {
     bool qNow = Keyboard::isKeyPressed(Keyboard::Q);
@@ -421,7 +421,7 @@ Fio::Fio(TextureManager* texMgr, AudioManager* audMgr)
 }
 
 Fio::~Fio() {}
-void Fio::updateSprite()    {}
+void Fio::updateSprite() {}
 void Fio::activatePowerUp() { this->superchargedActive = true; this->superchargedTimer.restart(); }
 
 void Fio::switchWeapon(Weapon* w) {

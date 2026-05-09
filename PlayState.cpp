@@ -1,6 +1,7 @@
 #include "PlayState.h"
 #include "GameStateManager.h"
 #include "GameOverState.h"
+#include "LevelSelectState.h"
 #include "CharacterManager.h"
 #include "LevelManager.h"
 #include "ScoreManager.h"
@@ -12,7 +13,7 @@
 
 
 
-PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr)
+PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr, int startLvl)
     : entityManager(nullptr), enemyManager(nullptr), enemyVehicleManager(nullptr),
     projectileManager(nullptr), collectibleManager(nullptr),
     texManager(texMgr), audManager(audMgr),
@@ -28,6 +29,11 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
     , flyingTaraPhase(0)
     , submarineSpawned(false)
     , waterBaseY(574.f)
+    , startLevel(startLvl)
+    , currentLevelIndex(0)
+    , currentConfig(nullptr)
+    , levelTransitioning(false)
+    , levelTransitionTimer(0.f)
 {
     this->id = GSTATE_PLAY;
 
@@ -57,11 +63,6 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
     this->debugText.setFillColor(Color(0, 255, 0));
     this->debugText.setPosition(10.f, 10.f);
 
-    this->scroll = 0.f;
-    this->scrollY = 0.f;
-    this->bgTex.loadFromFile("resources/Sprites/background.png");
-    this->bgSprite.setTexture(this->bgTex);
-
     this->bloodOverlayTex.loadFromFile("resources/Sprites/blood-overlay.png");
     this->bloodOverlaySprite.setTexture(this->bloodOverlayTex);
     this->bloodOverlaySprite.setScale(
@@ -72,48 +73,11 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
         -(float)SCREEN_W * 0.05f,
         -(float)SCREEN_H * 0.05f
     );
-    float texH = static_cast<float>(this->bgTex.getSize().y);
-    if (texH > 0.f) {
-        this->bgScaleY = (float)SCREEN_H / texH * 1.4f;
-        this->bgSprite.setScale(this->bgScaleY, this->bgScaleY);
-    }
-    else {
-        this->bgScaleY = 1.f;
-    }
 
-    if (this->levelManager != nullptr) {
-        Level* lvl = this->levelManager->getLevel();
-        if (lvl != nullptr) {
-            this->blockManager = new BlockManager(texMgr, audMgr, lvl);
-
-            this->texManager->loadTexture("dirt", "resources/Sprites/dirt.png");
-
-            int cellSize = lvl->getCellSize();
-            int groundRow = lvl->getHeight() - 1;
-            int surfaceRow = groundRow - 2;
-            float surfaceY = (float)(surfaceRow * cellSize);
-
-            this->blockManager->buildGroundTerrain(surfaceRow, 3);
-            this->blockManager->buildMountainTerrain(4000.f, surfaceY);
-
-            if (this->characterManager != nullptr) {
-                sf::Vector2f spawnPos(200.f, surfaceY - 140.f);
-                this->characterManager->initAllPositions(spawnPos);
-            }
-
-            this->spawnTestBlocks();
-            this->spawnTestEnemies();
-
-            // ── Initialize water pool shape ──
-            // Rectangular region: (10242,574) to (115919,1776)
-            this->waterShape.setPointCount(4);
-            this->waterShape.setPoint(0, sf::Vector2f(10242.f, 574.f));
-            this->waterShape.setPoint(1, sf::Vector2f(115919.f, 574.f));
-            this->waterShape.setPoint(2, sf::Vector2f(115919.f, 1776.f));
-            this->waterShape.setPoint(3, sf::Vector2f(10242.f, 1776.f));
-            this->waterShape.setFillColor(Color(0, 30, 80, 140));  // dark water
-        }
-    }
+    // Load the starting level (0 = campaign from beginning)
+    if (this->startLevel < 0) this->startLevel = 0;
+    if (this->startLevel >= TOTAL_LEVELS) this->startLevel = TOTAL_LEVELS - 1;
+    this->loadLevel(this->startLevel);
 }
 
 PlayState::~PlayState() {
@@ -125,6 +89,284 @@ PlayState::~PlayState() {
     if (this->characterManager) { delete this->characterManager;  this->characterManager = nullptr; }
     if (this->scoreManager) { delete this->scoreManager;      this->scoreManager = nullptr; }
     if (this->hud) { delete this->hud;               this->hud = nullptr; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// loadLevel — initializes (or re-initializes) everything for a given level
+// ─────────────────────────────────────────────────────────────────────────────
+void PlayState::loadLevel(int levelIndex) {
+    if (levelIndex < 0 || levelIndex >= TOTAL_LEVELS) return;
+
+    this->currentLevelIndex = levelIndex;
+    this->currentConfig = ALL_LEVELS[levelIndex];
+    const LevelConfig* cfg = this->currentConfig;
+
+    // ── Reset scrolling ──
+    this->scroll = 0.f;
+    this->scrollY = 0.f;  // will be corrected below for flat levels
+
+    // ── Reset vehicle/animation state ──
+    this->flyingTaraPhase = 0;
+    this->submarineSpawned = false;
+    this->flyingTaraClock.restart();
+    this->levelTransitioning = false;
+    this->levelTransitionTimer = 0.f;
+
+    // ── Clear old enemies, vehicles, projectiles ──
+    if (this->enemyManager) this->enemyManager->clearAll();
+    if (this->enemyVehicleManager) this->enemyVehicleManager->clearAll();
+    if (this->projectileManager) this->projectileManager->clearAll();
+
+    // ── Delete old BlockManager (mountain + ground blocks) ──
+    if (this->blockManager) {
+        delete this->blockManager;
+        this->blockManager = nullptr;
+    }
+
+    // ── Reset the Level grid ──
+    if (this->levelManager) {
+        Level* lvl = this->levelManager->getLevel();
+        if (lvl != nullptr) {
+            // Clear all solid cells
+            for (int r = 0; r < lvl->getHeight(); r++) {
+                for (int c = 0; c < lvl->getWidth(); c++) {
+                    lvl->setSolid(r, c, false);
+                }
+            }
+        }
+    }
+
+    // ── Load background ──
+    this->bgTex.loadFromFile(cfg->bgPath);
+    this->bgSprite.setTexture(this->bgTex);
+    float texH = static_cast<float>(this->bgTex.getSize().y);
+    float texW = static_cast<float>(this->bgTex.getSize().x);
+    if (texH > 0.f) {
+        if (cfg->enableVerticalScroll) {
+            // Levels with vertical scroll — scale up so BG is taller than screen
+            this->bgScaleY = (float)SCREEN_H / texH * 1.4f;
+        }
+        else {
+            // Flat levels (no vertical scroll) — scale BG to fill screen height exactly
+            this->bgScaleY = (float)SCREEN_H / texH;
+        }
+        this->bgSprite.setScale(this->bgScaleY, this->bgScaleY);
+    }
+    else {
+        this->bgScaleY = 1.f;
+    }
+
+    // ── Rebuild terrain ──
+    if (this->levelManager != nullptr) {
+        Level* lvl = this->levelManager->getLevel();
+        if (lvl != nullptr) {
+            this->blockManager = new BlockManager(this->texManager, this->audManager, lvl);
+
+            this->texManager->loadTexture("dirt", "resources/Sprites/dirt.png");
+
+            int cellSize = lvl->getCellSize();
+            int groundRow = lvl->getHeight() - 1;
+            int surfaceRow = groundRow - 2;
+            float surfaceY = (float)(surfaceRow * cellSize);
+
+            if (cfg->visibleGround) {
+                // Normal levels — build visible dirt block ground
+                this->blockManager->buildGroundTerrain(surfaceRow, 3);
+            }
+            else {
+                // Invisible ground — mark cells solid but don't create dirt sprites
+                for (int rowOff = 0; rowOff < 3; rowOff++) {
+                    int row = surfaceRow + rowOff;
+                    if (row >= lvl->getHeight()) break;
+                    for (int col = 0; col < lvl->getWidth(); col++) {
+                        lvl->setSolid(row, col, true);
+                    }
+                }
+            }
+
+            // Only build mountain terrain if the level config says so
+            if (cfg->hasMountain) {
+                this->blockManager->buildMountainTerrain(4000.f, surfaceY);
+            }
+
+            // ── Reset player position ──
+            if (this->characterManager != nullptr) {
+                sf::Vector2f spawnPos(200.f, surfaceY - 140.f);
+                this->characterManager->initAllPositions(spawnPos);
+            }
+
+            // ── Spawn platforms from config ──
+            this->spawnPlatformsFromConfig();
+
+            // ── Spawn enemies from config ──
+            this->spawnEnemiesFromConfig();
+
+            // ── Initialize water pool shape ──
+            if (cfg->hasWater) {
+                this->waterShape.setPointCount(4);
+                this->waterShape.setPoint(0, sf::Vector2f(cfg->waterX1, cfg->waterY1));
+                this->waterShape.setPoint(1, sf::Vector2f(cfg->waterX2, cfg->waterY1));
+                this->waterShape.setPoint(2, sf::Vector2f(cfg->waterX2, cfg->waterY2));
+                this->waterShape.setPoint(3, sf::Vector2f(cfg->waterX1, cfg->waterY2));
+                this->waterShape.setFillColor(Color(0, 30, 80, 140));  // dark water
+            }
+            else {
+                // Empty invisible shape if no water
+                this->waterShape.setPointCount(4);
+                this->waterShape.setPoint(0, sf::Vector2f(0.f, 0.f));
+                this->waterShape.setPoint(1, sf::Vector2f(0.f, 0.f));
+                this->waterShape.setPoint(2, sf::Vector2f(0.f, 0.f));
+                this->waterShape.setPoint(3, sf::Vector2f(0.f, 0.f));
+                this->waterShape.setFillColor(Color(0, 0, 0, 0));
+            }
+
+            // ── For flat levels, set scrollY so ground lines up near bottom of screen ──
+            if (!cfg->enableVerticalScroll) {
+                // Place ground at ~85% down the screen (matches typical BG ground line)
+                this->scrollY = surfaceY - (float)SCREEN_H * 0.92f;
+                if (this->scrollY < 0.f) this->scrollY = 0.f;
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// spawnEnemiesFromConfig — reads enemy list from currentConfig and spawns them
+// ─────────────────────────────────────────────────────────────────────────────
+void PlayState::spawnEnemiesFromConfig() {
+    if (this->enemyManager == nullptr) return;
+    if (this->currentConfig == nullptr) return;
+
+    Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
+    if (lvl == nullptr) return;
+
+    int cellSize = lvl->getCellSize();
+    int surfaceRow = lvl->getHeight() - 3;
+    float surfaceY = (float)(surfaceRow * cellSize);
+    float rebelFootOffset = 140.f;
+
+    // Mountain coordinates for filling in x=0 enemies
+    float mtBaseX = 4000.f;
+    float mtTop30 = surfaceY - 11.f * 48.f;
+    float mtTop65 = surfaceY - 25.f * 48.f;
+    float mtTop90 = surfaceY - 25.f * 48.f;
+
+    const LevelConfig* cfg = this->currentConfig;
+
+    for (int i = 0; i < cfg->enemyCount && i < 40; i++) {
+        const EnemySpawnEntry* e = &cfg->enemies[i];
+        float ex = e->x;
+        float ey = e->y;
+
+        // Fill in Y=0 enemies with surface Y
+        if (ey == 0.f) {
+            ey = surfaceY - rebelFootOffset;
+        }
+
+        // Fill in mountain enemies (x=0 means mountain position)
+        // Only assign mountain positions if this level has a mountain
+        if (ex == 0.f) {
+            if (cfg->hasMountain) {
+                // Assign mountain positions based on index pattern
+                if (i % 4 == 0) { ex = mtBaseX + 30.f * 48.f; ey = mtTop30 - rebelFootOffset; }
+                else if (i % 4 == 1) { ex = mtBaseX + 90.f * 48.f; ey = mtTop90 - rebelFootOffset; }
+                else if (i % 4 == 2) { ex = mtBaseX + 65.f * 48.f; ey = mtTop65 - rebelFootOffset; }
+                else { ex = mtBaseX + 80.f * 48.f; ey = mtTop90 - rebelFootOffset; }
+            }
+            else {
+                // No mountain — place these enemies on flat ground instead
+                ex = (float)(15 + i * 8) * 48.f;
+                ey = surfaceY - rebelFootOffset;
+            }
+        }
+
+        switch (e->type) {
+        case ENEMY_REBEL:
+            this->enemyManager->spawnRebel(ex, ey);
+            break;
+        case ENEMY_BAZOOKA:
+            this->enemyManager->spawnBazooka(ex, ey);
+            break;
+        case ENEMY_SHIELDED:
+            this->enemyManager->spawnShielded(ex, ey);
+            break;
+        case ENEMY_GRENADE:
+            this->enemyManager->spawnGrenade(ex, ey);
+            break;
+        case ENEMY_MARTIAN:
+            this->enemyManager->spawnMartian(ex, ey);
+            break;
+        case ENEMY_PARATROOPER:
+            this->enemyManager->spawnParatrooper(ex, ey - 500.f, e->landY > 0.f ? e->landY : ey);
+            break;
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// spawnPlatformsFromConfig — reads platform list from currentConfig
+// ─────────────────────────────────────────────────────────────────────────────
+void PlayState::spawnPlatformsFromConfig() {
+    if (this->blockManager == nullptr) return;
+    if (this->currentConfig == nullptr) return;
+
+    const LevelConfig* cfg = this->currentConfig;
+    for (int i = 0; i < cfg->platformCount && i < 10; i++) {
+        const PlatformSpawnEntry* p = &cfg->platforms[i];
+        if (p->count > 0) {
+            this->blockManager->spawnPlatform(p->startX, p->startY, p->count);
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// checkLevelTransition — detects when player reaches end of current level
+// ─────────────────────────────────────────────────────────────────────────────
+void PlayState::checkLevelTransition() {
+    PlayerSoldier* player = this->characterManager
+        ? this->characterManager->getCurrentCharacter() : nullptr;
+    if (player == nullptr) return;
+
+    // Use levelWidth from config if set, otherwise fall back to grid width
+    float levelWidth = 0.f;
+    if (this->currentConfig != nullptr && this->currentConfig->levelWidth > 0.f) {
+        levelWidth = this->currentConfig->levelWidth;
+    }
+    else {
+        Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
+        if (lvl == nullptr) return;
+        levelWidth = (float)(lvl->getWidth() * lvl->getCellSize());
+    }
+
+    float playerX = player->getPosition().x;
+
+    // Trigger transition when player is near the right edge
+    if (playerX >= levelWidth - 200.f && !this->levelTransitioning) {
+        this->levelTransitioning = true;
+        this->levelTransitionTimer = 0.f;
+    }
+
+    if (this->levelTransitioning) {
+        this->levelTransitionTimer += 1.f / 60.f;  // approx 60fps
+
+        // Short delay before transitioning (0.5 sec)
+        if (this->levelTransitionTimer >= 0.5f) {
+            int nextLevel = this->currentLevelIndex + 1;
+
+            if (nextLevel >= TOTAL_LEVELS) {
+                // Beat all levels — go to level select (victory)
+                if (this->stateManager != nullptr) {
+                    int finalScore = this->scoreManager ? this->scoreManager->getScore() : 0;
+                    this->stateManager->changeState(
+                        new LevelSelectState(this->texManager, this->audManager, finalScore));
+                }
+            }
+            else {
+                // Load next level
+                this->loadLevel(nextLevel);
+            }
+        }
+    }
 }
 
 void PlayState::update(float dt) {
@@ -218,7 +460,13 @@ void PlayState::update(float dt) {
 
     if (player != nullptr && lvl != nullptr) {
         float playerX = player->getPosition().x;
-        float levelWidth = (float)(lvl->getWidth() * lvl->getCellSize());
+        float levelWidth = 0.f;
+        if (this->currentConfig != nullptr && this->currentConfig->levelWidth > 0.f) {
+            levelWidth = this->currentConfig->levelWidth;
+        }
+        else {
+            levelWidth = (float)(lvl->getWidth() * lvl->getCellSize());
+        }
         this->scroll = playerX - (float)SCREEN_W / 2.f;
         if (this->scroll < 0.f) this->scroll = 0.f;
         float maxScroll = levelWidth - (float)SCREEN_W;
@@ -226,7 +474,10 @@ void PlayState::update(float dt) {
         if (this->scroll > maxScroll) this->scroll = maxScroll;
     }
 
-    if (player != nullptr && lvl != nullptr) {
+    // Vertical scroll — only if the level config allows it
+    if (player != nullptr && lvl != nullptr &&
+        this->currentConfig != nullptr && this->currentConfig->enableVerticalScroll)
+    {
         float playerY = player->getPosition().y;
         float levelHeight = (float)(lvl->getHeight() * lvl->getCellSize());
         this->scrollY = playerY - (float)SCREEN_H / 2.f;
@@ -235,55 +486,74 @@ void PlayState::update(float dt) {
         if (maxScrollY < 0.f) maxScrollY = 0.f;
         if (this->scrollY > maxScrollY) this->scrollY = maxScrollY;
     }
+    else if (this->currentConfig != nullptr && !this->currentConfig->enableVerticalScroll) {
+        // No vertical scroll — lock camera so ground is near bottom of screen
+        if (lvl != nullptr) {
+            int surfaceRow = lvl->getHeight() - 3;
+            float surfaceY = (float)(surfaceRow * lvl->getCellSize());
+            this->scrollY = surfaceY - (float)SCREEN_H * 0.92f;
+            if (this->scrollY < 0.f) this->scrollY = 0.f;
+        }
+    }
 
     // ── Check if player is in the water region ──
-    if (player != nullptr) {
+    if (player != nullptr && this->currentConfig != nullptr && this->currentConfig->hasWater) {
         float px = player->getPosition().x;
         float py = player->getPosition().y;
-        bool inWaterNow = (px >= 10242.f && px <= 115919.f &&
-            py >= 574.f && py <= 1776.f);
+        bool inWaterNow = (px >= this->currentConfig->waterX1 &&
+            px <= this->currentConfig->waterX2 &&
+            py >= this->currentConfig->waterY1 &&
+            py <= this->currentConfig->waterY2);
         player->setInWater(inWaterNow);
+    }
+    else if (player != nullptr) {
+        player->setInWater(false);
     }
 
     if (this->levelManager)
         this->levelManager->update(dt);
 
-    // ── FlyingTara: two passes at 10s and 16s ──
-    if (this->flyingTaraPhase == 0 &&
-        this->flyingTaraClock.getElapsedTime().asSeconds() >= 10.f &&
-        this->enemyVehicleManager != nullptr && player != nullptr && lvl != nullptr)
+    // ── FlyingTara: spawn based on config timings ──
+    if (this->currentConfig != nullptr && this->enemyVehicleManager != nullptr &&
+        player != nullptr && lvl != nullptr)
     {
-        int cellSize = lvl->getCellSize();
-        int surfaceRow = lvl->getHeight() - 3;
-        float surfaceY = (float)(surfaceRow * cellSize);
-        float taraY = surfaceY - 500.f;
-        float spawnX = player->getPosition().x - (float)SCREEN_W - 200.f;
+        int passes = this->currentConfig->flyingTaraPasses;
+        for (int i = 0; i < passes && i < 4; i++) {
+            if (this->flyingTaraPhase == i &&
+                this->flyingTaraClock.getElapsedTime().asSeconds() >= this->currentConfig->flyingTaraTimes[i])
+            {
+                int cellSize = lvl->getCellSize();
+                int surfaceRow = lvl->getHeight() - 3;
+                float surfaceY = (float)(surfaceRow * cellSize);
+                float taraY = surfaceY - 500.f;
 
-        this->enemyVehicleManager->spawnFlyingTara(spawnX, taraY, DIR_RIGHT);
-        this->flyingTaraPhase = 1;
-    }
-    else if (this->flyingTaraPhase == 1 &&
-        this->flyingTaraClock.getElapsedTime().asSeconds() >= 16.f &&
-        this->enemyVehicleManager != nullptr && player != nullptr && lvl != nullptr)
-    {
-        int cellSize = lvl->getCellSize();
-        int surfaceRow = lvl->getHeight() - 3;
-        float surfaceY = (float)(surfaceRow * cellSize);
-        float taraY = surfaceY - 500.f;
-        float spawnX = player->getPosition().x + (float)SCREEN_W + 200.f;
+                // Alternate spawn direction: even = from left, odd = from right
+                int dir = (i % 2 == 0) ? DIR_RIGHT : DIR_LEFT;
+                float spawnX = (dir == DIR_RIGHT)
+                    ? player->getPosition().x - (float)SCREEN_W - 200.f
+                    : player->getPosition().x + (float)SCREEN_W + 200.f;
 
-        this->enemyVehicleManager->spawnFlyingTara(spawnX, taraY, DIR_LEFT);
-        this->flyingTaraPhase = 2;
+                this->enemyVehicleManager->spawnFlyingTara(spawnX, taraY, dir);
+                this->flyingTaraPhase = i + 1;
+            }
+        }
     }
 
-    // ── Submarine: spawn when player reaches water region ──
-    if (!this->submarineSpawned && player != nullptr &&
-        player->getPosition().x >= 9000.f &&
+    // ── Submarine: spawn when player reaches trigger X ──
+    if (this->currentConfig != nullptr && this->currentConfig->hasSubmarine &&
+        !this->submarineSpawned && player != nullptr &&
+        player->getPosition().x >= this->currentConfig->submarineTriggerX &&
         this->enemyVehicleManager != nullptr)
     {
-        this->enemyVehicleManager->spawnSubmarine(11000.f, 900.f, DIR_LEFT);
+        this->enemyVehicleManager->spawnSubmarine(
+            this->currentConfig->submarineSpawnX,
+            this->currentConfig->submarineSpawnY,
+            this->currentConfig->submarineDir);
         this->submarineSpawned = true;
     }
+
+    // ── Check level transition ──
+    this->checkLevelTransition();
 }
 
 void PlayState::render(RenderWindow& window) {
@@ -293,28 +563,67 @@ void PlayState::render(RenderWindow& window) {
     float bgWidth = static_cast<float>(this->bgTex.getSize().x) * this->bgScaleY;
     float bgHeight = static_cast<float>(this->bgTex.getSize().y) * this->bgScaleY;
 
-    const float BG_GROUND_RATIO = 0.82f;
+    float bgX = -this->scroll;
+    float bgY = 0.f;
 
-    float groundY = 0.f;
     Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
-    if (lvl != nullptr) {
-        int surfaceRow = lvl->getHeight() - 3;
-        groundY = (float)(surfaceRow * lvl->getCellSize());
+
+    if (this->currentConfig != nullptr && this->currentConfig->enableVerticalScroll) {
+        // Levels with vertical scroll — align BG ground line with world ground
+        const float BG_GROUND_RATIO = 0.82f;
+
+        float groundY = 0.f;
+        if (lvl != nullptr) {
+            int surfaceRow = lvl->getHeight() - 3;
+            groundY = (float)(surfaceRow * lvl->getCellSize());
+        }
+
+        float groundLineInSprite = bgHeight * BG_GROUND_RATIO;
+        bgY = groundY - groundLineInSprite - this->scrollY;
+
+        float maxBgY = bgHeight - (float)SCREEN_H; if (maxBgY < 0.f) maxBgY = 0.f;
+        if (bgY > 0.f) bgY = 0.f;
+        if (bgY < -maxBgY) bgY = -maxBgY;
+    }
+    else if (this->currentConfig != nullptr && !this->currentConfig->enableVerticalScroll) {
+        // Flat levels — BG is scaled to fill screen height exactly
+        // Keep it pinned to the screen (bgY = 0), don't scroll vertically
+        bgY = 0.f;
     }
 
-    float groundLineInSprite = bgHeight * BG_GROUND_RATIO;
-    float bgX = -this->scroll;
-    float bgY = groundY - groundLineInSprite - this->scrollY;
-
     if (bgX > 0.f) bgX = 0.f;
-    float maxBgX = bgWidth - (float)SCREEN_W; if (maxBgX < 0.f) maxBgX = 0.f;
-    if (bgX < -maxBgX) bgX = -maxBgX;
-    float maxBgY = bgHeight - (float)SCREEN_H; if (maxBgY < 0.f) maxBgY = 0.f;
-    if (bgY > 0.f) bgY = 0.f;
-    if (bgY < -maxBgY) bgY = -maxBgY;
 
-    this->bgSprite.setPosition(bgX, bgY);
-    window.draw(this->bgSprite);
+    // ── Draw BG (with optional tiling for levels where BG is shorter than level) ──
+    if (this->currentConfig != nullptr && this->currentConfig->tileBg) {
+        // Tile BG horizontally to cover the full level width
+        // Calculate how many copies we need and which ones are visible
+        float levelWidth = this->currentConfig->levelWidth > 0.f
+            ? this->currentConfig->levelWidth
+            : (float)(lvl != nullptr ? lvl->getWidth() * lvl->getCellSize() : bgWidth);
+
+        int totalTiles = (int)(levelWidth / bgWidth) + 2;
+        float viewLeft = this->scroll;
+        float viewRight = this->scroll + (float)SCREEN_W;
+        int firstTile = (int)(viewLeft / bgWidth);
+        if (firstTile < 0) firstTile = 0;
+
+        for (int t = firstTile; t < firstTile + totalTiles && t * bgWidth < viewRight + bgWidth; t++) {
+            float tileX = (float)t * bgWidth - this->scroll;
+            if (tileX + bgWidth < 0.f) continue;   // off-screen left
+            if (tileX > (float)SCREEN_W) break;     // off-screen right
+
+            this->bgSprite.setPosition(tileX, bgY);
+            window.draw(this->bgSprite);
+        }
+    }
+    else {
+        // Normal single-BG draw with clamping
+        float maxBgX = bgWidth - (float)SCREEN_W; if (maxBgX < 0.f) maxBgX = 0.f;
+        if (bgX < -maxBgX) bgX = -maxBgX;
+
+        this->bgSprite.setPosition(bgX, bgY);
+        window.draw(this->bgSprite);
+    }
 
     if (this->levelManager)      this->levelManager->draw(window, this->scroll, this->scrollY);
     if (this->blockManager)      this->blockManager->draw(window, this->scroll, this->scrollY);
@@ -324,8 +633,7 @@ void PlayState::render(RenderWindow& window) {
     if (this->projectileManager) this->projectileManager->draw(window, this->scroll, this->scrollY);
 
     // ── Draw water pool (dark layer only) ──
-    {
-        // Shift water shape by scroll offset for rendering
+    if (this->currentConfig != nullptr && this->currentConfig->hasWater) {
         sf::ConvexShape drawWater = this->waterShape;
         for (int i = 0; i < drawWater.getPointCount(); i++) {
             sf::Vector2f pt = drawWater.getPoint(i);
@@ -334,6 +642,16 @@ void PlayState::render(RenderWindow& window) {
             drawWater.setPoint(i, pt);
         }
         window.draw(drawWater);
+    }
+
+    // ── Level transition overlay ──
+    if (this->levelTransitioning) {
+        sf::RectangleShape overlay(sf::Vector2f((float)SCREEN_W, (float)SCREEN_H));
+        float alpha = this->levelTransitionTimer / 0.5f;  // 0→1 over 0.5s
+        if (alpha > 1.f) alpha = 1.f;
+        overlay.setFillColor(sf::Color(0, 0, 0, static_cast<sf::Uint8>(255.f * alpha)));
+        overlay.setPosition(0.f, 0.f);
+        window.draw(overlay);
     }
 
     if (this->hud)               this->hud->draw(window);
@@ -352,7 +670,8 @@ void PlayState::renderDebug(RenderWindow& window) {
         int j = 0; while (src[j]) buf[k++] = src[j++]; buf[k] = '\0';
         };
 
-    sprintf(line, "Projectiles: %d\n",
+    sprintf(line, "Level: %d/%d  Projectiles: %d\n",
+        this->currentLevelIndex + 1, TOTAL_LEVELS,
         this->projectileManager ? this->projectileManager->getActiveCount() : -1);
     append(line);
     sprintf(line, "Blocks: %d / %d  Enemies: %d  Vehicles: %d\n",
@@ -378,7 +697,7 @@ void PlayState::renderDebug(RenderWindow& window) {
     append(line);
 
     this->debugText.setString(buf);
-    RectangleShape bg(sf::Vector2f(450.f, 130.f));
+    RectangleShape bg(sf::Vector2f(480.f, 130.f));
     bg.setFillColor(Color(0, 0, 0, 170));
     bg.setPosition(5.f, 5.f);
     window.draw(bg);
@@ -480,6 +799,8 @@ void PlayState::handleEvent(Event& event) {
 void PlayState::onEnter() {}
 void PlayState::onExit() {}
 
+// ── Legacy spawn functions (kept for compatibility, not used by loadLevel) ──
+
 void PlayState::spawnTestBlocks() {
     if (this->blockManager == nullptr) return;
 
@@ -522,11 +843,9 @@ void PlayState::spawnTestEnemies() {
 
     float rebelFootOffset = 140.f;
 
-    // ── Ground level enemies ──
     this->enemyManager->spawnMartian(15.f * 48.f, surfaceY - rebelFootOffset);
     this->enemyManager->spawnRebel(35.f * 48.f, surfaceY - rebelFootOffset);
 
-    // ── Platform enemies ──
     float platY1 = 32.f * 48.f;
     float platY2 = 30.f * 48.f;
 
@@ -535,35 +854,26 @@ void PlayState::spawnTestEnemies() {
     this->enemyManager->spawnRebel(34.f * 48.f, platY2 - rebelFootOffset);
     this->enemyManager->spawnRebel(48.f * 48.f, platY2 - rebelFootOffset);
 
-    // ── Mountain enemies ──
     float mtBaseX = 4000.f;
     float mtTop30 = surfaceY - 11.f * 48.f;
-    float mtTop65 = surfaceY - 25.f * 48.f;
     float mtTop90 = surfaceY - 25.f * 48.f;
     this->enemyManager->spawnRebel(mtBaseX + 30.f * 48.f, mtTop30 - rebelFootOffset);
     this->enemyManager->spawnRebel(mtBaseX + 90.f * 48.f, mtTop90 - rebelFootOffset);
-    // NOTE: mtBaseX + 140*48 = 10720 which is in water region (10242+), removed
 
-    // ── Bazooka soldiers ──
     this->enemyManager->spawnBazooka(25.f * 48.f, surfaceY - rebelFootOffset);
     this->enemyManager->spawnBazooka(50.f * 48.f, surfaceY - rebelFootOffset);
 
-    // ── Shielded soldiers ──
     this->enemyManager->spawnShielded(20.f * 48.f, surfaceY - rebelFootOffset);
     this->enemyManager->spawnShielded(40.f * 48.f, surfaceY - rebelFootOffset);
     this->enemyManager->spawnShielded(mtBaseX + 90.f * 48.f, mtTop90 - rebelFootOffset);
 
-    // ── Grenade soldiers ──
     this->enemyManager->spawnGrenade(12.f * 48.f, platY1 - rebelFootOffset);
     this->enemyManager->spawnGrenade(33.f * 48.f, platY2 - rebelFootOffset);
     this->enemyManager->spawnGrenade(mtBaseX + 30.f * 48.f, mtTop30 - rebelFootOffset);
 
-    // ── Martians ──
     float mtPeak = surfaceY - 25.f * 48.f;
-    // NOTE: mtBaseX + 140*48 Martian removed (water region)
-    this->enemyManager->spawnMartian(mtBaseX + 65.f * 48.f, mtTop65 - rebelFootOffset);
+    this->enemyManager->spawnMartian(mtBaseX + 65.f * 48.f, mtPeak - rebelFootOffset);
 
-    // ── Paratrooper ──
     float paraLandingY = mtPeak - rebelFootOffset;
     this->enemyManager->spawnParatrooper(
         mtBaseX + 80.f * 48.f,

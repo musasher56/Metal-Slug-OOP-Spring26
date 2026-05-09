@@ -7,7 +7,7 @@
 
 TextureManager::TextureManager() : textureCount(0) {
     for (int i = 0; i < MAX_TEXTURES; i++) {
-        loaded[i]   = false;
+        loaded[i] = false;
         names[i][0] = '\0';
     }
     // 1×1 white fallback — getTexture() and loadTextureWithMask() always have
@@ -40,7 +40,7 @@ int TextureManager::findSlot(const char* key) const {
 // Writes `key` into names[slot] and marks the slot as loaded.
 // Called by every loader after the texture data is already in textures[slot].
 static void registerKey(char names[][MAX_NAME_LEN], bool* loaded,
-                         int slot, const char* key)
+    int slot, const char* key)
 {
     int i = 0;
     while (key[i] != '\0' && i < MAX_NAME_LEN - 1) {
@@ -48,7 +48,7 @@ static void registerKey(char names[][MAX_NAME_LEN], bool* loaded,
         i++;
     }
     names[slot][i] = '\0';
-    loaded[slot]   = true;
+    loaded[slot] = true;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -108,9 +108,9 @@ Texture& TextureManager::getTexture(const char* key) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 Texture& TextureManager::loadTextureWithMask(const char* key,
-                                              const char* filepath,
-                                              sf::Color   maskColor,
-                                              sf::Uint8   tolerance)
+    const char* filepath,
+    sf::Color   maskColor,
+    sf::Uint8   tolerance)
 {
     // ── Already cached? Return directly ──────────────────────────────────────
     int idx = findSlot(key);
@@ -132,7 +132,7 @@ Texture& TextureManager::loadTextureWithMask(const char* key,
     // sf::Image always decodes to 32-bit RGBA regardless of source format,
     // so getPixel/setPixel always work with 4-channel data.
     sf::Vector2u size = img.getSize();
-    const int tol     = static_cast<int>(tolerance);
+    const int tol = static_cast<int>(tolerance);
 
     for (unsigned int y = 0; y < size.y; ++y) {
         for (unsigned int x = 0; x < size.x; ++x) {
@@ -167,7 +167,7 @@ Texture& TextureManager::loadTextureWithMask(const char* key,
     textureCount++;   // only increment AFTER everything else succeeded
 
     printf("[INFO] Loaded '%s' with colour-key mask (%ux%u px, tol=%d)\n",
-           key, size.x, size.y, tol);
+        key, size.x, size.y, tol);
 
     return textures[slot];   // direct reference — no second findSlot needed
 }

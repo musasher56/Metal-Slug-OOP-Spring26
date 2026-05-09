@@ -113,27 +113,36 @@ void CharacterManager::switchCharacter() {
 
             // --- Physics handoff ---
             // copyPhysicsFrom() writes position, velocityX/Y, onGround, and
-            // direction into the incoming soldier. All five are protected on
-            // Soldier, so this must be a member function — not a direct field
-            // copy from CharacterManager.
-            //
-            // Without this the incoming character spawns at (200, 300),
-            // which is almost certainly inside terrain at any non-trivial
-            // level scroll, causing the "fall through floor" glitch.
+            // direction into the incoming soldier.
             if (outgoing != nullptr) {
                 incoming->copyPhysicsFrom(outgoing);
             }
 
-            // Rebuild the bounding box for the incoming character's sprite
-            // after the position change. The box stores an offset from
-            // position, so it must be recalculated now or the first collision
-            // frame will use stale geometry.
+            // ── Feet-level correction ──────────────────────────────────────
+            // Every character is scaled so physH * scale ≈ 143px (normalised
+            // in the constructor), making bounding-box heights nearly equal.
+            // This residual adjustment handles the small floating-point delta
+            // that remains (~0–2px) so the character never phases through
+            // the ground or floats above it after a Z-switch.
+            //
+            // Logic: the world Y of the FEET = position.y + box.height.
+            // After copyPhysicsFrom the position is shared but box heights
+            // may differ by a pixel or two.  We shift incoming->position.y
+            // by that delta so the feet land at exactly the same world Y.
+            if (outgoing != nullptr) {
+                int outH = outgoing->getBoundingBox().height;
+                incoming->updateBoundingBox();           // build box with new scale
+                int inH = incoming->getBoundingBox().height;
+                int delta = outH - inH;                  // positive = outgoing was taller
+                if (delta != 0) {
+                    incoming->position.y += static_cast<float>(delta);
+                }
+            }
+
+            // Rebuild bounding box after the position adjustment
             incoming->updateBoundingBox();
 
-            // Ensure pm is valid for the incoming character. Even though
-            // setProjectileManager() distributes to all slots at init,
-            // this guard makes the switch self-contained: a character
-            // constructed after init (future feature) would still work.
+            // Ensure pm is valid for the incoming character.
             if (this->pm != nullptr) {
                 incoming->setProjectileManager(this->pm);
             }
