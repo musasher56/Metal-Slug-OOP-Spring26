@@ -14,9 +14,14 @@ ProjectileManager::ProjectileManager(TextureManager* t, AudioManager* a)
 {
     for (int i = 0; i < MAX_PROJ; i++) this->slots[i] = nullptr;
 
-    // Preload the bullet texture so StraightProjectile constructor (which calls
-    // texMgr->getTexture("bullet")) never hits a missing-key assert.
+    // Preload projectile textures so each draw() call finds them cached.
+    // The "bullet" key is used by StraightProjectile's base constructor;
+    // "bullet_draw", "grenade_draw", "bomb_draw" are used by the polymorphic
+    // draw() methods in StraightProjectile and ExplosiveProjectile.
     this->texMgr->loadTexture("bullet", "resources/Sprites/bullet.png");
+    this->texMgr->loadTexture("bullet_draw", "resources/Sprites/bullet.png");
+    this->texMgr->loadTexture("grenade_draw", "resources/Sprites/grenade.png");
+    this->texMgr->loadTexture("bomb_draw", "resources/Sprites/bomb.png");
 
     // Blast animation pool — initialise every slot so postEntityUpdate() can
     // safely call anim.update() without a null check.
@@ -31,7 +36,7 @@ ProjectileManager::ProjectileManager(TextureManager* t, AudioManager* a)
         this->blasts[i].anim.setTexture(&this->texMgr->getTexture("blast"));
         this->blasts[i].anim.setFrameCount(3);
         this->blasts[i].anim.setFrameDelay(6);
-        this->blasts[i].anim.setFrameRect(0,  75, 339, 308, 278);
+        this->blasts[i].anim.setFrameRect(0, 75, 339, 308, 278);
         this->blasts[i].anim.setFrameRect(1, 463, 353, 457, 287);
         this->blasts[i].anim.setFrameRect(2, 984, 304, 505, 400);
         this->blasts[i].anim.setLoop(false);
@@ -60,9 +65,9 @@ void ProjectileManager::clearAll() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 sf::Vector2f ProjectileManager::calcBarrelTip(sf::Vector2f entityPos,
-                                               int          dir,
-                                               float        spriteWidth,
-                                               float        barrelOffsetY)
+    int          dir,
+    float        spriteWidth,
+    float        barrelOffsetY)
 {
     const float GAP = 4.f;
     float x = (dir == DIR_RIGHT)
@@ -72,7 +77,7 @@ sf::Vector2f ProjectileManager::calcBarrelTip(sf::Vector2f entityPos,
 }
 
 void ProjectileManager::angleToVelocity(float angle, int dir, float speed,
-                                         float& outVX, float& outVY)
+    float& outVX, float& outVY)
 {
     // angle is in degrees where 0 = horizontal, positive = upward.
     // Convert to standard math radians: positive Y is downward in SFML, so negate.
@@ -88,14 +93,14 @@ void ProjectileManager::angleToVelocity(float angle, int dir, float speed,
 // ─────────────────────────────────────────────────────────────────────────────
 
 void ProjectileManager::spawnStraight(sf::Vector2f origin, int dir,
-                                       float angle, int dmg, bool fromEnemy)
+    float angle, int dmg, bool fromEnemy)
 {
     if (this->activeCount >= MAX_PROJ) return;
 
     StraightProjectile* p = new StraightProjectile(this->texMgr, this->audMgr, angle);
-    p->position  = origin;
+    p->position = origin;
     p->fromEnemy = fromEnemy;
-    p->damage    = dmg;
+    p->damage = dmg;
 
     float vx = 0.f, vy = 0.f;
     ProjectileManager::angleToVelocity(angle, dir, 15.f, vx, vy);
@@ -105,15 +110,15 @@ void ProjectileManager::spawnStraight(sf::Vector2f origin, int dir,
 }
 
 void ProjectileManager::spawnExplosive(sf::Vector2f origin, int dir,
-                                        float angle, int dmg,
-                                        int blastRadius, bool fromEnemy)
+    float angle, int dmg,
+    int blastRadius, bool fromEnemy)
 {
     if (this->activeCount >= MAX_PROJ) return;
 
     ExplosiveProjectile* p = new ExplosiveProjectile(this->texMgr, this->audMgr);
-    p->position    = origin;
-    p->fromEnemy   = fromEnemy;
-    p->damage      = dmg;
+    p->position = origin;
+    p->fromEnemy = fromEnemy;
+    p->damage = dmg;
     p->blastRadius = blastRadius;
     // projectileClass stays PROJ_EXPLOSIVE (set in constructor)
 
@@ -125,17 +130,17 @@ void ProjectileManager::spawnExplosive(sf::Vector2f origin, int dir,
 }
 
 void ProjectileManager::spawnBomb(sf::Vector2f origin, int dir,
-                                   float angle, int dmg, int blastRadius,
-                                   bool fromEnemy, float speed)
+    float angle, int dmg, int blastRadius,
+    bool fromEnemy, float speed)
 {
     if (this->activeCount >= MAX_PROJ) return;
 
     ExplosiveProjectile* p = new ExplosiveProjectile(this->texMgr, this->audMgr);
-    p->position           = origin;
-    p->fromEnemy          = fromEnemy;
-    p->damage             = dmg;
-    p->blastRadius        = blastRadius;
-    p->projectileClass    = PROJ_BOMB;   // tag differentiates grey bomb from orange rocket
+    p->position = origin;
+    p->fromEnemy = fromEnemy;
+    p->damage = dmg;
+    p->blastRadius = blastRadius;
+    p->projectileClass = PROJ_BOMB;   // tag differentiates grey bomb from orange rocket
 
     float vx = 0.f, vy = 0.f;
     ProjectileManager::angleToVelocity(angle, dir, speed, vx, vy);
@@ -154,7 +159,7 @@ void ProjectileManager::spawnBomb(sf::Vector2f origin, int dir,
 //   steady stream without hogging pool slots.
 //   If you WANT a denser visual, lower maxLifetime to 12 or raise fireRate.
 void ProjectileManager::spawnFlame(sf::Vector2f origin, int dir,
-                                    float angle, int dmg, bool fromEnemy)
+    float angle, int dmg, bool fromEnemy)
 {
     if (this->activeCount >= MAX_PROJ) return;
 
@@ -162,9 +167,9 @@ void ProjectileManager::spawnFlame(sf::Vector2f origin, int dir,
     // 120px ≈ 3.75 blocks before burning out — close to the spec's 5-block
     // range (exact range tuning can happen with real sprites).
     FlameParticle* fp = new FlameParticle(this->texMgr, this->audMgr, angle, 20);
-    fp->position  = origin;
+    fp->position = origin;
     fp->fromEnemy = fromEnemy;
-    fp->damage    = dmg;
+    fp->damage = dmg;
 
     // Slightly slower than bullets so the flame visually stays in front of the
     // player barrel for its lifetime rather than shooting across the screen.
@@ -184,14 +189,14 @@ void ProjectileManager::spawnFlame(sf::Vector2f origin, int dir,
 // The beam lives 5 frames, flickering in draw() — visible flash without
 // requiring a separate animation system.
 void ProjectileManager::spawnLaser(sf::Vector2f origin, int dir,
-                                    int dmg, bool fromEnemy)
+    int dmg, bool fromEnemy)
 {
     if (this->activeCount >= MAX_PROJ) return;
 
     LaserBeam* lb = new LaserBeam(this->texMgr, this->audMgr, dir, 5);
-    lb->position  = origin;
+    lb->position = origin;
     lb->fromEnemy = fromEnemy;
-    lb->damage    = dmg;
+    lb->damage = dmg;
     // Velocity (0,0) — stationary; movement is suppressed in LaserBeam::move()
 
     this->slots[this->activeCount++] = lb;
@@ -200,8 +205,8 @@ void ProjectileManager::spawnLaser(sf::Vector2f origin, int dir,
 void ProjectileManager::spawnBlast(float x, float y) {
     for (int i = 0; i < MAX_BLASTS; i++) {
         if (!this->blasts[i].active) {
-            this->blasts[i].x      = x;
-            this->blasts[i].y      = y;
+            this->blasts[i].x = x;
+            this->blasts[i].y = y;
             this->blasts[i].active = true;
             this->blasts[i].anim.reset();
             return;
@@ -241,8 +246,8 @@ void ProjectileManager::postEntityUpdate(float scrollX, float scrollY, Level* lv
 
         if (lvl != nullptr) {
             // Record impact position before checkTileCollision deactivates the slot.
-            float  impactX     = p->position.x;
-            float  impactY     = p->position.y;
+            float  impactX = p->position.x;
+            float  impactY = p->position.y;
             bool   wasExplosive = p->isExplosive;
 
             // Friend access: calls Projectile::checkTileCollision() directly.
@@ -308,7 +313,7 @@ void ProjectileManager::draw(RenderWindow& window, float scrollX, float scrollY)
 
         IntRect rect = blastSprite.getTextureRect();
         blastSprite.setOrigin(
-            static_cast<float>(rect.width)  * 0.5f,
+            static_cast<float>(rect.width) * 0.5f,
             static_cast<float>(rect.height) * 0.5f);
         blastSprite.setScale(0.8f, 0.8f);
         blastSprite.setPosition(blast.x - scrollX, blast.y - 85.f - scrollY);
@@ -329,17 +334,17 @@ int ProjectileManager::checkEntityCollisions(DamagableEntity** targets, int targ
         if (proj == nullptr || !proj->getStatus()) { p++; continue; }
 
         IntRect projBox = proj->getBoundingBox();
-        bool    hit     = false;
+        bool    hit = false;
 
         for (int e = 0; e < targetCount && !hit; e++) {
             if (targets[e] == nullptr || !targets[e]->isAlive()) continue;
 
             IntRect entBox = targets[e]->getBoundingBox();
 
-            bool overlapX = (projBox.left < entBox.left + entBox.width)  &&
-                            (projBox.left + projBox.width > entBox.left);
-            bool overlapY = (projBox.top  < entBox.top  + entBox.height) &&
-                            (projBox.top  + projBox.height > entBox.top);
+            bool overlapX = (projBox.left < entBox.left + entBox.width) &&
+                (projBox.left + projBox.width > entBox.left);
+            bool overlapY = (projBox.top < entBox.top + entBox.height) &&
+                (projBox.top + projBox.height > entBox.top);
 
             if (overlapX && overlapY) {
                 if (proj->isExplosive) this->spawnBlast(proj->position.x, proj->position.y);
@@ -365,20 +370,20 @@ int ProjectileManager::checkPlayerBulletHits(DamagableEntity** targets, int targ
     for (int p = 0; p < this->activeCount; ) {
         Projectile* proj = this->slots[p];
         if (proj == nullptr || !proj->getStatus()) { p++; continue; }
-        if (proj->isFromEnemy())                   { p++; continue; }
+        if (proj->isFromEnemy()) { p++; continue; }
 
         IntRect projBox = proj->getBoundingBox();
-        bool    hit     = false;
+        bool    hit = false;
 
         for (int e = 0; e < targetCount && !hit; e++) {
             if (targets[e] == nullptr || !targets[e]->isAlive()) continue;
 
             IntRect entBox = targets[e]->getBoundingBox();
 
-            bool overlapX = (projBox.left < entBox.left + entBox.width)  &&
-                            (projBox.left + projBox.width > entBox.left);
-            bool overlapY = (projBox.top  < entBox.top  + entBox.height) &&
-                            (projBox.top  + projBox.height > entBox.top);
+            bool overlapX = (projBox.left < entBox.left + entBox.width) &&
+                (projBox.left + projBox.width > entBox.left);
+            bool overlapY = (projBox.top < entBox.top + entBox.height) &&
+                (projBox.top + projBox.height > entBox.top);
 
             if (overlapX && overlapY) {
                 if (proj->isExplosive) this->spawnBlast(proj->position.x, proj->position.y);
@@ -417,14 +422,14 @@ bool ProjectileManager::checkEnemyBulletHitPlayer(DamagableEntity* player)
     for (int p = 0; p < this->activeCount; ) {
         Projectile* proj = this->slots[p];
         if (proj == nullptr || !proj->getStatus()) { p++; continue; }
-        if (!proj->isFromEnemy())                  { p++; continue; }
+        if (!proj->isFromEnemy()) { p++; continue; }
 
         IntRect projBox = proj->getBoundingBox();
 
-        bool overlapX = (projBox.left < playerBox.left + playerBox.width)  &&
-                        (projBox.left + projBox.width > playerBox.left);
-        bool overlapY = (projBox.top  < playerBox.top  + playerBox.height) &&
-                        (projBox.top  + projBox.height > playerBox.top);
+        bool overlapX = (projBox.left < playerBox.left + playerBox.width) &&
+            (projBox.left + projBox.width > playerBox.left);
+        bool overlapY = (projBox.top < playerBox.top + playerBox.height) &&
+            (projBox.top + projBox.height > playerBox.top);
 
         if (overlapX && overlapY) {
             if (proj->isExplosive) this->spawnBlast(proj->position.x, proj->position.y);
@@ -452,7 +457,7 @@ void ProjectileManager::removeAt(int i) {
     this->activeCount--;
 
     if (i < this->activeCount) {
-        this->slots[i]                   = this->slots[this->activeCount];
-        this->slots[this->activeCount]   = nullptr;
+        this->slots[i] = this->slots[this->activeCount];
+        this->slots[this->activeCount] = nullptr;
     }
 }

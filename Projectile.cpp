@@ -15,7 +15,8 @@ Projectile::Projectile(TextureManager* texMgr, AudioManager* audMgr)
     , isExplosive(false)
     , blastRadius(0)
     , projectileClass(0)
-{}
+{
+}
 
 Projectile::~Projectile() {}
 
@@ -57,7 +58,7 @@ void Projectile::draw(RenderWindow& window, float scrollX, float scrollY) {
 void Projectile::checkTileCollision(Level* lvl) {
     if (lvl == nullptr) return;
 
-    const int cell   = lvl->getCellSize();
+    const int cell = lvl->getCellSize();
     const int PROJ_W = 8;
     const int PROJ_H = 8;
 
@@ -71,14 +72,14 @@ void Projectile::checkTileCollision(Level* lvl) {
         ? this->position.y + PROJ_H
         : this->position.y;
 
-    int colX  = (int)frontX / cell;
-    int rowY  = (int)frontY / cell;
+    int colX = (int)frontX / cell;
+    int rowY = (int)frontY / cell;
 
     int rowForX = (int)(this->position.y + PROJ_H / 2.f) / cell;
     int colForY = (int)(this->position.x + PROJ_W / 2.f) / cell;
 
     bool hitX = lvl->isSolid(rowForX, colX);
-    bool hitY = lvl->isSolid(rowY,    colForY);
+    bool hitY = lvl->isSolid(rowY, colForY);
 
     if (hitX || hitY) {
         this->onImpact(nullptr, nullptr);
@@ -92,10 +93,10 @@ void Projectile::checkBounds(float scrollX, float scrollY) {
     // while still partially visible.
     const float MARGIN = 300.f;
 
-    if (this->position.x + 8.f < scrollX - MARGIN)             { this->deactivate(); return; }
-    if (this->position.x        > scrollX + SCREEN_W + MARGIN) { this->deactivate(); return; }
-    if (this->position.y + 8.f < scrollY - MARGIN)             { this->deactivate(); return; }
-    if (this->position.y        > scrollY + SCREEN_H + MARGIN) { this->deactivate(); }
+    if (this->position.x + 8.f < scrollX - MARGIN) { this->deactivate(); return; }
+    if (this->position.x > scrollX + SCREEN_W + MARGIN) { this->deactivate(); return; }
+    if (this->position.y + 8.f < scrollY - MARGIN) { this->deactivate(); return; }
+    if (this->position.y > scrollY + SCREEN_H + MARGIN) { this->deactivate(); }
 }
 
 IntRect Projectile::getBoundingBox() const {
@@ -107,7 +108,7 @@ IntRect Projectile::getBoundingBox() const {
     );
 }
 
-int  Projectile::getDamage()   const { return this->damage;    }
+int  Projectile::getDamage()   const { return this->damage; }
 bool Projectile::isFromEnemy() const { return this->fromEnemy; }
 
 void Projectile::onImpact(EnemyManager* em, CharacterManager* cm) {
@@ -123,8 +124,8 @@ void Projectile::onImpact(EnemyManager* em, CharacterManager* cm) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 StraightProjectile::StraightProjectile(TextureManager* texMgr,
-                                       AudioManager*   audMgr,
-                                       float           ang)
+    AudioManager* audMgr,
+    float           ang)
     : Projectile(texMgr, audMgr)
     , angle(ang)
 {
@@ -143,18 +144,30 @@ void StraightProjectile::move(float /*scroll*/) {
 void StraightProjectile::draw(RenderWindow& window, float scrollX, float scrollY) {
     if (!this->status) return;
 
-    // 10×4 yellow rectangle oriented to velocity direction.
-    // Using RectangleShape (no texture needed) keeps this working even before
-    // any sprite sheets are integrated.
-    sf::RectangleShape bullet(sf::Vector2f(10.f, 4.f));
-    bullet.setFillColor(sf::Color(255, 240, 40));   // bright yellow
-    bullet.setOrigin(5.f, 2.f);                     // rotate around centre
-
-    // atan2 → degrees: aligns the long axis with the velocity vector.
     float rot = std::atan2f(this->velocityY, this->velocityX) * 180.f / 3.14159f;
-    bullet.setRotation(rot);
-    bullet.setPosition(this->position.x - scrollX, this->position.y - scrollY);
-    window.draw(bullet);
+
+    // Try to use the bullet sprite if the texture was loaded
+    if (this->textureManager->loadTexture("bullet_draw", "resources/Sprites/bullet.png")) {
+        sf::Texture& tex = this->textureManager->getTexture("bullet_draw");
+        sf::Sprite bulletSprite;
+        bulletSprite.setTexture(tex);
+        float texW = static_cast<float>(tex.getSize().x);
+        float texH = static_cast<float>(tex.getSize().y);
+        bulletSprite.setOrigin(texW * 0.5f, texH * 0.5f);
+        bulletSprite.setScale(0.2f, 0.2f);
+        bulletSprite.setRotation(rot);
+        bulletSprite.setPosition(this->position.x - scrollX, this->position.y - scrollY);
+        window.draw(bulletSprite);
+    }
+    else {
+        // Fallback: yellow rectangle placeholder
+        sf::RectangleShape bullet(sf::Vector2f(10.f, 4.f));
+        bullet.setFillColor(sf::Color(255, 240, 40));
+        bullet.setOrigin(5.f, 2.f);
+        bullet.setRotation(rot);
+        bullet.setPosition(this->position.x - scrollX, this->position.y - scrollY);
+        window.draw(bullet);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -214,10 +227,10 @@ void BallisticProjectile::draw(RenderWindow& window, float scrollX, float scroll
 ExplosiveProjectile::ExplosiveProjectile(TextureManager* texMgr, AudioManager* audMgr)
     : BallisticProjectile(texMgr, audMgr)
 {
-    this->isExplosive     = true;
-    this->blastRadius     = 3;
+    this->isExplosive = true;
+    this->blastRadius = 3;
     this->projectileClass = PROJ_EXPLOSIVE;
-    this->status          = true;
+    this->status = true;
 }
 
 ExplosiveProjectile::~ExplosiveProjectile() {}
@@ -228,32 +241,59 @@ void ExplosiveProjectile::draw(RenderWindow& window, float scrollX, float scroll
     float rot = std::atan2f(this->velocityY, this->velocityX) * 180.f / 3.14159f;
 
     if (this->projectileClass == PROJ_BOMB) {
-        // Enemy-thrown bomb — dark grey, round silhouette
-        sf::CircleShape bomb(7.f);
-        bomb.setFillColor(sf::Color(55, 55, 55));
-        bomb.setOutlineColor(sf::Color(120, 120, 120));
-        bomb.setOutlineThickness(1.5f);
-        bomb.setOrigin(7.f, 7.f);
-        bomb.setPosition(this->position.x - scrollX, this->position.y - scrollY);
-        window.draw(bomb);
-    } else {
-        // Rocket / grenade — fiery red-orange elongated capsule rotated to arc
-        sf::RectangleShape rocket(sf::Vector2f(14.f, 7.f));
-        rocket.setFillColor(sf::Color(255, 90, 10));
-        rocket.setOrigin(7.f, 3.5f);
-        rocket.setRotation(rot);
-        rocket.setPosition(this->position.x - scrollX, this->position.y - scrollY);
-        window.draw(rocket);
+        // Enemy-thrown bomb — try bomb.png sprite, fallback to grey circle
+        if (this->textureManager->loadTexture("bomb_draw", "resources/Sprites/bomb.png")) {
+            sf::Texture& tex = this->textureManager->getTexture("bomb_draw");
+            sf::Sprite bombSprite;
+            bombSprite.setTexture(tex);
+            bombSprite.setTextureRect(sf::IntRect(0, 0, 108, 52));
+            bombSprite.setOrigin(54.f, 26.f);
+            bombSprite.setScale(0.8f, 0.8f);
+            bombSprite.setRotation(rot);
+            bombSprite.setPosition(this->position.x - scrollX, this->position.y - scrollY);
+            window.draw(bombSprite);
+        }
+        else {
+            sf::CircleShape bomb(7.f);
+            bomb.setFillColor(sf::Color(55, 55, 55));
+            bomb.setOutlineColor(sf::Color(120, 120, 120));
+            bomb.setOutlineThickness(1.5f);
+            bomb.setOrigin(7.f, 7.f);
+            bomb.setPosition(this->position.x - scrollX, this->position.y - scrollY);
+            window.draw(bomb);
+        }
+    }
+    else {
+        // Rocket / grenade — try grenade.png sprite, fallback to orange rectangle
+        if (this->textureManager->loadTexture("grenade_draw", "resources/Sprites/grenade.png")) {
+            sf::Texture& tex = this->textureManager->getTexture("grenade_draw");
+            sf::Sprite grenadeSprite;
+            grenadeSprite.setTexture(tex);
+            float texW = static_cast<float>(tex.getSize().x);
+            float texH = static_cast<float>(tex.getSize().y);
+            grenadeSprite.setOrigin(texW * 0.5f, texH * 0.5f);
+            grenadeSprite.setScale(0.08f, 0.08f);
+            grenadeSprite.setRotation(rot);
+            grenadeSprite.setPosition(this->position.x - scrollX, this->position.y - scrollY);
+            window.draw(grenadeSprite);
+        }
+        else {
+            sf::RectangleShape rocket(sf::Vector2f(14.f, 7.f));
+            rocket.setFillColor(sf::Color(255, 90, 10));
+            rocket.setOrigin(7.f, 3.5f);
+            rocket.setRotation(rot);
+            rocket.setPosition(this->position.x - scrollX, this->position.y - scrollY);
+            window.draw(rocket);
 
-        // Small bright-white nose cone tip
-        sf::CircleShape nose(2.5f);
-        nose.setFillColor(sf::Color(255, 200, 100));
-        nose.setOrigin(2.5f, 2.5f);
-        float noseOffX = std::cosf(rot * 3.14159f / 180.f) * 7.f;
-        float noseOffY = std::sinf(rot * 3.14159f / 180.f) * 7.f;
-        nose.setPosition((this->position.x - scrollX) + noseOffX,
-                         (this->position.y - scrollY) + noseOffY);
-        window.draw(nose);
+            sf::CircleShape nose(2.5f);
+            nose.setFillColor(sf::Color(255, 200, 100));
+            nose.setOrigin(2.5f, 2.5f);
+            float noseOffX = std::cosf(rot * 3.14159f / 180.f) * 7.f;
+            float noseOffY = std::sinf(rot * 3.14159f / 180.f) * 7.f;
+            nose.setPosition((this->position.x - scrollX) + noseOffX,
+                (this->position.y - scrollY) + noseOffY);
+            window.draw(nose);
+        }
     }
 }
 
@@ -280,7 +320,7 @@ void ExplosiveProjectile::onImpact(EnemyManager* em, CharacterManager* cm) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 FlameParticle::FlameParticle(TextureManager* texMgr, AudioManager* audMgr,
-                             float ang, int frames)
+    float ang, int frames)
     : StraightProjectile(texMgr, audMgr, ang)
     , lifetime(frames)
     , maxLifetime(frames)
@@ -311,7 +351,7 @@ void FlameParticle::draw(RenderWindow& window, float scrollX, float scrollY) {
     // Used to fade both green channel (orange→red) and alpha (fully opaque→gone).
     float ratio = (float)this->lifetime / (float)this->maxLifetime;
 
-    sf::Uint8 g     = static_cast<sf::Uint8>(90.f  * ratio);  // green component fades out
+    sf::Uint8 g = static_cast<sf::Uint8>(90.f * ratio);  // green component fades out
     sf::Uint8 alpha = static_cast<sf::Uint8>(200.f * ratio + 55.f);
 
     // Outer halo — larger, more transparent
@@ -343,13 +383,13 @@ void FlameParticle::draw(RenderWindow& window, float scrollX, float scrollY) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 LaserBeam::LaserBeam(TextureManager* texMgr, AudioManager* audMgr,
-                     int dir, int frames)
+    int dir, int frames)
     : StraightProjectile(texMgr, audMgr, 0.f)
     , lifetime(frames)
     , beamDir(dir)
 {
     this->projectileClass = PROJ_BEAM;
-    this->isExplosive     = false;
+    this->isExplosive = false;
     // Velocity stays at (0,0) — the beam occupies its extent from the spawn frame.
 }
 
@@ -365,7 +405,8 @@ IntRect LaserBeam::getBoundingBox() const {
             static_cast<int>(this->position.y) - 4,
             SCREEN_W, 8
         );
-    } else {
+    }
+    else {
         return IntRect(
             static_cast<int>(this->position.x) - SCREEN_W,
             static_cast<int>(this->position.y) - 4,
@@ -402,7 +443,7 @@ void LaserBeam::draw(RenderWindow& window, float scrollX, float scrollY) {
     float ratio = (float)this->lifetime / 5.f;
     if (ratio > 1.f) ratio = 1.f;
 
-    sf::Uint8 alpha     = static_cast<sf::Uint8>(180.f * ratio + 75.f);
+    sf::Uint8 alpha = static_cast<sf::Uint8>(180.f * ratio + 75.f);
     sf::Uint8 coreAlpha = static_cast<sf::Uint8>(230.f * ratio + 25.f);
 
     float beamLen = static_cast<float>(SCREEN_W);
@@ -411,7 +452,7 @@ void LaserBeam::draw(RenderWindow& window, float scrollX, float scrollY) {
     float startX = (this->beamDir == DIR_RIGHT)
         ? (this->position.x - scrollX)
         : (this->position.x - scrollX - beamLen);
-    float y      = this->position.y - scrollY;
+    float y = this->position.y - scrollY;
 
     // ── Outer glow: wide, semi-transparent cyan ───────────────────────────────
     sf::RectangleShape glow(sf::Vector2f(beamLen, 8.f));
