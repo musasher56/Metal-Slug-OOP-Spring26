@@ -29,7 +29,7 @@ public:
     ProjectileManager(TextureManager* t, AudioManager* a);
     ~ProjectileManager();
     void spawnBomb(sf::Vector2f origin, int dir, float angle,
-        int dmg, int blastRadius, bool fromEnemy = false);
+        int dmg, int blastRadius, bool fromEnemy = false, float speed = 8.f);
     static sf::Vector2f calcBarrelTip(sf::Vector2f entityPos,
         int dir,
         float spriteWidth,

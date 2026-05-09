@@ -1,4 +1,4 @@
-#include "ProjectileManager.h"
+ï»¿#include "ProjectileManager.h"
 #include "Level.h"
 #include <cmath>
 
@@ -79,7 +79,7 @@ void ProjectileManager::spawnStraight(sf::Vector2f origin, int dir,
 
 
 void ProjectileManager::spawnBomb(sf::Vector2f origin, int dir,
-    float angle, int dmg, int blastRadius, bool fromEnemy)
+    float angle, int dmg, int blastRadius, bool fromEnemy, float speed)
 {
     if (this->activeCount >= MAX_PROJ) return;
 
@@ -91,7 +91,7 @@ void ProjectileManager::spawnBomb(sf::Vector2f origin, int dir,
     p->projectileClass = PROJ_BOMB;   // <-- marks it as a bomb, not grenade
 
     float vx = 0.f, vy = 0.f;
-    ProjectileManager::angleToVelocity(angle, dir, 8.f, vx, vy);
+    ProjectileManager::angleToVelocity(angle, dir, speed, vx, vy);
     p->setVelocity(vx, vy);
 
     this->slots[this->activeCount++] = p;
@@ -148,7 +148,7 @@ void ProjectileManager::postEntityUpdate(float scrollX, float scrollY, Level* lv
         }
 
         if (lvl != nullptr) {
-            // Save position before collision check — if the projectile
+            // Save position before collision check Â— if the projectile
             // dies on impact, we know where to spawn the blast effect
             float impactX = p->position.x;
             float impactY = p->position.y;
@@ -157,7 +157,7 @@ void ProjectileManager::postEntityUpdate(float scrollX, float scrollY, Level* lv
             p->checkTileCollision(lvl);
 
             if (!p->status && wasExplosive) {
-                // Grenade hit something — spawn blast at impact point
+                // Grenade hit something Â— spawn blast at impact point
                 this->spawnBlast(impactX, impactY);
             }
         }
@@ -176,7 +176,7 @@ void ProjectileManager::postEntityUpdate(float scrollX, float scrollY, Level* lv
         i++;
     }
 
-    // Update blast animations — remove finished ones
+    // Update blast animations Â— remove finished ones
     for (int b = 0; b < MAX_BLASTS; b++) {
         if (this->blasts[b].active) {
             this->blasts[b].anim.update();

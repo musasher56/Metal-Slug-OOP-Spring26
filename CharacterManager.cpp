@@ -91,10 +91,10 @@ void CharacterManager::handleInput(Event& event) {
 
     if (event.type == Event::KeyPressed) {
         if (event.key.code == Keyboard::Space) {
-            current->handleJump();
-        }
-        if (event.key.code == Keyboard::Down) {
-            current->handleSwimDown();
+            // Only jump on ground; swimming is handled in Soldier::update
+            if (!current->getInWater()) {
+                current->handleJump();
+            }
         }
     }
 }

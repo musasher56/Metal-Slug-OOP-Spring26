@@ -1,5 +1,6 @@
 #include "Soldier.h"
 #include "Level.h"
+#include <SFML/Window/Keyboard.hpp>
 
 Soldier::Soldier(TextureManager* texMgr, AudioManager* audMgr)
     : DamagableEntity(texMgr, audMgr)
@@ -34,6 +35,15 @@ void Soldier::update(float scroll, Level* lvl) {
     this->handleStateTimers();
     if (this->inWater) {
         this->applyWaterPhysics();
+        // ── Swimming controls (checked every frame) ──
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+            this->velocityY -= 0.8f;
+            if (this->velocityY < -4.f) this->velocityY = -4.f;
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+            this->velocityY += 0.8f;
+            if (this->velocityY > 4.f) this->velocityY = 4.f;
+        }
     }
     else {
         this->applyGravity();
@@ -137,19 +147,9 @@ TransformationState* Soldier::getTransformationState() const {
 }
 
 void Soldier::handleJump() {
-    if (this->inWater) {
-        // Swim up in water
-        this->velocityY = -5.f;
-    }
-    else if (this->onGround) {
+    if (this->onGround) {
         this->velocityY = -20.f;
         this->onGround = false;
-    }
-}
-
-void Soldier::handleSwimDown() {
-    if (this->inWater) {
-        this->velocityY = 5.f;
     }
 }
 
@@ -172,13 +172,13 @@ void Soldier::applyGravity() {
 
 void Soldier::applyWaterPhysics() {
     // Neutral buoyancy: no gravity in water
-    // Dampen existing velocity so player floats in place
-    this->velocityY *= 0.90f;
-    this->velocityX *= 0.94f;
+    // Moderate drag so player can actually move but still slows down
+    this->velocityX *= 0.96f;
+    this->velocityY *= 0.96f;
 
     // Snap tiny velocities to zero so player actually stops
-    if (this->velocityY > -0.3f && this->velocityY < 0.3f) this->velocityY = 0.f;
-    if (this->velocityX > -0.3f && this->velocityX < 0.3f) this->velocityX = 0.f;
+    if (this->velocityX > -0.2f && this->velocityX < 0.2f) this->velocityX = 0.f;
+    if (this->velocityY > -0.2f && this->velocityY < 0.2f) this->velocityY = 0.f;
 }
 
 void Soldier::handleCollision(Level* lvl) {

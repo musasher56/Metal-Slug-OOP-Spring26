@@ -59,7 +59,6 @@ public:
 
 
     void handleJump();
-    void handleSwimDown();
 
     bool inWater;
     void setInWater(bool val);

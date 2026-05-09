@@ -3,6 +3,7 @@
 #include "Level.h"
 #include "ProjectileManager.h"
 #include <cmath>
+#include <cstdlib>
 
 // ============================================================
 // EnemyVehicle — base class
@@ -326,6 +327,20 @@ void Submarine::update(PlayerSoldier* player, ProjectileManager* projMgr,
         // ── SWIMMING: patrol back and forth in water, fire bomb at player ──
         this->position.x += this->velocityX;
 
+        // Clamp to water rectangle: (10242,574) to (115919,1776)
+        float subW = 372.f * 0.8f;  // sprite width * scale
+        float subH = 196.f * 0.8f;  // sprite height * scale
+        if (this->position.x < 10242.f) {
+            this->position.x = 10242.f;
+            this->setSwimDirection(DIR_RIGHT);
+        }
+        if (this->position.x + subW > 115919.f) {
+            this->position.x = 115919.f - subW;
+            this->setSwimDirection(DIR_LEFT);
+        }
+        if (this->position.y < 574.f) this->position.y = 574.f;
+        if (this->position.y + subH > 1776.f) this->position.y = 1776.f - subH;
+
         // Reverse direction at patrol boundaries
         if (this->position.x <= this->patrolLeftX) {
             this->setSwimDirection(DIR_RIGHT);
@@ -334,43 +349,38 @@ void Submarine::update(PlayerSoldier* player, ProjectileManager* projMgr,
             this->setSwimDirection(DIR_LEFT);
         }
 
-        // Fire bomb when player is within range and in front
+        // Fire bomb at player — rough aim with spread, not perfect tracking
         if (!this->bombFired && player != nullptr && projMgr != nullptr) {
             float dx = player->getPosition().x - this->position.x;
             float dy = player->getPosition().y - this->position.y;
-            float dist = fabsf(dx);
+            float dist = sqrtf(dx * dx + dy * dy);
 
-            // Only fire if player is within ~600px horizontal range
-            if (dist < 600.f) {
-                bool playerInFront = (this->faceRight && dx > 0.f) ||
-                    (!this->faceRight && dx < 0.f);
-                if (playerInFront) {
-                    // Launch bomb toward player
-                    float angle = atan2f(-dy, fabsf(dx)) * 180.f / 3.14159f;
-                    int dir = this->faceRight ? DIR_RIGHT : DIR_LEFT;
-                    float scaleX = std::abs(this->sprite.getScale().x);
-                    float bombX = this->position.x + 186.f * scaleX;
-                    float bombY = this->position.y + 98.f;
+            // Only fire if player is within ~600px range
+            if (dist < 600.f && dist > 50.f) {
+                // Calculate angle toward player with random spread (+/- 15 degrees)
+                float angle = atan2f(-dy, dx) * 180.f / 3.14159f;
+                float spread = ((rand() % 30) - 15);  // -15 to +15 degrees
+                angle += spread;
 
-                    projMgr->spawnBomb(
-                        sf::Vector2f(bombX, bombY),
-                        dir, angle, 3, 3, true);
+                // Determine direction based on which side player is on
+                int bombDir = (dx >= 0.f) ? DIR_RIGHT : DIR_LEFT;
 
-                    this->bombFired = true;
-                    this->bombCooldown.restart();
-                }
+                float scaleX = std::abs(this->sprite.getScale().x);
+                float bombX = this->position.x + 186.f * scaleX;
+                float bombY = this->position.y + 98.f;
+
+                projMgr->spawnBomb(
+                    sf::Vector2f(bombX, bombY),
+                    bombDir, angle, 1, 3, true, 6.f);
+
+                this->bombFired = true;
+                this->bombCooldown.restart();
             }
         }
 
-        // Reset bomb after cooldown (2 seconds)
-        if (this->bombFired && this->bombCooldown.getElapsedTime().asSeconds() >= 2.f) {
+        // Reset bomb after cooldown (2.5 seconds)
+        if (this->bombFired && this->bombCooldown.getElapsedTime().asSeconds() >= 2.5f) {
             this->bombFired = false;
-        }
-
-        // Deactivate if far off screen
-        if (this->position.x < scroll - 2000.f ||
-            this->position.x > scroll + (float)SCREEN_W + 2000.f) {
-            this->status = false;
         }
 
         this->currentAnim = &this->swimAnim;
