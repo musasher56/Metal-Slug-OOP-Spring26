@@ -55,6 +55,12 @@ public:
     void updateBoundingBox();
     virtual void handleInput() = 0;
     virtual void takeDamage(int amount);
+
+    // Overrides Soldier::draw() to apply left/right direction flip
+    // via negative X scale — SFML has no native sprite flip, so we
+    // reflect the sprite through the Y-axis by negating scaleX.
+    // Must be virtual so subclasses can further specialise (e.g. vehicle state).
+    virtual void draw(RenderWindow& window, float scrollX, float scrollY);
 };
 
 
@@ -79,6 +85,9 @@ private:
     float vehicleDurabilityBonus;
     bool  immunityActive;
     Clock immunityTimer;
+
+    // Walk animation: 16 frames extracted from Tarma_Roving.png rows 341-366
+    Animation walkAnim;
 public:
     Tarma(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~Tarma();
@@ -95,6 +104,9 @@ private:
     float blastRadiusMultiplier;
     bool  doubleGrenadeActive;
     Clock doubleGrenadeTimer;
+
+    // Walk animation: 13 frames extracted from Eri_Kasamoto.png rows 289-329
+    Animation walkAnim;
 public:
     Eri(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~Eri();
@@ -112,6 +124,9 @@ private:
     float fireRateMultiplier;
     bool  superchargedActive;
     Clock superchargedTimer;
+
+    // Walk animation: 16 frames extracted from Fiolina_Germi.png rows 140-159
+    Animation walkAnim;
 public:
     Fio(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~Fio();

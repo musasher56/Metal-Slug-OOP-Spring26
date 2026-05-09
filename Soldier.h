@@ -25,6 +25,17 @@ protected:
     Clock invincibilityClock;
     bool  isInvincible;
 
+    // Physical collision extent in TEXTURE PIXELS (before scale).
+    // handleCollision() multiplies these by the sprite's current scale to get
+    // the world-space collision box dimensions.  Every subclass constructor
+    // sets these to match its actual sprite frame size so collision height
+    // equals visual height — preventing float-above-ground when switching
+    // characters who use different scales.
+    //
+    // Default: 34 x 40 (matches the original hardcoded values for Marco).
+    int physW;
+    int physH;
+
 public:
     Soldier(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~Soldier();
