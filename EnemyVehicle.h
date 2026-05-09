@@ -67,3 +67,37 @@ public:
     virtual void updateBoundingBox();
     virtual void draw(RenderWindow& window, float scrollX, float scrollY);
 };
+
+// ============================================================
+// Submarine — aquatic enemy vehicle
+// HP: 8, swims back and forth in the water region,
+// fires bomb (same as FlyingTara) when player is nearby.
+// Sprite: submarine.png (7 frames)
+// ============================================================
+
+class Submarine : public EnemyVehicle {
+private:
+    int subState;       // 0 = swimming, 1 = destroyed/sinking
+    float swimSpeed;
+    float patrolLeftX;  // left patrol boundary
+    float patrolRightX; // right patrol boundary
+    bool bombFired;
+    float sinkVY;
+    Animation swimAnim;
+    Clock bombCooldown;
+    Clock deathClock;
+    float deathDuration;
+
+public:
+    Submarine(TextureManager* texMgr, AudioManager* audMgr);
+    virtual ~Submarine();
+
+    void setPatrolBounds(float leftX, float rightX);
+    void setSwimDirection(int dir);
+
+    virtual void update(PlayerSoldier* player, ProjectileManager* pm,
+        float scroll, Level* lvl);
+    virtual void onDeath();
+    virtual void updateBoundingBox();
+    virtual void draw(RenderWindow& window, float scrollX, float scrollY);
+};

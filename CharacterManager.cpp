@@ -4,8 +4,8 @@
 
 CharacterManager::CharacterManager(TextureManager* texMgr, AudioManager* audMgr, int startChar)
     : currentCharacter(0), kills(0), rings(0), fusionCompanion(nullptr),
-      fusionAvailable(false), texManager(texMgr), audManager(audMgr),
-      pm(nullptr)
+    fusionAvailable(false), texManager(texMgr), audManager(audMgr),
+    pm(nullptr)
 {
     for (int i = 0; i < 4; i++) {
         this->characters[i] = nullptr;
@@ -20,7 +20,8 @@ CharacterManager::CharacterManager(TextureManager* texMgr, AudioManager* audMgr,
     // (e.g. -1 or 4) never leaves currentCharacter pointing at nullptr.
     if (startChar >= 0 && startChar < 4 && this->characters[startChar] != nullptr) {
         this->currentCharacter = startChar;
-    } else {
+    }
+    else {
         this->currentCharacter = 0;  // fallback to Marco
     }
 }
@@ -91,6 +92,9 @@ void CharacterManager::handleInput(Event& event) {
     if (event.type == Event::KeyPressed) {
         if (event.key.code == Keyboard::Space) {
             current->handleJump();
+        }
+        if (event.key.code == Keyboard::Down) {
+            current->handleSwimDown();
         }
     }
 }

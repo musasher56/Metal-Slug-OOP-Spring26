@@ -55,6 +55,11 @@ private:
 
     Clock flyingTaraClock;
     int   flyingTaraPhase;
+    bool  submarineSpawned;
+
+    // Water pool overlay
+    sf::ConvexShape waterShape;
+    float waterBaseY;
 
 public:
     PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr);

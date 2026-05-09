@@ -8,6 +8,7 @@
 #include "BlockManager.h"
 #include "DamagableEntity.h"
 #include <cstdio>
+#include <cmath>
 
 
 
@@ -25,6 +26,8 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
     debugMode(true)
     , showHitboxes(true), stateManager(nullptr)
     , flyingTaraPhase(0)
+    , submarineSpawned(false)
+    , waterBaseY(574.f)
 {
     this->id = GSTATE_PLAY;
 
@@ -100,6 +103,15 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
 
             this->spawnTestBlocks();
             this->spawnTestEnemies();
+
+            // ── Initialize water pool shape ──
+            // Rectangular region: (10242,574) to (115919,1776)
+            this->waterShape.setPointCount(4);
+            this->waterShape.setPoint(0, sf::Vector2f(10242.f, 574.f));
+            this->waterShape.setPoint(1, sf::Vector2f(115919.f, 574.f));
+            this->waterShape.setPoint(2, sf::Vector2f(115919.f, 1776.f));
+            this->waterShape.setPoint(3, sf::Vector2f(10242.f, 1776.f));
+            this->waterShape.setFillColor(Color(0, 30, 80, 140));  // dark water
         }
     }
 }
@@ -224,6 +236,15 @@ void PlayState::update(float dt) {
         if (this->scrollY > maxScrollY) this->scrollY = maxScrollY;
     }
 
+    // ── Check if player is in the water region ──
+    if (player != nullptr) {
+        float px = player->getPosition().x;
+        float py = player->getPosition().y;
+        bool inWaterNow = (px >= 10242.f && px <= 115919.f &&
+            py >= 574.f && py <= 1776.f);
+        player->setInWater(inWaterNow);
+    }
+
     if (this->levelManager)
         this->levelManager->update(dt);
 
@@ -253,6 +274,15 @@ void PlayState::update(float dt) {
 
         this->enemyVehicleManager->spawnFlyingTara(spawnX, taraY, DIR_LEFT);
         this->flyingTaraPhase = 2;
+    }
+
+    // ── Submarine: spawn when player reaches water region ──
+    if (!this->submarineSpawned && player != nullptr &&
+        player->getPosition().x >= 9000.f &&
+        this->enemyVehicleManager != nullptr)
+    {
+        this->enemyVehicleManager->spawnSubmarine(11000.f, 900.f, DIR_LEFT);
+        this->submarineSpawned = true;
     }
 }
 
@@ -292,6 +322,20 @@ void PlayState::render(RenderWindow& window) {
     if (this->enemyVehicleManager) this->enemyVehicleManager->draw(window, this->scroll, this->scrollY);
     if (this->characterManager)  this->characterManager->draw(window, this->scroll, this->scrollY);
     if (this->projectileManager) this->projectileManager->draw(window, this->scroll, this->scrollY);
+
+    // ── Draw water pool (dark layer only) ──
+    {
+        // Shift water shape by scroll offset for rendering
+        sf::ConvexShape drawWater = this->waterShape;
+        for (int i = 0; i < drawWater.getPointCount(); i++) {
+            sf::Vector2f pt = drawWater.getPoint(i);
+            pt.x -= this->scroll;
+            pt.y -= this->scrollY;
+            drawWater.setPoint(i, pt);
+        }
+        window.draw(drawWater);
+    }
+
     if (this->hud)               this->hud->draw(window);
     this->renderBloodOverlay(window);
     if (this->showHitboxes)    this->renderHitboxes(window);
@@ -496,10 +540,9 @@ void PlayState::spawnTestEnemies() {
     float mtTop30 = surfaceY - 11.f * 48.f;
     float mtTop65 = surfaceY - 25.f * 48.f;
     float mtTop90 = surfaceY - 25.f * 48.f;
-    float mtTop140 = surfaceY - 19.f * 48.f;
     this->enemyManager->spawnRebel(mtBaseX + 30.f * 48.f, mtTop30 - rebelFootOffset);
     this->enemyManager->spawnRebel(mtBaseX + 90.f * 48.f, mtTop90 - rebelFootOffset);
-    this->enemyManager->spawnRebel(mtBaseX + 140.f * 48.f, mtTop140 - rebelFootOffset);
+    // NOTE: mtBaseX + 140*48 = 10720 which is in water region (10242+), removed
 
     // ── Bazooka soldiers ──
     this->enemyManager->spawnBazooka(25.f * 48.f, surfaceY - rebelFootOffset);
@@ -517,7 +560,7 @@ void PlayState::spawnTestEnemies() {
 
     // ── Martians ──
     float mtPeak = surfaceY - 25.f * 48.f;
-    this->enemyManager->spawnMartian(mtBaseX + 140.f * 48.f, mtPeak - rebelFootOffset);
+    // NOTE: mtBaseX + 140*48 Martian removed (water region)
     this->enemyManager->spawnMartian(mtBaseX + 65.f * 48.f, mtTop65 - rebelFootOffset);
 
     // ── Paratrooper ──

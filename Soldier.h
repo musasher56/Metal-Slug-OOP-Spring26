@@ -13,15 +13,15 @@ protected:
     float velocityY;
     float maxVelocity;
     float baseMaxVelocity;
-    int direction;  
+    int direction;
     bool onGround;
     int lives;
-    int currentHP;  
-    int saturation;  
+    int currentHP;
+    int saturation;
     float meleeDamage;
     float meleeCooldown;
     Clock meleeTimer;
-    TransformationState* transformState; 
+    TransformationState* transformState;
     Clock invincibilityClock;
     bool  isInvincible;
 
@@ -33,7 +33,7 @@ public:
     virtual void draw(RenderWindow& window, float scrollX, float scrollY);
     virtual void takeDamage(int amount);
     void meleeAttack();
-    int getState() const;  
+    int getState() const;
     int getLives() const;
     int getCurrentHP() const;
     bool getIsInvincible() const { return this->isInvincible; }
@@ -41,13 +41,13 @@ public:
     void setTransformationState(TransformationState* newState);
     TransformationState* getTransformationState() const;
 
-    
+
     float getBaseMaxVelocity() const { return this->baseMaxVelocity; }
     void setBaseMaxVelocity(float val) { this->baseMaxVelocity = val; }
     float getMaxVelocity() const { return this->maxVelocity; }
     void setMaxVelocity(float val) { this->maxVelocity = val; }
 
-    
+
     void setDirectionAndVelocity(int dir);
     void decelerate();
 
@@ -59,13 +59,19 @@ public:
 
 
     void handleJump();
+    void handleSwimDown();
 
-    
-    
+    bool inWater;
+    void setInWater(bool val);
+    bool getInWater() const;
+
+
+
     void resolveBlockCollisions(DamagableEntity** blocks, int count);
 
 protected:
     virtual void applyGravity();
+    virtual void applyWaterPhysics();
     virtual void handleCollision(Level* lvl);
     virtual void applyMovement(float& scroll);
     virtual void handleStateTimers();

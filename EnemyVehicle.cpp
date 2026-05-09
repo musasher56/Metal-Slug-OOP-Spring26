@@ -240,3 +240,203 @@ void FlyingTara::draw(RenderWindow& window, float scrollX, float scrollY) {
         this->position.y - scrollY);
     window.draw(this->sprite);
 }
+
+// ============================================================
+// Submarine
+// ============================================================
+
+Submarine::Submarine(TextureManager* texMgr, AudioManager* audMgr)
+    : EnemyVehicle(texMgr, audMgr)
+    , subState(0)
+    , swimSpeed(2.f)
+    , patrolLeftX(10242.f)
+    , patrolRightX(115919.f)
+    , bombFired(false)
+    , sinkVY(0.f)
+    , deathDuration(3.0f)
+{
+    this->health = 8;
+    this->maxHealth = 8;
+    this->scoreValue = 500;
+    this->biome = BIOME_AQUATIC;
+
+    // Swim animation — submarine.png (7 frames)
+    Texture& subTex = texMgr->getTexture("resources/Sprites/submarine.png");
+    this->swimAnim.setTexture(&subTex);
+    this->swimAnim.setFrameCount(7);
+    this->swimAnim.setFrameDelay(8);
+    this->swimAnim.setFrameRect(0, 0, 0, 372, 196);
+    this->swimAnim.setFrameRect(1, 408, 4, 372, 192);
+    this->swimAnim.setFrameRect(2, 816, 4, 368, 192);
+    this->swimAnim.setFrameRect(3, 1220, 0, 368, 196);
+    this->swimAnim.setFrameRect(4, 1620, 0, 372, 196);
+    this->swimAnim.setFrameRect(5, 2024, 4, 372, 192);
+    this->swimAnim.setFrameRect(6, 2428, 12, 372, 184);
+    this->swimAnim.setLoop(true);
+
+    // Base anim uses the same texture for bounding box reference
+    this->anim.setTexture(&subTex);
+    this->anim.setFrameCount(7);
+    this->anim.setFrameDelay(8);
+    this->anim.setFrameRect(0, 0, 0, 372, 196);
+    this->anim.setFrameRect(1, 408, 4, 372, 192);
+    this->anim.setFrameRect(2, 816, 4, 368, 192);
+    this->anim.setFrameRect(3, 1220, 0, 368, 196);
+    this->anim.setFrameRect(4, 1620, 0, 372, 196);
+    this->anim.setFrameRect(5, 2024, 4, 372, 192);
+    this->anim.setFrameRect(6, 2428, 12, 372, 184);
+    this->anim.setLoop(true);
+
+    this->sprite.setTexture(subTex);
+    this->sprite.setTextureRect(IntRect(0, 0, 372, 196));
+    this->sprite.setScale(0.8f, 0.8f);
+    this->currentAnim = &this->swimAnim;
+    this->updateBoundingBox();
+}
+
+Submarine::~Submarine() {}
+
+void Submarine::setPatrolBounds(float leftX, float rightX) {
+    this->patrolLeftX = leftX;
+    this->patrolRightX = rightX;
+}
+
+void Submarine::setSwimDirection(int dir) {
+    if (dir == DIR_RIGHT) {
+        this->faceRight = true;
+        this->velocityX = this->swimSpeed;
+    }
+    else {
+        this->faceRight = false;
+        this->velocityX = -this->swimSpeed;
+    }
+}
+
+void Submarine::update(PlayerSoldier* player, ProjectileManager* projMgr,
+    float scroll, Level* lvl)
+{
+    (void)lvl;
+    if (!this->status) return;
+
+    if (this->destroyed && this->subState == 0) {
+        this->subState = 1;
+    }
+
+    if (this->subState == 0) {
+        // ── SWIMMING: patrol back and forth in water, fire bomb at player ──
+        this->position.x += this->velocityX;
+
+        // Reverse direction at patrol boundaries
+        if (this->position.x <= this->patrolLeftX) {
+            this->setSwimDirection(DIR_RIGHT);
+        }
+        else if (this->position.x >= this->patrolRightX) {
+            this->setSwimDirection(DIR_LEFT);
+        }
+
+        // Fire bomb when player is within range and in front
+        if (!this->bombFired && player != nullptr && projMgr != nullptr) {
+            float dx = player->getPosition().x - this->position.x;
+            float dy = player->getPosition().y - this->position.y;
+            float dist = fabsf(dx);
+
+            // Only fire if player is within ~600px horizontal range
+            if (dist < 600.f) {
+                bool playerInFront = (this->faceRight && dx > 0.f) ||
+                    (!this->faceRight && dx < 0.f);
+                if (playerInFront) {
+                    // Launch bomb toward player
+                    float angle = atan2f(-dy, fabsf(dx)) * 180.f / 3.14159f;
+                    int dir = this->faceRight ? DIR_RIGHT : DIR_LEFT;
+                    float scaleX = std::abs(this->sprite.getScale().x);
+                    float bombX = this->position.x + 186.f * scaleX;
+                    float bombY = this->position.y + 98.f;
+
+                    projMgr->spawnBomb(
+                        sf::Vector2f(bombX, bombY),
+                        dir, angle, 3, 3, true);
+
+                    this->bombFired = true;
+                    this->bombCooldown.restart();
+                }
+            }
+        }
+
+        // Reset bomb after cooldown (2 seconds)
+        if (this->bombFired && this->bombCooldown.getElapsedTime().asSeconds() >= 2.f) {
+            this->bombFired = false;
+        }
+
+        // Deactivate if far off screen
+        if (this->position.x < scroll - 2000.f ||
+            this->position.x > scroll + (float)SCREEN_W + 2000.f) {
+            this->status = false;
+        }
+
+        this->currentAnim = &this->swimAnim;
+    }
+    else {
+        // ── SINKING: slowly drift down ──
+        this->sinkVY += 0.05f;
+        this->position.y += this->sinkVY;
+
+        // Safety timeout
+        if (this->deathClock.getElapsedTime().asSeconds() >= this->deathDuration) {
+            this->status = false;
+        }
+
+        this->currentAnim = &this->swimAnim;
+    }
+}
+
+void Submarine::onDeath() {
+    if (this->destroyed) return;
+    this->destroyed = true;
+    this->subState = 1;
+    this->sinkVY = 0.5f;
+    this->deathClock.restart();
+}
+
+void Submarine::updateBoundingBox() {
+    float scaleX = std::abs(this->sprite.getScale().x);
+    float scaleY = std::abs(this->sprite.getScale().y);
+    int boxW = static_cast<int>(372.f * scaleX);
+    int boxH = static_cast<int>(196.f * scaleY);
+    int boxX = 0;
+    int boxY = 0;
+    if (this->faceRight) {
+        boxX = -boxW;
+    }
+    this->boundingBox = IntRect(boxX, boxY, boxW, boxH);
+}
+
+void Submarine::draw(RenderWindow& window, float scrollX, float scrollY) {
+    if (!this->status) return;
+
+    if (this->currentAnim != nullptr) {
+        this->currentAnim->update();
+        this->currentAnim->applyToSprite(this->sprite);
+    }
+
+    float scale = 0.8f;
+
+    if (this->faceRight) {
+        this->sprite.setScale(-scale, scale);
+    }
+    else {
+        this->sprite.setScale(scale, scale);
+    }
+
+    // When sinking, slight tilt
+    if (this->subState == 1) {
+        float angle = this->faceRight ? 15.f : -15.f;
+        this->sprite.setRotation(angle);
+    }
+    else {
+        this->sprite.setRotation(0.f);
+    }
+
+    this->sprite.setPosition(this->position.x - scrollX,
+        this->position.y - scrollY);
+    window.draw(this->sprite);
+}

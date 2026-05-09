@@ -15,6 +15,7 @@ Soldier::Soldier(TextureManager* texMgr, AudioManager* audMgr)
     , meleeDamage(1.f)
     , meleeCooldown(0.5f)
     , transformState(nullptr), isInvincible(false)
+    , inWater(false)
 {
 }
 
@@ -28,10 +29,15 @@ Soldier::~Soldier() {
 void Soldier::update(float scroll, Level* lvl) {
     if (this->isInvincible && this->invincibilityClock.getElapsedTime().asSeconds() >= 2.0f) {
         this->isInvincible = false;
-        
+
     }
     this->handleStateTimers();
-    this->applyGravity();
+    if (this->inWater) {
+        this->applyWaterPhysics();
+    }
+    else {
+        this->applyGravity();
+    }
     this->applyMovement(scroll);
     this->handleCollision(lvl);
 }
@@ -131,10 +137,28 @@ TransformationState* Soldier::getTransformationState() const {
 }
 
 void Soldier::handleJump() {
-    if (this->onGround) {
+    if (this->inWater) {
+        // Swim up in water
+        this->velocityY = -5.f;
+    }
+    else if (this->onGround) {
         this->velocityY = -20.f;
         this->onGround = false;
     }
+}
+
+void Soldier::handleSwimDown() {
+    if (this->inWater) {
+        this->velocityY = 5.f;
+    }
+}
+
+void Soldier::setInWater(bool val) {
+    this->inWater = val;
+}
+
+bool Soldier::getInWater() const {
+    return this->inWater;
 }
 
 void Soldier::applyGravity() {
@@ -144,6 +168,17 @@ void Soldier::applyGravity() {
             this->velocityY = 20.f;
         }
     }
+}
+
+void Soldier::applyWaterPhysics() {
+    // Neutral buoyancy: no gravity in water
+    // Dampen existing velocity so player floats in place
+    this->velocityY *= 0.90f;
+    this->velocityX *= 0.94f;
+
+    // Snap tiny velocities to zero so player actually stops
+    if (this->velocityY > -0.3f && this->velocityY < 0.3f) this->velocityY = 0.f;
+    if (this->velocityX > -0.3f && this->velocityX < 0.3f) this->velocityX = 0.f;
 }
 
 void Soldier::handleCollision(Level* lvl) {
@@ -285,25 +320,27 @@ void Soldier::handleStateTimers() {
 
 void Soldier::setDirectionAndVelocity(int dir) {
     this->direction = dir;
-    float accel = 0.5f;
+    float accel = this->inWater ? 0.3f : 0.5f;
+    float maxV = this->inWater ? 3.f : this->maxVelocity;
     if (dir == DIR_LEFT) {
         this->velocityX -= accel;
-        if (this->velocityX < -this->maxVelocity) this->velocityX = -this->maxVelocity;
+        if (this->velocityX < -maxV) this->velocityX = -maxV;
     }
     else {
         this->velocityX += accel;
-        if (this->velocityX > this->maxVelocity) this->velocityX = this->maxVelocity;
+        if (this->velocityX > maxV) this->velocityX = maxV;
     }
 }
 
 void Soldier::decelerate() {
-    if (this->onGround) {
+    float drag = this->inWater ? 0.25f : 0.5f;
+    if (this->onGround || this->inWater) {
         if (this->velocityX > 0.f) {
-            this->velocityX -= 0.5f;
+            this->velocityX -= drag;
             if (this->velocityX < 0.f) this->velocityX = 0.f;
         }
         else if (this->velocityX < 0.f) {
-            this->velocityX += 0.5f;
+            this->velocityX += drag;
             if (this->velocityX > 0.f) this->velocityX = 0.f;
         }
     }
@@ -321,10 +358,10 @@ void Soldier::copyPhysicsFrom(Soldier* other) {
     // encapsulation or requiring friend declarations.
     if (other == nullptr) return;
 
-    this->position  = other->position;
+    this->position = other->position;
     this->velocityX = other->velocityX;
     this->velocityY = other->velocityY;
-    this->onGround  = other->onGround;
+    this->onGround = other->onGround;
     this->direction = other->direction;
 }
 

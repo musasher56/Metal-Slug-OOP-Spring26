@@ -23,6 +23,7 @@ public:
     void setProjectileManager(ProjectileManager* p);
 
     int spawnFlyingTara(float x, float y, int dir);
+    int spawnSubmarine(float x, float y, int dir);
 
     void update(float scroll, float scrollY, Level* lvl,
         PlayerSoldier* player, ProjectileManager* projMgr);

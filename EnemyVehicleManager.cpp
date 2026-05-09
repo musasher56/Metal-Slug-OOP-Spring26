@@ -75,6 +75,30 @@ int EnemyVehicleManager::spawnFlyingTara(float x, float y, int dir) {
     return slot;
 }
 
+int EnemyVehicleManager::spawnSubmarine(float x, float y, int dir) {
+    int slot = this->findFreeSlot();
+    if (slot < 0) return -1;
+
+    Submarine* sub = new Submarine(this->texMgr, this->audMgr);
+    sub->position = sf::Vector2f(x, y);
+    sub->setSwimDirection(dir);
+    sub->setProjectileManager(this->pm);
+    sub->updateBoundingBox();
+
+    if (slot < this->activeCount) {
+        if (this->slots[slot] != nullptr) {
+            delete this->slots[slot];
+        }
+    }
+    else {
+        this->activeCount = slot + 1;
+    }
+
+    this->slots[slot] = sub;
+    this->deSlots[slot] = sub;
+    return slot;
+}
+
 void EnemyVehicleManager::update(float scroll, float scrollY, Level* lvl,
     PlayerSoldier* player, ProjectileManager* projMgr)
 {
