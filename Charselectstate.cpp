@@ -1,8 +1,7 @@
 #include "CharSelectState.h"
+#include "PlayState.h"
 #include <cstdio>
 
-// Character names in slot order: 1=Marco, 2=Eri, 3=Tarma, 4=Fio
-// (Order matches the uploaded Characterselect.png image)
 const char* CharSelectState::CHAR_NAMES[4] = { "Marco", "Eri", "Tarma", "Fio" };
 
 CharSelectState::CharSelectState(TextureManager* texMgr, AudioManager* audMgr)
@@ -11,19 +10,16 @@ CharSelectState::CharSelectState(TextureManager* texMgr, AudioManager* audMgr)
     , bgLoaded(false)
     , fontLoaded(false)
     , hoveredChar(0)
-    , selectedChar(-1)   // -1 = not yet chosen
 {
     this->id = GSTATE_CHAR_SELECT;
+    this->shouldGoBack = false;
+    this->shouldExit = false;
+    // selectedChar, gameMode, selectedLevel are inherited from GameState
+    // and already set by MenuState before this object was created.
+    // selectedChar is -1 until player confirms.
 
-    // ── Background image ─────────────────────────────────────────────────────
-    // Try to load the character select art. If it fails we fall back to a plain
-    // dark background with text only — the game won't crash.
-    // YOU MUST place the image at:  resources/Sprites/CharacterSelect.png
     if (this->bgTexture.loadFromFile("resources/Sprites/CharacterSelect.png")) {
         this->bgLoaded = true;
-
-        // Scale the image to fill the screen (1280×720) regardless of its
-        // original resolution. This is a UI screen so pixelation is acceptable.
         sf::Vector2u texSize = this->bgTexture.getSize();
         float scaleX = static_cast<float>(SCREEN_W) / static_cast<float>(texSize.x);
         float scaleY = static_cast<float>(SCREEN_H) / static_cast<float>(texSize.y);
@@ -32,36 +28,27 @@ CharSelectState::CharSelectState(TextureManager* texMgr, AudioManager* audMgr)
         this->bgSprite.setPosition(0.f, 0.f);
     }
 
-    // ── Font ─────────────────────────────────────────────────────────────────
-    // Try system fonts in priority order; same fallback chain as PlayState.
     fontLoaded = this->font.loadFromFile("/System/Library/Fonts/Helvetica.ttc");
     if (!fontLoaded) fontLoaded = this->font.loadFromFile("/Library/Fonts/Arial.ttf");
     if (!fontLoaded) fontLoaded = this->font.loadFromFile("C:\\Windows\\Fonts\\Arial.ttf");
-    if (!fontLoaded) fontLoaded = this->font.loadFromFile("resources/font.ttf");
+    if (!fontLoaded) fontLoaded = this->font.loadFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
 
-    // ── Highlight box ─────────────────────────────────────────────────────────
-    // A semi-transparent yellow rectangle drawn over whichever slot is hovered.
-    // The size matches one portrait panel (~300×480 at 1280×720 scale).
     this->highlightBox.setSize(sf::Vector2f(290.f, 460.f));
     this->highlightBox.setFillColor(sf::Color(255, 255, 0, 50));
-    this->highlightBox.setOutlineColor(sf::Color(255, 215, 0));  // gold
+    this->highlightBox.setOutlineColor(sf::Color(255, 215, 0));
     this->highlightBox.setOutlineThickness(4.f);
 
-    // Build the four slot rectangles matching the image layout
     this->buildSlotPositions();
 }
 
 CharSelectState::~CharSelectState() {}
 
 void CharSelectState::buildSlotPositions() {
-    // The image has 4 equal-width portrait panels side by side.
-    // At 1280×720, each panel is ~320px wide. Left edge starts at x~20.
-    // These are approximate — tune them to match your image if needed.
-    const float panelW  = 296.f;
-    const float panelH  = 455.f;
-    const float startX  = 22.f;
-    const float startY  = 130.f;  // below the "SOLDIER SELECT" header
-    const float gapX    = 10.f;   // horizontal gap between panels
+    const float panelW = 296.f;
+    const float panelH = 455.f;
+    const float startX = 22.f;
+    const float startY = 130.f;
+    const float gapX = 10.f;
 
     for (int i = 0; i < 4; i++) {
         float x = startX + i * (panelW + gapX);
@@ -71,16 +58,13 @@ void CharSelectState::buildSlotPositions() {
 
 void CharSelectState::update(float dt) {
     (void)dt;
-    // Nothing to animate in this state currently.
-    // Highlight position is updated in handleEvent().
 }
 
 void CharSelectState::render(RenderWindow& window) {
-    // ── Background ────────────────────────────────────────────────────────────
     if (this->bgLoaded) {
         window.draw(this->bgSprite);
-    } else {
-        // Fallback: dark background if image is missing
+    }
+    else {
         sf::RectangleShape bg(sf::Vector2f((float)SCREEN_W, (float)SCREEN_H));
         bg.setFillColor(sf::Color(20, 20, 20));
         window.draw(bg);
@@ -97,10 +81,9 @@ void CharSelectState::render(RenderWindow& window) {
             title.setPosition((float)SCREEN_W / 2.f, 40.f);
             window.draw(title);
 
-            // Draw name placeholders for each slot
             for (int i = 0; i < 4; i++) {
                 sf::RectangleShape panel(sf::Vector2f(this->slotRects[i].width,
-                                                       this->slotRects[i].height));
+                    this->slotRects[i].height));
                 panel.setPosition(this->slotRects[i].left, this->slotRects[i].top);
                 panel.setFillColor(sf::Color(40, 40, 40));
                 panel.setOutlineColor(sf::Color(100, 100, 100));
@@ -109,31 +92,27 @@ void CharSelectState::render(RenderWindow& window) {
 
                 sf::Text nameText;
                 nameText.setFont(this->font);
-                nameText.setString(CharSelectState::CHAR_NAMES[i]);
+                nameText.setString(CHAR_NAMES[i]);
                 nameText.setCharacterSize(28);
                 nameText.setFillColor(sf::Color::White);
                 sf::FloatRect nb = nameText.getLocalBounds();
                 nameText.setOrigin(nb.width / 2.f, nb.height / 2.f);
                 nameText.setPosition(
                     this->slotRects[i].left + this->slotRects[i].width / 2.f,
-                    this->slotRects[i].top  + this->slotRects[i].height / 2.f
+                    this->slotRects[i].top + this->slotRects[i].height / 2.f
                 );
                 window.draw(nameText);
             }
         }
     }
 
-    // ── Highlight box over hovered slot ──────────────────────────────────────
     sf::FloatRect& hovered = this->slotRects[this->hoveredChar];
     this->highlightBox.setPosition(hovered.left, hovered.top);
     window.draw(this->highlightBox);
 
-    // ── Bottom instructions ───────────────────────────────────────────────────
     if (this->fontLoaded) {
-        // Slot number labels (1, 2, 3, 4) above each panel — drawn on top of image
         for (int i = 0; i < 4; i++) {
             char numBuf[4];
-            // Safe: itoa-equivalent without sprintf for single digit
             numBuf[0] = '1' + i;
             numBuf[1] = '\0';
 
@@ -142,7 +121,7 @@ void CharSelectState::render(RenderWindow& window) {
             numText.setString(numBuf);
             numText.setCharacterSize(28);
             numText.setFillColor(i == this->hoveredChar
-                ? sf::Color(255, 255, 0)    // yellow when hovered
+                ? sf::Color(255, 255, 0)
                 : sf::Color(200, 200, 200));
             numText.setStyle(sf::Text::Bold);
             sf::FloatRect nb = numText.getLocalBounds();
@@ -154,10 +133,9 @@ void CharSelectState::render(RenderWindow& window) {
             window.draw(numText);
         }
 
-        // Bottom hint bar
         sf::Text hint;
         hint.setFont(this->font);
-        hint.setString("[LEFT/RIGHT] Browse  [1/2/3/4] Select  [ENTER] Confirm");
+        hint.setString("[LEFT/RIGHT] Browse  [1/2/3/4] Select  [ENTER] Confirm  [ESC] Back");
         hint.setCharacterSize(22);
         hint.setFillColor(sf::Color(180, 180, 180));
         sf::FloatRect hb = hint.getLocalBounds();
@@ -167,38 +145,45 @@ void CharSelectState::render(RenderWindow& window) {
     }
 }
 
-void CharSelectState::handleEvent(Event& event) {
-    if (event.type != Event::KeyPressed) return;
+void CharSelectState::handleEvent(sf::Event& event) {
+    if (event.type != sf::Event::KeyPressed) return;
 
-    // Arrow keys cycle through the 4 slots
-    if (event.key.code == Keyboard::Left) {
-        this->hoveredChar = (this->hoveredChar + 3) % 4;  // wrap left
+    if (event.key.code == sf::Keyboard::Left) {
+        this->hoveredChar = (this->hoveredChar + 3) % 4;
     }
-    else if (event.key.code == Keyboard::Right) {
-        this->hoveredChar = (this->hoveredChar + 1) % 4;  // wrap right
+    else if (event.key.code == sf::Keyboard::Right) {
+        this->hoveredChar = (this->hoveredChar + 1) % 4;
     }
-
-    // Direct selection via number keys 1-4
-    else if (event.key.code == Keyboard::Num1) { this->hoveredChar = 0; this->selectedChar = 0; }
-    else if (event.key.code == Keyboard::Num2) { this->hoveredChar = 1; this->selectedChar = 1; }
-    else if (event.key.code == Keyboard::Num3) { this->hoveredChar = 2; this->selectedChar = 2; }
-    else if (event.key.code == Keyboard::Num4) { this->hoveredChar = 3; this->selectedChar = 3; }
-
-    // Enter confirms whichever slot is currently hovered
-    else if (event.key.code == Keyboard::Return || event.key.code == Keyboard::Space) {
+    else if (event.key.code == sf::Keyboard::Num1) { this->hoveredChar = 0; this->selectedChar = 0; }
+    else if (event.key.code == sf::Keyboard::Num2) { this->hoveredChar = 1; this->selectedChar = 1; }
+    else if (event.key.code == sf::Keyboard::Num3) { this->hoveredChar = 2; this->selectedChar = 2; }
+    else if (event.key.code == sf::Keyboard::Num4) { this->hoveredChar = 3; this->selectedChar = 3; }
+    else if (event.key.code == sf::Keyboard::Return || event.key.code == sf::Keyboard::Space) {
         this->selectedChar = this->hoveredChar;
+    }
+    else if (event.key.code == sf::Keyboard::Escape) {
+        this->shouldGoBack = true;
     }
 }
 
 void CharSelectState::onEnter() {
-    // Reset selection each time this state is entered so re-opening it
-    // (if the state is ever reused) starts fresh.
     this->selectedChar = -1;
-    this->hoveredChar  = 0;
+    this->hoveredChar = 0;
+    this->shouldGoBack = false;
 }
 
 void CharSelectState::onExit() {}
 
-int CharSelectState::getSelectedChar() const {
-    return this->selectedChar;
+GameState* CharSelectState::createNextState() {
+    // Only transition when a character has been confirmed
+    if (this->selectedChar >= 0 && this->selectedChar <= 3) {
+        PlayState* play = new PlayState(this->gameMode,
+            this->selectedChar,
+            this->texManager,
+            this->audManager,
+            this->selectedLevel);
+        play->setStateManager(this->stateManager);
+        return play;
+    }
+    return nullptr;
 }

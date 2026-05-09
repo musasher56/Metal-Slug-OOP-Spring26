@@ -6,8 +6,6 @@ Game::Game()
     , stateManager(nullptr)
     , texManager(nullptr)
     , audManager(nullptr)
-    , gameMode(MODE_SURVIVAL)
-    , selectedChar(0)
     , running(true)
 {
     this->window.setFramerateLimit(FRAMERATE_LIMIT);
@@ -17,8 +15,8 @@ Game::Game()
 Game::~Game() { this->cleanup(); }
 
 void Game::initialize() {
-    this->texManager   = new TextureManager();
-    this->audManager   = new AudioManager();
+    this->texManager = new TextureManager();
+    this->audManager = new AudioManager();
     this->stateManager = new GameStateManager();
     MenuState* menu = new MenuState(this->texManager, this->audManager);
     this->stateManager->push(menu);
@@ -29,12 +27,6 @@ void Game::run() {
     while (this->running && this->window.isOpen()) {
         float dt = clock.restart().asSeconds();
         this->handleEvents();
-
-
-
-
-
-
 
         if (!this->running || !this->window.isOpen()) break;
 
@@ -51,47 +43,49 @@ void Game::handleEvents() {
             this->window.close();
             return;
         }
-        if (ev.type == Event::KeyPressed && ev.key.code == Keyboard::Escape) {
-            this->running = false;
-            this->window.close();
-            return;
-        }
+
         if (this->stateManager != nullptr) {
             this->stateManager->handleEvent(ev);
-            GameState* current = this->stateManager->peek();
 
-            // ── MenuState: mode selected → go to character select ────────────
-            if (current != nullptr && current->getID() == GSTATE_MENU) {
-                MenuState* menu = (MenuState*)current;
-                int mode = menu->getSelectedMode();
-                if (mode == 99) {
-                    this->running = false;
-                    this->window.close();
-                    return;
-                } else if (mode >= 0 && mode <= 2) {
-                    this->gameMode = mode;
-                    this->stateManager->pop();
-                    // Push character select screen — player chooses their soldier
-                    CharSelectState* charSel = new CharSelectState(
-                        this->texManager, this->audManager);
-                    this->stateManager->push(charSel);
-                }
+            GameState* current = this->stateManager->peek();
+            if (current == nullptr) continue;
+
+            // ── Polymorphic transition: no if-chains on state IDs ────────
+            // Each state overrides createNextState() to return the next
+            // screen when the player has made a selection, or nullptr if
+            // they're still deciding.  Game.cpp doesn't need to know which
+            // concrete state it's dealing with.
+
+            // Check exit request
+            if (current->getShouldExit()) {
+                this->running = false;
+                this->window.close();
+                return;
             }
 
-            // ── CharSelectState: character chosen → launch PlayState ─────────
-            else if (current != nullptr && current->getID() == GSTATE_CHAR_SELECT) {
-                CharSelectState* charSel = (CharSelectState*)current;
-                int chosen = charSel->getSelectedChar();
-                if (chosen >= 0 && chosen <= 3) {
-                    this->selectedChar = chosen;
-                    this->stateManager->pop();
-                    PlayState* play = new PlayState(this->gameMode,
-                                                    this->selectedChar,
-                                                    this->texManager,
-                                                    this->audManager);
-                    play->setStateManager(this->stateManager);
-                    this->stateManager->push(play);
+            // Check go-back request (ESC to return to previous screen)
+            if (current->getShouldGoBack()) {
+                this->stateManager->pop();
+                // If nothing left on the stack, push a fresh main menu
+                if (this->stateManager->peek() == nullptr) {
+                    MenuState* menu = new MenuState(this->texManager, this->audManager);
+                    this->stateManager->push(menu);
                 }
+                continue;
+            }
+
+            // Ask the current state for the next transition
+            GameState* next = current->createNextState();
+            if (next != nullptr) {
+                // Copy context forward so the next state can read it
+                next->gameMode = current->gameMode;
+                next->selectedLevel = current->selectedLevel;
+                next->selectedChar = current->selectedChar;
+                if (next->stateManager == nullptr)
+                    next->setStateManager(this->stateManager);
+
+                this->stateManager->pop();
+                this->stateManager->push(next);
             }
         }
     }
@@ -109,6 +103,6 @@ void Game::render() {
 
 void Game::cleanup() {
     if (this->stateManager) { delete this->stateManager; this->stateManager = nullptr; }
-    if (this->audManager)   { delete this->audManager;   this->audManager   = nullptr; }
-    if (this->texManager)   { delete this->texManager;   this->texManager   = nullptr; }
+    if (this->audManager) { delete this->audManager;   this->audManager = nullptr; }
+    if (this->texManager) { delete this->texManager;   this->texManager = nullptr; }
 }

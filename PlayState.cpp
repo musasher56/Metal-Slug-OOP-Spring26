@@ -1,7 +1,7 @@
 #include "PlayState.h"
 #include "GameStateManager.h"
 #include "GameOverState.h"
-#include "LevelSelectState.h"
+// LevelSelectState removed — level select is now in MainMenu
 #include "CharacterManager.h"
 #include "LevelManager.h"
 #include "ScoreManager.h"
@@ -223,7 +223,7 @@ void PlayState::loadLevel(int levelIndex) {
             // ── For flat levels, set scrollY so ground lines up near bottom of screen ──
             if (!cfg->enableVerticalScroll) {
                 // Place ground at ~85% down the screen (matches typical BG ground line)
-                this->scrollY = surfaceY - (float)SCREEN_H * 0.92f;
+                this->scrollY = surfaceY - (float)SCREEN_H * 0.85f;
                 if (this->scrollY < 0.f) this->scrollY = 0.f;
             }
         }
@@ -354,11 +354,10 @@ void PlayState::checkLevelTransition() {
             int nextLevel = this->currentLevelIndex + 1;
 
             if (nextLevel >= TOTAL_LEVELS) {
-                // Beat all levels — go to level select (victory)
+                // Beat all levels — go to GameOver (victory)
                 if (this->stateManager != nullptr) {
                     int finalScore = this->scoreManager ? this->scoreManager->getScore() : 0;
-                    this->stateManager->changeState(
-                        new LevelSelectState(this->texManager, this->audManager, finalScore));
+                    this->stateManager->changeState(new GameOverState(finalScore));
                 }
             }
             else {
@@ -491,7 +490,7 @@ void PlayState::update(float dt) {
         if (lvl != nullptr) {
             int surfaceRow = lvl->getHeight() - 3;
             float surfaceY = (float)(surfaceRow * lvl->getCellSize());
-            this->scrollY = surfaceY - (float)SCREEN_H * 0.92f;
+            this->scrollY = surfaceY - (float)SCREEN_H * 0.85f;
             if (this->scrollY < 0.f) this->scrollY = 0.f;
         }
     }

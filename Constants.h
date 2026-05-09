@@ -79,19 +79,11 @@ const int TRANSFORM_UNDEAD = 1;
 const int TRANSFORM_MUMMY = 2;
 
 
-// ── Projectile class constants ────────────────────────────────────────────────
-// These are rendering and logic tags — they travel with the Projectile object
-// so the vtable can dispatch correct visual and collision treatment.
-// NEVER switch on these in game-logic code; use them only where unavoidable
-// (e.g., inside a class's own draw() override for intra-class visual variants).
-const int PROJ_STRAIGHT  = 0;   // Constant-velocity linear: Pistol, HMG
-const int PROJ_BALLISTIC = 1;   // Gravity-affected parabolic arc
-const int PROJ_EXPLOSIVE = 2;   // Ballistic + blast radius on impact: Rocket
-const int PROJ_BEAM      = 3;   // Instant raycast: LaserGun — stationary hitbox
-const int PROJ_BOMB      = 4;   // Enemy-thrown bomb variant of ExplosiveProjectile
-const int PROJ_FLAME     = 5;   // FlameShot stream particle — short lifetime, orange
-
-// ─────────────────────────────────────────────────────────────────────────────
+const int PROJ_STRAIGHT = 0;
+const int PROJ_BALLISTIC = 1;
+const int PROJ_EXPLOSIVE = 2;
+const int PROJ_BEAM = 3;
+const int PROJ_FLAME = 5;   // FlameShot stream particle — short lifetime
 
 
 const int GSTATE_MENU = 0;
@@ -99,7 +91,7 @@ const int GSTATE_PLAY = 1;
 const int GSTATE_PAUSED = 2;
 const int GSTATE_GAME_OVER = 3;
 const int GSTATE_LEADERBOARD = 4;
-const int GSTATE_CHAR_SELECT = 5;   // Character select screen (between mode select and PlayState)
+const int GSTATE_CHAR_SELECT = 5;   // Character select screen (between menu and PlayState)
 
 
 const int SCREEN_W = 1280;
@@ -114,3 +106,4 @@ const int ENTITY_POOL_GROWTH = 100;
 
 
 const int HITS_PER_HEART = 3;
+const int PROJ_BOMB = 4;

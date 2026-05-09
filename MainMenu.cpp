@@ -1,19 +1,33 @@
 #include "MainMenu.h"
 #include <cstdio>
 
+static const char* LEVEL_NAMES[3] = {
+    "Level 1 - Ruins",
+    "Level 2 - Cold Death",
+    "Level 3 - Blasphemous City"
+};
+
+static const char* LEVEL_DESCS[3] = {
+    "Mountain + Water",
+    "Mountain + Water",
+    "Flat Plains - 11km"
+};
+
 MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
     : selectedOption(0)
     , gameMode(MODE_SURVIVAL)
+    , selectedLevel(-1)
     , menuState(0)
     , texManager(tex)
     , audManager(aud)
     , fontLoaded(false)
+    , hoveredLevel(0)
     , totalVideoFrames(0)
     , currentFrame(0)
     , splashDuration(3.0f)
     , videoLoaded(false)
 {
-    const char* opts[] = {"SURVIVAL MODE", "CAMPAIGN MODE", "SELF-PLAY (AI)", "EXIT"};
+    const char* opts[] = { "SURVIVAL MODE", "CAMPAIGN MODE", "SELF-PLAY (AI)", "EXIT" };
     for (int i = 0; i < 4; i++) {
         int j = 0;
         while (opts[i][j] != '\0' && j < MAX_NAME_LEN - 1) {
@@ -37,10 +51,32 @@ MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
     this->selector.setSize(Vector2f(500.f, 50.f));
     this->selector.setFillColor(Color(220, 80, 0, 180));
 
+    // Level select boxes
+    float boxW = 320.f;
+    float boxH = 360.f;
+    float gap = 40.f;
+    float totalW = 3.f * boxW + 2.f * gap;
+    float startX = ((float)SCREEN_W - totalW) / 2.f;
+    float boxY = 200.f;
+
+    for (int i = 0; i < 3; i++) {
+        float x = startX + i * (boxW + gap);
+        this->levelBoxes[i].setSize(Vector2f(boxW, boxH));
+        this->levelBoxes[i].setPosition(x, boxY);
+        this->levelBoxes[i].setOutlineThickness(3.f);
+        this->levelBoxes[i].setFillColor(Color(20, 20, 50, 180));
+        this->levelBoxes[i].setOutlineColor(Color(80, 80, 120));
+    }
+
     this->loadVideoFrames();
 }
 
 MainMenu::~MainMenu() {}
+
+bool MainMenu::isReady() const {
+    // Ready when a mode AND a level have both been selected
+    return (this->gameMode >= 0 && this->gameMode <= 2) && (this->selectedLevel >= 0 && this->selectedLevel <= 2);
+}
 
 void MainMenu::loadVideoFrames() {
     char path[128];
@@ -53,9 +89,9 @@ void MainMenu::loadVideoFrames() {
             path[pos++] = prefix[k];
 
         path[pos++] = '0' + (i / 1000) % 10;
-        path[pos++] = '0' + (i / 100)  % 10;
-        path[pos++] = '0' + (i / 10)   % 10;
-        path[pos++] = '0' + (i)        % 10;
+        path[pos++] = '0' + (i / 100) % 10;
+        path[pos++] = '0' + (i / 10) % 10;
+        path[pos++] = '0' + (i) % 10;
 
         const char* ext = ".png";
         for (int k = 0; ext[k] != '\0' && pos < 127; k++)
@@ -75,7 +111,8 @@ void MainMenu::loadVideoFrames() {
         this->videoSprite.setScale(sx, sy);
         this->videoLoaded = true;
         printf("[INFO] Loaded %d video frames\n", this->totalVideoFrames);
-    } else {
+    }
+    else {
         printf("[INFO] No video frames found (optional)\n");
     }
 }
@@ -97,32 +134,73 @@ void MainMenu::updateVideo(float dt) {
 int MainMenu::handleEvent(Event& event) {
     if (event.type != Event::KeyPressed) return -1;
 
+    // ── Splash screen ── any key advances to mode select
     if (this->menuState == 0) {
         this->menuState = 1;
         return -1;
     }
 
-    if (event.key.code == Keyboard::Up)
-        this->selectedOption = (this->selectedOption - 1 + 4) % 4;
-    else if (event.key.code == Keyboard::Down)
-        this->selectedOption = (this->selectedOption + 1) % 4;
-    else if (event.key.code == Keyboard::Return || event.key.code == Keyboard::Space) {
-        if (this->selectedOption == 3) return 99;
-        this->gameMode = this->selectedOption;
-        return this->gameMode;
-    } else if (event.key.code == Keyboard::Escape)
-        return 99;
+    // ── Mode select screen ──
+    if (this->menuState == 1) {
+        if (event.key.code == Keyboard::Up)
+            this->selectedOption = (this->selectedOption - 1 + 4) % 4;
+        else if (event.key.code == Keyboard::Down)
+            this->selectedOption = (this->selectedOption + 1) % 4;
+        else if (event.key.code == Keyboard::Return || event.key.code == Keyboard::Space) {
+            if (this->selectedOption == 3) return 99;  // EXIT
+            this->gameMode = this->selectedOption;
+            // Advance to level select instead of returning immediately
+            this->menuState = 2;
+            this->selectedLevel = -1;
+            this->hoveredLevel = 0;
+        }
+        else if (event.key.code == Keyboard::Escape) {
+            return 99;
+        }
+        return -1;
+    }
+
+    // ── Level select screen ──
+    if (this->menuState == 2) {
+        if (event.key.code == Keyboard::Left) {
+            this->hoveredLevel = (this->hoveredLevel + 2) % 3;
+        }
+        else if (event.key.code == Keyboard::Right) {
+            this->hoveredLevel = (this->hoveredLevel + 1) % 3;
+        }
+        else if (event.key.code == Keyboard::Num1) {
+            this->hoveredLevel = 0;
+            this->selectedLevel = 0;
+        }
+        else if (event.key.code == Keyboard::Num2) {
+            this->hoveredLevel = 1;
+            this->selectedLevel = 1;
+        }
+        else if (event.key.code == Keyboard::Num3) {
+            this->hoveredLevel = 2;
+            this->selectedLevel = 2;
+        }
+        else if (event.key.code == Keyboard::Return || event.key.code == Keyboard::Space) {
+            this->selectedLevel = this->hoveredLevel;
+        }
+        else if (event.key.code == Keyboard::Escape) {
+            // Go back to mode select
+            this->menuState = 1;
+            this->selectedLevel = -1;
+        }
+        return -1;
+    }
 
     return -1;
 }
 
 void MainMenu::draw(RenderWindow& window) {
     if (this->menuState == 0) this->drawSplash(window);
-    else                      this->drawMain(window);
+    else if (this->menuState == 1) this->drawMain(window);
+    else if (this->menuState == 2) this->drawLevelSelect(window);
 }
 
 void MainMenu::drawSplash(RenderWindow& window) {
-    
     if (this->videoLoaded)
         window.draw(this->videoSprite);
 }
@@ -144,8 +222,8 @@ void MainMenu::drawMain(RenderWindow& window) {
     title.setPosition(SCREEN_W / 2.f, 50.f);
     window.draw(title);
 
-    const float startY  = 250.f;
-    const float stepY   = 90.f;
+    const float startY = 250.f;
+    const float stepY = 90.f;
     const float centerX = SCREEN_W / 2.f;
 
     for (int i = 0; i < 4; i++) {
@@ -176,5 +254,123 @@ void MainMenu::drawMain(RenderWindow& window) {
     FloatRect hb = hint.getLocalBounds();
     hint.setOrigin(hb.width / 2.f, 0.f);
     hint.setPosition(centerX, SCREEN_H - 50.f);
+    window.draw(hint);
+}
+
+void MainMenu::drawLevelSelect(RenderWindow& window) {
+    if (this->videoLoaded) window.draw(this->videoSprite);
+    window.draw(this->overlay);
+
+    if (!this->fontLoaded) return;
+
+    // Title
+    Text title;
+    title.setFont(this->font);
+    title.setString("SELECT LEVEL");
+    title.setCharacterSize(52);
+    title.setFillColor(Color(255, 215, 0));
+    title.setStyle(Text::Bold);
+    FloatRect tb = title.getLocalBounds();
+    title.setOrigin(tb.width / 2.f, 0.f);
+    title.setPosition((float)SCREEN_W / 2.f, 30.f);
+    window.draw(title);
+
+    // Mode subtitle
+    const char* modeName = "SURVIVAL";
+    if (this->gameMode == MODE_CAMPAIGN) modeName = "CAMPAIGN";
+    else if (this->gameMode == MODE_SELF_PLAY) modeName = "SELF-PLAY";
+
+    Text modeText;
+    modeText.setFont(this->font);
+    modeText.setString(modeName);
+    modeText.setCharacterSize(24);
+    modeText.setFillColor(Color(180, 180, 200));
+    FloatRect mb = modeText.getLocalBounds();
+    modeText.setOrigin(mb.width / 2.f, 0.f);
+    modeText.setPosition((float)SCREEN_W / 2.f, 95.f);
+    window.draw(modeText);
+
+    // Level boxes
+    for (int i = 0; i < 3; i++) {
+        // Update colors based on hover
+        if (i == this->hoveredLevel) {
+            this->levelBoxes[i].setFillColor(Color(40, 60, 120, 200));
+            this->levelBoxes[i].setOutlineColor(Color(255, 215, 0));
+        }
+        else {
+            this->levelBoxes[i].setFillColor(Color(20, 20, 50, 180));
+            this->levelBoxes[i].setOutlineColor(Color(80, 80, 120));
+        }
+
+        window.draw(this->levelBoxes[i]);
+
+        float bx = this->levelBoxes[i].getPosition().x;
+        float by = this->levelBoxes[i].getPosition().y;
+        float bw = this->levelBoxes[i].getSize().x;
+        float bh = this->levelBoxes[i].getSize().y;
+
+        // Big level number
+        Text numText;
+        numText.setFont(this->font);
+        char buf[4];
+        buf[0] = '1' + i;
+        buf[1] = '\0';
+        numText.setString(buf);
+        numText.setCharacterSize(80);
+        numText.setFillColor(i == this->hoveredLevel
+            ? Color(255, 215, 0, 200) : Color(100, 140, 200, 120));
+        FloatRect nr = numText.getLocalBounds();
+        numText.setOrigin(nr.width / 2.f, 0.f);
+        numText.setPosition(bx + bw / 2.f, by + 30.f);
+        window.draw(numText);
+
+        // Level name
+        Text nameText;
+        nameText.setFont(this->font);
+        nameText.setString(LEVEL_NAMES[i]);
+        nameText.setCharacterSize(18);
+        nameText.setStyle(Text::Bold);
+        nameText.setFillColor(i == this->hoveredLevel
+            ? Color(255, 255, 255) : Color(160, 160, 180));
+        FloatRect nm = nameText.getLocalBounds();
+        nameText.setOrigin(nm.width / 2.f, 0.f);
+        nameText.setPosition(bx + bw / 2.f, by + 140.f);
+        window.draw(nameText);
+
+        // Level description
+        Text descText;
+        descText.setFont(this->font);
+        descText.setString(LEVEL_DESCS[i]);
+        descText.setCharacterSize(15);
+        descText.setFillColor(Color(130, 130, 160));
+        FloatRect dr = descText.getLocalBounds();
+        descText.setOrigin(dr.width / 2.f, 0.f);
+        descText.setPosition(bx + bw / 2.f, by + 175.f);
+        window.draw(descText);
+
+        // Key hint
+        Text keyText;
+        keyText.setFont(this->font);
+        char keyBuf[8];
+        keyBuf[0] = '1' + i;
+        keyBuf[1] = '\0';
+        keyText.setString(keyBuf);
+        keyText.setCharacterSize(26);
+        keyText.setFillColor(Color(200, 200, 200, 150));
+        FloatRect kr = keyText.getLocalBounds();
+        keyText.setOrigin(kr.width / 2.f, 0.f);
+        keyText.setPosition(bx + bw / 2.f, by + bh - 50.f);
+        window.draw(keyText);
+    }
+
+    // Instructions
+    Text hint;
+    hint.setFont(this->font);
+    hint.setString("[LEFT/RIGHT] Browse   [1/2/3] Quick Select   [ENTER] Confirm   [ESC] Back");
+    hint.setCharacterSize(20);
+    hint.setFillColor(Color(150, 150, 150));
+    FloatRect hb = hint.getLocalBounds();
+    hint.setOrigin(hb.width / 2.f, 0.f);
+    hint.setPosition((float)SCREEN_W / 2.f, (float)SCREEN_H - 50.f);
     window.draw(hint);
 }
