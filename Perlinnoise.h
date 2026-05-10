@@ -112,5 +112,3 @@ public:
                          int   harmonics,
                          int   seed);
 };
-
-//For pushing
