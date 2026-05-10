@@ -1,7 +1,8 @@
 #include "HUD.h"
 #include "CharacterManager.h"
+#include "PlayerSoldier.h"
 
-HUD::HUD() : score(0), hp(3), redHueAlpha(0.0f) {
+HUD::HUD() : score(0), hp(3), redHueAlpha(0.0f), weaponName("Pistol") {
 
     if (!this->font.loadFromFile("resources/Fonts/arial.ttf")) {
 
@@ -16,6 +17,10 @@ void HUD::update(CharacterManager* cm, int levelNum) {
     if (cm != nullptr) {
         this->score = cm->getKills() * 50;
         this->hp = cm->getHealthPoints();
+        PlayerSoldier* player = cm->getCurrentCharacter();
+        if (player != nullptr) {
+            this->weaponName = player->getCurrentWeaponName();
+        }
     }
 }
 
@@ -49,6 +54,14 @@ void HUD::draw(RenderWindow& window) {
             window.draw(heart);
         }
     }
+
+    // Draw current weapon name
+    if (this->weaponName != nullptr) {
+        Text weaponText("Weapon: " + std::string(this->weaponName), this->font, 20);
+        weaponText.setPosition(10, 70);
+        weaponText.setFillColor(Color(200, 200, 255));
+        window.draw(weaponText);
+    }
 }
 
 void HUD::setScore(int s) {
@@ -61,4 +74,8 @@ int HUD::getScore() const {
 
 void HUD::showDamageHue(float intensity) {
     this->redHueAlpha = intensity;
+}
+
+void HUD::setWeaponName(const char* name) {
+    this->weaponName = name;
 }

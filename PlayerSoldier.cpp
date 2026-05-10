@@ -94,9 +94,63 @@ void PlayerSoldier::shoot() {
     if (!this->currentWeapon->hasAmmo()) return;
 
     float angle = this->aimController.getAngle();
+
+    // Use the character's actual physics dimensions (physW * scale) for
+    // barrel positioning instead of hardcoded 60/52 which was tuned for
+    // Marco only.  This ensures all characters (Marco, Tarma, Eri, Fio)
+    // fire from the correct barrel tip position.
+    float scaleX = std::abs(this->sprite.getScale().x);
+    float scaleY = std::abs(this->sprite.getScale().y);
+    float spriteW = (float)this->physW * scaleX;
+    float spriteH = (float)this->physH * scaleY;
+
     sf::Vector2f origin = ProjectileManager::calcBarrelTip(
-        this->position, this->direction, 60.f, 52.f);
+        this->position, this->direction, spriteW, spriteH * 0.36f);
     this->currentWeapon->fire(origin, this->direction, angle, this->pm);
+}
+
+void PlayerSoldier::meleeAttack() {
+    if (this->pm == nullptr) return;
+
+    // Cooldown gate — meleeCooldown is 0.5s by default
+    if (this->meleeTimer.getElapsedTime().asSeconds() < this->meleeCooldown) return;
+    this->meleeTimer.restart();
+
+    // Position the melee slash in front of the player.
+    // The slash origin is the anchor point; MeleeSlash::getBoundingBox()
+    // extends the hitbox in slashDir from that anchor.
+    float scaleX = std::abs(this->sprite.getScale().x);
+    float scaleY = std::abs(this->sprite.getScale().y);
+    float spriteW = (float)this->physW * scaleX;
+    float spriteH = (float)this->physH * scaleY;
+
+    // X: place the slash anchor at the player's front edge so the hitbox
+    // extends OUTWARD into enemy territory, not inside the player's body.
+    //
+    //  DIR_RIGHT: front edge = position.x + spriteW
+    //    MeleeSlash (DIR_RIGHT) hitbox: [anchor, anchor + slashWidth]
+    //    So anchor at the front edge means the slash extends rightward from
+    //    the player's right side — exactly where enemies would be.
+    //
+    //  DIR_LEFT:  front edge = position.x
+    //    MeleeSlash (DIR_LEFT) hitbox: [anchor - slashWidth, anchor]
+    //    So anchor at the front edge means the slash extends leftward from
+    //    the player's left side — exactly where enemies would be.
+    //
+    //  Previously both directions used position.x + spriteW*0.5 (center),
+    //  which for DIR_LEFT placed the slash partially behind the player.
+    float slashX;
+    if (this->direction == DIR_RIGHT) {
+        slashX = this->position.x + spriteW;       // front (right) edge
+    } else {
+        slashX = this->position.x;                  // front (left) edge
+    }
+
+    // Y: use HEIGHT to offset to chest level — roughly 25% down
+    // from the top of the sprite puts the slash at chest/shoulder height.
+    float slashY = this->position.y + spriteH * 0.25f;
+
+    this->pm->spawnMelee(sf::Vector2f(slashX, slashY), this->direction, 3, false);
 }
 
 void PlayerSoldier::switchWeapon(Weapon* w) {
@@ -223,10 +277,87 @@ Marco::Marco(TextureManager* texMgr, AudioManager* audMgr)
     this->physH = 41;
     this->position = sf::Vector2f(200.f, 300.f);
     this->updateBoundingBox();
+    if (texMgr != nullptr) {
+        texMgr->loadTextureWithMask("marco-machinegun",
+            "resources/Sprites/marco-machinegun.png", sf::Color::Black, 40);
+        texMgr->loadTextureWithMask("marco-laser",
+            "resources/Sprites/marco-laser.png",      sf::Color::Black, 40);
+        texMgr->loadTextureWithMask("marco-flame",
+            "resources/Sprites/marco-flame.png",      sf::Color::Black, 40);
+        texMgr->loadTextureWithMask("marco-rocket",
+            "resources/Sprites/marco-rocket.png",     sf::Color::Black, 40);
+
+        // Each PNG: 1024x1536, 6 rows of 1024x256 strips.
+        // Rows 1-4 are active walk frames (row 0 and 5 are empty).
+        auto setupWpnAnim = [&](Animation& anim, const char* key) {
+            Texture& tex = texMgr->getTexture(key);
+            anim.setTexture(&tex);
+            anim.setFrameCount(4);
+            anim.setFrameDelay(6);
+            anim.setLoop(true);
+            anim.useExplicitFrames = true;
+            anim.setFrameRect(0, 0, 256,  1024, 256);
+            anim.setFrameRect(1, 0, 512,  1024, 256);
+            anim.setFrameRect(2, 0, 768,  1024, 256);
+            anim.setFrameRect(3, 0, 1024, 1024, 256);
+        };
+        setupWpnAnim(this->hmgAnim,    "marco-machinegun");
+        setupWpnAnim(this->laserAnim,  "marco-laser");
+        setupWpnAnim(this->flameAnim,  "marco-flame");
+        setupWpnAnim(this->rocketAnim, "marco-rocket");
+    }
+    this->usingWeaponSpr = false;
+    this->lastWeaponType = WEAPON_PISTOL;  // start with pistol, track for switch detection
 }
 
+
 Marco::~Marco() {}
-void Marco::updateSprite() { this->sprite.setTextureRect(IntRect(0, 0, 36, 41)); }
+void Marco::updateSprite() {
+    this->sprite.setTextureRect(IntRect(0, 0, 36, 41));
+    this->usingWeaponSpr = false;
+
+    if (this->currentWeapon) {
+        int wtype = this->currentWeapon->getType();
+        Animation* wAnim = nullptr;
+        if      (wtype == WEAPON_HMG)             wAnim = &this->hmgAnim;
+        else if (wtype == WEAPON_LASER_GUN)        wAnim = &this->laserAnim;
+        else if (wtype == WEAPON_FLAME_SHOT)       wAnim = &this->flameAnim;
+        else if (wtype == WEAPON_ROCKET_LAUNCHER)  wAnim = &this->rocketAnim;
+
+        // ── Reset animation on weapon switch ──────────────────────────────
+        // When the player presses Q to cycle weapons, the new weapon's
+        // animation must start from frame 0.  Without this reset, the new
+        // weapon's animation continues from wherever it was last left,
+        // causing a visual glitch (wrong frame briefly shown, then snapping
+        // to the correct sequence).  The reset ensures a clean transition.
+        if (wtype != this->lastWeaponType) {
+            if (wAnim != nullptr) {
+                wAnim->reset();
+            }
+            // Also reset the OLD weapon's animation so it starts fresh next time
+            Animation* oldAnim = nullptr;
+            if      (this->lastWeaponType == WEAPON_HMG)             oldAnim = &this->hmgAnim;
+            else if (this->lastWeaponType == WEAPON_LASER_GUN)        oldAnim = &this->laserAnim;
+            else if (this->lastWeaponType == WEAPON_FLAME_SHOT)       oldAnim = &this->flameAnim;
+            else if (this->lastWeaponType == WEAPON_ROCKET_LAUNCHER)  oldAnim = &this->rocketAnim;
+            if (oldAnim != nullptr) {
+                oldAnim->reset();
+            }
+            this->lastWeaponType = wtype;
+        }
+
+        if (wAnim != nullptr) {
+            wAnim->update();
+            wAnim->applyToSprite(this->weaponSpr);
+            float signX = (this->direction == DIR_RIGHT) ? 1.f : -1.f;
+            // 0.56f: 256px frame height * 0.56 = 143px (matches physH*scale)
+            this->weaponSpr.setScale(signX * 0.56f, 0.56f);
+            this->usingWeaponSpr = true;
+        }
+    } else {
+        this->lastWeaponType = WEAPON_PISTOL;
+    }
+}
 void Marco::activatePowerUp() { this->dualFireActive = true; this->dualFireTimer.restart(); }
 
 void Marco::handleInput() {
@@ -235,6 +366,7 @@ void Marco::handleInput() {
     this->qWasPressed = qNow;
 
     if (Keyboard::isKeyPressed(Keyboard::X)) this->shoot();
+    if (Keyboard::isKeyPressed(Keyboard::V)) this->meleeAttack();
 
     if (this->dualFireActive && Keyboard::isKeyPressed(Keyboard::X)) {
         if (this->pm && this->currentWeapon) {
@@ -250,7 +382,43 @@ void Marco::handleInput() {
     if (Keyboard::isKeyPressed(Keyboard::C)) this->throwGrenade();
 }
 
-void Marco::meleeAttack() { Soldier::meleeAttack(); }
+void Marco::meleeAttack() { PlayerSoldier::meleeAttack(); }
+
+void Marco::draw(RenderWindow& window, float scrollX, float scrollY) {
+    if (!this->status) return;
+
+    // MUST call updateSprite() every frame so the weapon sprite changes
+    // when the player cycles weapons with Q.  Without this call, usingWeaponSpr
+    // stays false and only the default pistol sprite ever renders.
+    this->updateSprite();
+
+    float drawX = this->position.x - scrollX;
+    float drawY = this->position.y - scrollY;
+
+    if (this->usingWeaponSpr) {
+        // Weapon sprite height (256 * 0.56 = 143px) matches physics feet position.
+        // When facing LEFT the negative scale flips the sprite around its origin
+        // (top-left corner by default), which shifts it left by one full frame
+        // width.  We compensate by adding the frame width back so the sprite
+        // stays aligned with the character's feet regardless of facing direction.
+        float frameW = 256.f * 0.56f;  // weapon frame width in screen pixels
+        if (this->direction == DIR_LEFT) {
+            this->weaponSpr.setPosition(drawX + frameW, drawY);
+        } else {
+            this->weaponSpr.setPosition(drawX, drawY);
+        }
+        window.draw(this->weaponSpr);
+    } else {
+        // Default: draw physics sprite (your existing texture, unchanged)
+        this->sprite.setPosition(drawX, drawY);
+        window.draw(this->sprite);
+    }
+
+    // Draw grenade if in flight
+    if (this->currentGrenade && this->currentGrenade->isActive()) {
+        this->currentGrenade->draw(window, scrollX, scrollY);
+    }
+}
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -313,6 +481,7 @@ void Tarma::handleInput() {
     this->qWasPressed = qNow;
 
     if (Keyboard::isKeyPressed(Keyboard::X)) this->shoot();
+    if (Keyboard::isKeyPressed(Keyboard::V)) this->meleeAttack();
     if (Keyboard::isKeyPressed(Keyboard::C)) this->throwGrenade();
 }
 
@@ -341,6 +510,11 @@ Eri::Eri(TextureManager* texMgr, AudioManager* audMgr)
     this->animation.setFrameRect(0, 13, 0, 287, 258);
     this->animation.setLoop(true);
 
+    // physW uses the FULL crop width (287), same pattern as Fio (physW=304).
+    // The previous value (287*0.55=157) had the scale baked in, causing
+    // updateBoundingBox() to double-apply the scale: 157*0.55=87 px, which
+    // was far too narrow compared to Marco's 36*3.5=126 px.  With physW=287,
+    // the box becomes 287*0.55=158 px — consistent with other characters.
     this->physW = 287;
     this->physH = 258;
 
@@ -355,7 +529,7 @@ Eri::Eri(TextureManager* texMgr, AudioManager* audMgr)
 Eri::~Eri() {}
 void Eri::updateSprite() {}
 void Eri::activatePowerUp() { this->doubleGrenadeActive = true; this->doubleGrenadeTimer.restart(); }
-void Eri::meleeAttack() { Soldier::meleeAttack(); }
+void Eri::meleeAttack() { PlayerSoldier::meleeAttack(); }
 
 void Eri::handleInput() {
     bool qNow = Keyboard::isKeyPressed(Keyboard::Q);
@@ -363,6 +537,7 @@ void Eri::handleInput() {
     this->qWasPressed = qNow;
 
     if (Keyboard::isKeyPressed(Keyboard::X)) this->shoot();
+    if (Keyboard::isKeyPressed(Keyboard::V)) this->meleeAttack();
     if (Keyboard::isKeyPressed(Keyboard::C)) this->throwGrenade();
 }
 
@@ -434,6 +609,7 @@ void Fio::handleInput() {
     this->qWasPressed = qNow;
 
     if (Keyboard::isKeyPressed(Keyboard::X)) this->shoot();
+    if (Keyboard::isKeyPressed(Keyboard::V)) this->meleeAttack();
     if (Keyboard::isKeyPressed(Keyboard::C)) this->throwGrenade();
 }
 

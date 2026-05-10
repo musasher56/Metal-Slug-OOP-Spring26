@@ -68,6 +68,7 @@ private:
     const LevelConfig* currentConfig;
     bool levelTransitioning;
     float levelTransitionTimer;
+    bool hudVisible;              // T key toggle for HUD visibility
 
 public:
     PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr, int startLvl = 0);

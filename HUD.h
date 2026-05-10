@@ -13,6 +13,7 @@ private:
     Clock elapsedTime;
     Font font;
     float redHueAlpha;
+    const char* weaponName;
 
 public:
     HUD();
@@ -23,4 +24,5 @@ public:
     void setScore(int s);
     int getScore() const;
     void showDamageHue(float intensity);
+    void setWeaponName(const char* name);
 };

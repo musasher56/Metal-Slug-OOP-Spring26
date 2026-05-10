@@ -19,7 +19,7 @@ elseif(WIN32)
     endif()
 endif()
 
-find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
+find_package(SFML 2.5 COMPONENTS graphics window system audio REQUIRED)
 
 set(SOURCES
         main.cpp
@@ -71,6 +71,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         sfml-graphics
         sfml-window
         sfml-system
+        sfml-audio
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE

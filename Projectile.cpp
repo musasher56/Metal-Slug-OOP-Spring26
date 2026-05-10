@@ -100,11 +100,13 @@ void Projectile::checkBounds(float scrollX, float scrollY) {
 }
 
 IntRect Projectile::getBoundingBox() const {
-    // Standard 8x6 box — LaserBeam overrides this to span the full screen.
+    // Standard 12x8 box — slightly larger than the previous 8x6 to improve
+    // hit detection at all angles.  LaserBeam overrides this to span the
+    // full screen, and MeleeSlash uses its own slashWidth/slashHeight.
     return IntRect(
         static_cast<int>(this->position.x),
         static_cast<int>(this->position.y),
-        8, 6
+        12, 8
     );
 }
 
@@ -348,25 +350,50 @@ void FlameParticle::draw(RenderWindow& window, float scrollX, float scrollY) {
     if (!this->status) return;
 
     // Lifetime ratio [0,1] — 1.0 at birth, 0.0 when expired.
-    // Used to fade both green channel (orange→red) and alpha (fully opaque→gone).
     float ratio = (float)this->lifetime / (float)this->maxLifetime;
 
-    sf::Uint8 g = static_cast<sf::Uint8>(90.f * ratio);  // green component fades out
-    sf::Uint8 alpha = static_cast<sf::Uint8>(200.f * ratio + 55.f);
+    float sx = this->position.x - scrollX;
+    float sy = this->position.y - scrollY;
 
-    // Outer halo — larger, more transparent
-    sf::RectangleShape halo(sf::Vector2f(12.f, 8.f));
-    halo.setFillColor(sf::Color(255, g, 0, static_cast<sf::Uint8>(alpha / 2)));
-    halo.setOrigin(6.f, 4.f);
-    halo.setPosition(this->position.x - scrollX, this->position.y - scrollY);
-    window.draw(halo);
+    // Try to use the flame particle sprite if the texture was loaded
+    if (this->textureManager->loadTexture("flame_particle", "resources/Sprites/flame_particle.png")) {
+        sf::Texture& tex = this->textureManager->getTexture("flame_particle");
+        sf::Sprite flameSprite;
+        flameSprite.setTexture(tex);
+        float texW = static_cast<float>(tex.getSize().x);
+        float texH = static_cast<float>(tex.getSize().y);
+        flameSprite.setOrigin(texW * 0.5f, texH * 0.5f);
+        // Scale and alpha based on remaining lifetime
+        float s = 0.15f * ratio + 0.05f;  // shrinks as it fades
+        flameSprite.setScale(s, s);
+        float rot = std::atan2f(this->velocityY, this->velocityX) * 180.f / 3.14159f;
+        flameSprite.setRotation(rot);
+        // Color tint: fade from bright orange to dark red
+        sf::Uint8 g = static_cast<sf::Uint8>(90.f * ratio);
+        sf::Uint8 alpha = static_cast<sf::Uint8>(200.f * ratio + 55.f);
+        flameSprite.setColor(sf::Color(255, g + 50 > 255 ? 255 : g + 50, 10, alpha));
+        flameSprite.setPosition(sx, sy);
+        window.draw(flameSprite);
+    }
+    else {
+        // Fallback: fading orange-to-red rectangle
+        sf::Uint8 g = static_cast<sf::Uint8>(90.f * ratio);
+        sf::Uint8 alpha = static_cast<sf::Uint8>(200.f * ratio + 55.f);
 
-    // Inner core — smaller, more opaque, brighter
-    sf::RectangleShape core(sf::Vector2f(8.f, 5.f));
-    core.setFillColor(sf::Color(255, g + 50 > 255 ? 255 : g + 50, 10, alpha));
-    core.setOrigin(4.f, 2.5f);
-    core.setPosition(this->position.x - scrollX, this->position.y - scrollY);
-    window.draw(core);
+        // Outer halo — larger, more transparent
+        sf::RectangleShape halo(sf::Vector2f(12.f, 8.f));
+        halo.setFillColor(sf::Color(255, g, 0, static_cast<sf::Uint8>(alpha / 2)));
+        halo.setOrigin(6.f, 4.f);
+        halo.setPosition(sx, sy);
+        window.draw(halo);
+
+        // Inner core — smaller, more opaque, brighter
+        sf::RectangleShape core(sf::Vector2f(8.f, 5.f));
+        core.setFillColor(sf::Color(255, g + 50 > 255 ? 255 : g + 50, 10, alpha));
+        core.setOrigin(4.f, 2.5f);
+        core.setPosition(sx, sy);
+        window.draw(core);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -396,23 +423,36 @@ LaserBeam::LaserBeam(TextureManager* texMgr, AudioManager* audMgr,
 LaserBeam::~LaserBeam() {}
 
 IntRect LaserBeam::getBoundingBox() const {
-    // The beam extends SCREEN_W pixels from the barrel tip in beamDir.
-    // Height of 8 gives a forgiving hit window without feeling unfair.
-    // Vertically centred on the barrel: subtract 4 from Y for symmetry.
-    if (this->beamDir == DIR_RIGHT) {
-        return IntRect(
-            static_cast<int>(this->position.x),
-            static_cast<int>(this->position.y) - 4,
-            SCREEN_W, 8
-        );
+    const float BEAM_LEN   = (float)SCREEN_W;   // beam reaches one screen width
+    const float MIN_THICK  = 8.f;               // minimum AABB thickness
+
+    // velocityX/Y is a unit direction vector set by spawnLaser().
+    // If it's still (0,0) fall back to purely horizontal in beamDir.
+    float vx = this->velocityX;
+    float vy = this->velocityY;
+    if (vx * vx + vy * vy < 0.001f) {
+        vx = (this->beamDir == DIR_RIGHT) ? 1.f : -1.f;
+        vy = 0.f;
     }
-    else {
-        return IntRect(
-            static_cast<int>(this->position.x) - SCREEN_W,
-            static_cast<int>(this->position.y) - 4,
-            SCREEN_W, 8
-        );
-    }
+
+    float endX = this->position.x + vx * BEAM_LEN;
+    float endY = this->position.y + vy * BEAM_LEN;
+
+    float left  = (this->position.x < endX) ? this->position.x : endX;
+    float right = (this->position.x > endX) ? this->position.x : endX;
+    float top   = (this->position.y < endY) ? this->position.y : endY;
+    float bot   = (this->position.y > endY) ? this->position.y : endY;
+
+    // Ensure minimum thickness so the AABB is never a zero-area line
+    if (bot - top < MIN_THICK) { top -= MIN_THICK * 0.5f; bot += MIN_THICK * 0.5f; }
+    if (right - left < MIN_THICK) { left -= MIN_THICK * 0.5f; right += MIN_THICK * 0.5f; }
+
+    return IntRect(
+        static_cast<int>(left),
+        static_cast<int>(top),
+        static_cast<int>(right - left),
+        static_cast<int>(bot   - top)
+    );
 }
 
 void LaserBeam::update(float scroll, Level* /*lvl*/) {
@@ -434,48 +474,210 @@ void LaserBeam::move(float /*scroll*/) {
         this->deactivate();
     }
 }
-
 void LaserBeam::draw(RenderWindow& window, float scrollX, float scrollY) {
     if (!this->status) return;
 
-    // Flicker intensity drops as the beam expires.
-    // lifetime starts at 5, so ratio goes 1.0 → 0.2 → 0 (then deactivated).
+    float sx = this->position.x - scrollX;
+    float sy = this->position.y - scrollY;
+
+    float vx = this->velocityX;
+    float vy = this->velocityY;
+    if (vx * vx + vy * vy < 0.001f) {
+        vx = (this->beamDir == DIR_RIGHT) ? 1.f : -1.f;
+        vy = 0.f;
+    }
+
+    float beamLen  = (float)SCREEN_W * 1.2f;
+    float beamAngle = atan2f(vy, vx) * 180.f / 3.14159f;
+
+    // Alpha fades with remaining lifetime (lifetime starts at 5)
     float ratio = (float)this->lifetime / 5.f;
-    if (ratio > 1.f) ratio = 1.f;
+    sf::Uint8 glowA = static_cast<sf::Uint8>(ratio * 100.f + 20.f);
+    sf::Uint8 coreA = static_cast<sf::Uint8>(ratio * 200.f + 55.f);
 
-    sf::Uint8 alpha = static_cast<sf::Uint8>(180.f * ratio + 75.f);
-    sf::Uint8 coreAlpha = static_cast<sf::Uint8>(230.f * ratio + 25.f);
+    // Try to use the laser beam sprite if the texture was loaded
+    if (this->textureManager->loadTexture("laser_beam", "resources/Sprites/laser_beam.png")) {
+        sf::Texture& tex = this->textureManager->getTexture("laser_beam");
+        float texW = static_cast<float>(tex.getSize().x);
+        float texH = static_cast<float>(tex.getSize().y);
 
-    float beamLen = static_cast<float>(SCREEN_W);
+        // Outer glow (wider, dimmer)
+        sf::Sprite glowSprite;
+        glowSprite.setTexture(tex);
+        glowSprite.setOrigin(0.f, texH * 0.5f);
+        float glowScaleX = beamLen / texW;
+        float glowScaleY = 12.f / texH;
+        glowSprite.setScale(glowScaleX, glowScaleY);
+        glowSprite.setRotation(beamAngle);
+        glowSprite.setPosition(sx, sy);
+        glowSprite.setColor(sf::Color(80, 200, 255, glowA));
+        window.draw(glowSprite);
 
-    // Start X in screen space
-    float startX = (this->beamDir == DIR_RIGHT)
-        ? (this->position.x - scrollX)
-        : (this->position.x - scrollX - beamLen);
-    float y = this->position.y - scrollY;
+        // Bright core (thinner, brighter)
+        sf::Sprite coreSprite;
+        coreSprite.setTexture(tex);
+        coreSprite.setOrigin(0.f, texH * 0.5f);
+        float coreScaleX = beamLen / texW;
+        float coreScaleY = 4.f / texH;
+        coreSprite.setScale(coreScaleX, coreScaleY);
+        coreSprite.setRotation(beamAngle);
+        coreSprite.setPosition(sx, sy);
+        coreSprite.setColor(sf::Color(200, 240, 255, coreA));
+        window.draw(coreSprite);
+    }
+    else {
+        // Fallback: colored rectangles
+        // Outer glow
+        sf::RectangleShape glow(sf::Vector2f(beamLen, 12.f));
+        glow.setFillColor(Color(80, 200, 255, glowA));
+        glow.setOrigin(0.f, 6.f);
+        glow.setPosition(sx, sy);
+        glow.setRotation(beamAngle);
+        window.draw(glow);
 
-    // ── Outer glow: wide, semi-transparent cyan ───────────────────────────────
-    sf::RectangleShape glow(sf::Vector2f(beamLen, 8.f));
-    glow.setFillColor(sf::Color(0, 220, 255, alpha));
-    glow.setOrigin(0.f, 4.f);
-    glow.setPosition(startX, y);
-    window.draw(glow);
+        // Bright core
+        sf::RectangleShape core(sf::Vector2f(beamLen, 4.f));
+        core.setFillColor(Color(200, 240, 255, coreA));
+        core.setOrigin(0.f, 2.f);
+        core.setPosition(sx, sy);
+        core.setRotation(beamAngle);
+        window.draw(core);
+    }
 
-    // ── Inner core: narrow, nearly opaque, near-white ─────────────────────────
-    sf::RectangleShape core(sf::Vector2f(beamLen, 3.f));
-    core.setFillColor(sf::Color(180, 255, 255, coreAlpha));
-    core.setOrigin(0.f, 1.5f);
-    core.setPosition(startX, y);
-    window.draw(core);
-
-    // ── Muzzle flash: small circle at barrel end ───────────────────────────────
-    float flashX = (this->beamDir == DIR_RIGHT)
-        ? this->position.x - scrollX
-        : this->position.x - scrollX;
-
-    sf::CircleShape flash(6.f);
-    flash.setFillColor(sf::Color(200, 255, 255, coreAlpha));
-    flash.setOrigin(6.f, 6.f);
-    flash.setPosition(flashX, y);
+    // Muzzle flash at spawn point (always drawn, regardless of sprite)
+    float flashR = 6.f + ratio * 4.f;
+    sf::CircleShape flash(flashR);
+    flash.setFillColor(Color(255, 255, 200, coreA));
+    flash.setOrigin(flashR, flashR);
+    flash.setPosition(sx, sy);
     window.draw(flash);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MeleeSlash
+//
+// A stationary short-range hitbox representing a knife swing.
+// Reuses the projectile pipeline so melee damage works against all
+// DamagableEntity targets without a separate collision system.
+//
+// The slash appears in front of the player, lasts 8 frames, and deals
+// melee damage.  It skips tile collision (melee hits entities, not walls).
+// ─────────────────────────────────────────────────────────────────────────────
+
+MeleeSlash::MeleeSlash(TextureManager* texMgr, AudioManager* audMgr,
+    int dir, int frames)
+    : Projectile(texMgr, audMgr)
+    , lifetime(frames)
+    , maxLifetime(frames)
+    , slashDir(dir)
+    , slashWidth(80.f)     // increased from 70 for more reliable hit detection
+    , slashHeight(60.f)    // increased from 50 for more reliable hit detection
+{
+    this->projectileClass = PROJ_MELEE;
+    this->isExplosive = false;
+    this->status = true;
+}
+
+MeleeSlash::~MeleeSlash() {}
+
+IntRect MeleeSlash::getBoundingBox() const {
+    // The slash hitbox extends in front of the player in slashDir.
+    // position is set to the player's position by spawnMelee().
+    if (this->slashDir == DIR_RIGHT) {
+        // Slash extends to the RIGHT of the player
+        return IntRect(
+            static_cast<int>(this->position.x),
+            static_cast<int>(this->position.y),
+            static_cast<int>(this->slashWidth),
+            static_cast<int>(this->slashHeight)
+        );
+    }
+    else {
+        // Slash extends to the LEFT of the player
+        return IntRect(
+            static_cast<int>(this->position.x - this->slashWidth),
+            static_cast<int>(this->position.y),
+            static_cast<int>(this->slashWidth),
+            static_cast<int>(this->slashHeight)
+        );
+    }
+}
+
+void MeleeSlash::update(float scroll, Level* /*lvl*/) {
+    // Skip tile collision — melee hits entities, not walls.
+    if (!this->status) return;
+
+    this->move(scroll);
+    // No bounds check needed — melee is always on-screen with the player.
+}
+
+void MeleeSlash::move(float /*scroll*/) {
+    // No spatial displacement — pure lifetime countdown.
+    if (--this->lifetime <= 0) {
+        this->deactivate();
+    }
+}
+
+void MeleeSlash::draw(RenderWindow& window, float scrollX, float scrollY) {
+    if (!this->status) return;
+
+    float ratio = (float)this->lifetime / (float)this->maxLifetime;
+    sf::Uint8 alpha = static_cast<sf::Uint8>(ratio * 200.f + 55.f);
+
+    float sx = this->position.x - scrollX;
+    float sy = this->position.y - scrollY;
+
+    // Draw slash arc — a diagonal white-yellow line
+    float startX, endX;
+    if (this->slashDir == DIR_RIGHT) {
+        startX = sx;
+        endX = sx + this->slashWidth;
+    }
+    else {
+        startX = sx - this->slashWidth;
+        endX = sx;
+    }
+
+    // Outer slash arc (wider, dimmer)
+    sf::RectangleShape slashOuter(sf::Vector2f(this->slashWidth, 6.f));
+    slashOuter.setFillColor(sf::Color(255, 255, 150, static_cast<sf::Uint8>(alpha * 0.5f)));
+    slashOuter.setOrigin(0.f, 3.f);
+    float midY = sy + this->slashHeight * 0.5f;
+    if (this->slashDir == DIR_RIGHT) {
+        slashOuter.setPosition(sx, midY);
+    }
+    else {
+        slashOuter.setPosition(sx - this->slashWidth, midY);
+    }
+    // Slight rotation for arc feel
+    float rotAngle = (1.f - ratio) * 30.f - 15.f;  // swings from -15 to +15 degrees
+    if (this->slashDir == DIR_LEFT) rotAngle = -rotAngle;
+    slashOuter.setRotation(rotAngle);
+    window.draw(slashOuter);
+
+    // Inner slash core (brighter, thinner)
+    sf::RectangleShape slashCore(sf::Vector2f(this->slashWidth * 0.8f, 3.f));
+    slashCore.setFillColor(sf::Color(255, 255, 220, alpha));
+    slashCore.setOrigin(0.f, 1.5f);
+    if (this->slashDir == DIR_RIGHT) {
+        slashCore.setPosition(sx + this->slashWidth * 0.1f, midY);
+    }
+    else {
+        slashCore.setPosition(sx - this->slashWidth * 0.9f, midY);
+    }
+    slashCore.setRotation(rotAngle);
+    window.draw(slashCore);
+
+    // Impact flash at tip
+    float flashR = 4.f * ratio;
+    sf::CircleShape tipFlash(flashR);
+    tipFlash.setFillColor(sf::Color(255, 255, 180, alpha));
+    tipFlash.setOrigin(flashR, flashR);
+    if (this->slashDir == DIR_RIGHT) {
+        tipFlash.setPosition(endX, midY);
+    }
+    else {
+        tipFlash.setPosition(startX, midY);
+    }
+    window.draw(tipFlash);
 }

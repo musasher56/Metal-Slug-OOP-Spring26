@@ -43,7 +43,7 @@ public:
     virtual void update(float scroll, Level* lvl);
     virtual void draw(RenderWindow& window, float scrollX, float scrollY);
     virtual void takeDamage(int amount);
-    void meleeAttack();
+    virtual void meleeAttack();
     int getState() const;
     int getLives() const;
     int getCurrentHP() const;

@@ -586,7 +586,7 @@ ShieldedSoldier::ShieldedSoldier(TextureManager* texMgr, AudioManager* audMgr)
     this->shootFrames = 10;
     this->deathFrames = 8;
 
-    // Walk animation — shielded-walk.png (6 frames)
+    // Walk animation Â— shielded-walk.png (6 frames)
     Texture& walkTex = texMgr->getTexture("resources/Sprites/shielded-walk.png");
     this->walkAnim.setTexture(&walkTex);
     this->walkAnim.setFrameCount(this->walkFrames);
@@ -599,7 +599,7 @@ ShieldedSoldier::ShieldedSoldier(TextureManager* texMgr, AudioManager* audMgr)
     this->walkAnim.setFrameRect(5, 655, 0, 131, 169);
     this->walkAnim.setLoop(true);
 
-    // Shoot animation — shielded-shoot.png (10 frames)
+    // Shoot animation Â— shielded-shoot.png (10 frames)
     Texture& shootTex = texMgr->getTexture("resources/Sprites/shielded-shoot.png");
     this->shootAnim.setTexture(&shootTex);
     this->shootAnim.setFrameCount(this->shootFrames);
@@ -616,7 +616,7 @@ ShieldedSoldier::ShieldedSoldier(TextureManager* texMgr, AudioManager* audMgr)
     this->shootAnim.setFrameRect(9, 1347, 5, 155, 174);
     this->shootAnim.setLoop(false);
 
-    // Death animation — shares rebel-death.png (8 frames)
+    // Death animation Â— shares rebel-death.png (8 frames)
     Texture& deathTex = texMgr->getTexture("resources/Sprites/rebel-death.png");
     this->deathAnim.setTexture(&deathTex);
     this->deathAnim.setFrameCount(this->deathFrames);
@@ -648,14 +648,25 @@ void ShieldedSoldier::performAttack(PlayerSoldier* player) {
 void ShieldedSoldier::takeDamageFrom(int amount, int bulletDir) {
     if (this->dying) return;
 
-    // Shield blocks frontal bullets. The enemy's facing direction determines
-    // which side is "front". If the enemy faces right, bullets from the left
-    // are frontal. If the enemy faces left, bullets from the right are frontal.
+    // Shield blocks frontal bullets.
+    //
+    //  "Frontal" means the bullet is coming FROM the direction the enemy
+    //  is facing.  If the enemy faces RIGHT (faceRight=true), bullets
+    //  coming from the RIGHT (bulletDir < 0, travelling leftward) are
+    //  frontal â€” the shield is on the enemy's right side.
+    //  If the enemy faces LEFT, bullets from the LEFT (bulletDir > 0)
+    //  are frontal.
+    //
+    //  The PREVIOUS logic had the direction reversed: it treated
+    //  bullets from the LEFT as frontal for a right-facing enemy,
+    //  which meant the shield blocked attacks from BEHIND and let
+    //  frontal shots through â€” the exact opposite of intended.
+    //
+    //  bulletDir > 0 means bullet travels rightward (player is LEFT of enemy)
+    //  bulletDir < 0 means bullet travels leftward (player is RIGHT of enemy)
     if (this->hasShield && shieldHP > 0) {
-        // bulletDir > 0 means bullet travels right (came from left = frontal if enemy faces right)
-        // bulletDir < 0 means bullet travels left (came from right = frontal if enemy faces left)
-        bool bulletFromFront = (this->faceRight && bulletDir > 0) ||
-            (!this->faceRight && bulletDir < 0);
+        bool bulletFromFront = (this->faceRight && bulletDir < 0) ||
+            (!this->faceRight && bulletDir > 0);
 
         if (bulletFromFront) {
             // Shield absorbs the hit
@@ -667,7 +678,7 @@ void ShieldedSoldier::takeDamageFrom(int amount, int bulletDir) {
         }
     }
 
-    // No shield or hit from behind — take full damage
+    // No shield or hit from behind â€” take full damage
     this->takeDamage(amount);
 }
 
@@ -698,7 +709,7 @@ GrenadeSoldier::GrenadeSoldier(TextureManager* texMgr, AudioManager* audMgr)
     this->shootFrames = 4;
     this->deathFrames = 8;
 
-    // Walk animation — shares rebel-walk.png (9 frames)
+    // Walk animation Â— shares rebel-walk.png (9 frames)
     Texture& walkTex = texMgr->getTexture("resources/Sprites/rebel-walk.png");
     this->walkAnim.setTexture(&walkTex);
     this->walkAnim.setFrameCount(this->walkFrames);
@@ -714,7 +725,7 @@ GrenadeSoldier::GrenadeSoldier(TextureManager* texMgr, AudioManager* audMgr)
     this->walkAnim.setFrameRect(8, 711, 2, 58, 62);
     this->walkAnim.setLoop(true);
 
-    // Shoot animation — grenade-shoot.png (4 frames)
+    // Shoot animation Â— grenade-shoot.png (4 frames)
     Texture& shootTex = texMgr->getTexture("resources/Sprites/grenade-shoot.png");
     this->shootAnim.setTexture(&shootTex);
     this->shootAnim.setFrameCount(this->shootFrames);
@@ -725,7 +736,7 @@ GrenadeSoldier::GrenadeSoldier(TextureManager* texMgr, AudioManager* audMgr)
     this->shootAnim.setFrameRect(3, 448, 15, 123, 123);
     this->shootAnim.setLoop(false);
 
-    // Death animation — shares rebel-death.png (8 frames)
+    // Death animation Â— shares rebel-death.png (8 frames)
     Texture& deathTex = texMgr->getTexture("resources/Sprites/rebel-death.png");
     this->deathAnim.setTexture(&deathTex);
     this->deathAnim.setFrameCount(this->deathFrames);
@@ -846,7 +857,7 @@ Martian::Martian(TextureManager* texMgr, AudioManager* audMgr)
     this->shootFrames = 6;
     this->deathFrames = 8;
 
-    // Walk animation — martian-walk.png (16 frames)
+    // Walk animation Â— martian-walk.png (16 frames)
     Texture& walkTex = texMgr->getTexture("resources/Sprites/martian-walk.png");
     this->walkAnim.setTexture(&walkTex);
     this->walkAnim.setFrameCount(this->walkFrames);
@@ -869,7 +880,7 @@ Martian::Martian(TextureManager* texMgr, AudioManager* audMgr)
     this->walkAnim.setFrameRect(15, 3328, 4, 192, 168);
     this->walkAnim.setLoop(true);
 
-    // Shoot animation — martian-shoot.png (6 frames)
+    // Shoot animation Â— martian-shoot.png (6 frames)
     Texture& shootTex = texMgr->getTexture("resources/Sprites/martian-shoot.png");
     this->shootAnim.setTexture(&shootTex);
     this->shootAnim.setFrameCount(this->shootFrames);
@@ -882,7 +893,7 @@ Martian::Martian(TextureManager* texMgr, AudioManager* audMgr)
     this->shootAnim.setFrameRect(5, 1476, 4, 212, 148);
     this->shootAnim.setLoop(false);
 
-    // Death animation — martian-death.png (8 frames)
+    // Death animation Â— martian-death.png (8 frames)
     Texture& deathTex = texMgr->getTexture("resources/Sprites/martian-death.png");
     this->deathAnim.setTexture(&deathTex);
     this->deathAnim.setFrameCount(this->deathFrames);
@@ -930,7 +941,7 @@ void Martian::performAttack(PlayerSoldier* player) {
         (float)(this->frameH) * 0.4f
     );
 
-    // Martian fires energy blasts — two rapid straight shots
+    // Martian fires energy blasts Â— two rapid straight shots
     float angle = 0.f;
     float dy = player->getPosition().y - this->position.y;
     float dx = player->getPosition().x - this->position.x;
@@ -1014,7 +1025,7 @@ Paratrooper::Paratrooper(TextureManager* texMgr, AudioManager* audMgr)
     this->baseMaxVelocity = 3.5f;
     this->scoreValue = 75;
     this->deathDuration = 1.5f;
-    this->activated = true;  // always active — visible and swaying
+    this->activated = true;  // always active Â— visible and swaying
 
     // Bounding box / frame size matches rebel soldier (used after landing)
     this->frameW = 70;
@@ -1025,7 +1036,7 @@ Paratrooper::Paratrooper(TextureManager* texMgr, AudioManager* audMgr)
     this->shootFrames = 10;
     this->deathFrames = 8;
 
-    // Fly animation — paratrooper.png (single frame)
+    // Fly animation Â— paratrooper.png (single frame)
     Texture& flyTex = texMgr->getTexture("resources/Sprites/paratrooper.png");
     this->flyAnim.setTexture(&flyTex);
     this->flyAnim.setFrameCount(1);
@@ -1033,7 +1044,7 @@ Paratrooper::Paratrooper(TextureManager* texMgr, AudioManager* audMgr)
     this->flyAnim.setFrameRect(0, 181, 234, 681, 894);
     this->flyAnim.setLoop(true);
 
-    // Walk animation — rebel-walk.png (9 frames, same as RebelSoldier)
+    // Walk animation Â— rebel-walk.png (9 frames, same as RebelSoldier)
     Texture& walkTex = texMgr->getTexture("resources/Sprites/rebel-walk.png");
     this->walkAnim.setTexture(&walkTex);
     this->walkAnim.setFrameCount(this->walkFrames);
@@ -1049,7 +1060,7 @@ Paratrooper::Paratrooper(TextureManager* texMgr, AudioManager* audMgr)
     this->walkAnim.setFrameRect(8, 711, 2, 58, 62);
     this->walkAnim.setLoop(true);
 
-    // Shoot animation — rebel-shoot.png (10 frames, same as RebelSoldier)
+    // Shoot animation Â— rebel-shoot.png (10 frames, same as RebelSoldier)
     Texture& shootTex = texMgr->getTexture("resources/Sprites/rebel-shoot.png");
     this->shootAnim.setTexture(&shootTex);
     this->shootAnim.setFrameCount(this->shootFrames);
@@ -1066,7 +1077,7 @@ Paratrooper::Paratrooper(TextureManager* texMgr, AudioManager* audMgr)
     this->shootAnim.setFrameRect(9, 684, 13, 67, 63);
     this->shootAnim.setLoop(false);
 
-    // Death animation — rebel-death.png (8 frames, same as RebelSoldier)
+    // Death animation Â— rebel-death.png (8 frames, same as RebelSoldier)
     Texture& deathTex = texMgr->getTexture("resources/Sprites/rebel-death.png");
     this->deathAnim.setTexture(&deathTex);
     this->deathAnim.setFrameCount(this->deathFrames);
@@ -1139,7 +1150,7 @@ void Paratrooper::updateAI(PlayerSoldier* player, Level* lvl) {
             float dx = fabsf(player->getPosition().x - this->position.x);
             float dy = fabsf(player->getPosition().y - this->landY);
             // Player must be within 800px horizontally AND within 500px
-            // vertically of the landing spot — means they're climbing
+            // vertically of the landing spot Â— means they're climbing
             // the mountain toward the paratrooper
             if (dx < 200.f && dy < 500.f) {
                 this->startDescent = true;
@@ -1156,7 +1167,7 @@ void Paratrooper::updateAI(PlayerSoldier* player, Level* lvl) {
             this->faceRight = false;
             this->switchAnim(&this->walkAnim);
         }
-        // While flying: no attack, no chase — just descend (or hover)
+        // While flying: no attack, no chase Â— just descend (or hover)
         return;
     }
 
@@ -1165,7 +1176,7 @@ void Paratrooper::updateAI(PlayerSoldier* player, Level* lvl) {
 }
 
 void Paratrooper::performAttack(PlayerSoldier* player) {
-    // Same as rebel soldier — straight bullets
+    // Same as rebel soldier Â— straight bullets
     Enemy::performAttack(player);
 }
 

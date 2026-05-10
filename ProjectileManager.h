@@ -69,7 +69,11 @@ public:
                     int dmg, bool fromEnemy = false);
 
     // LaserGun — one stationary LaserBeam; its wide AABB hits all targets in path.
-    void spawnLaser(sf::Vector2f origin, int dir, int dmg, bool fromEnemy = false);
+    // angle parameter added — was missing, which is why laser ignored mouse aim.
+    void spawnLaser(sf::Vector2f origin, int dir, float angle, int dmg, bool fromEnemy = false);
+
+    // Melee / knife — short-range MeleeSlash in front of the player.
+    void spawnMelee(sf::Vector2f origin, int dir, int dmg, bool fromEnemy = false);
 
     // Explosion visual at world position (called by collision handlers)
     void spawnBlast(float x, float y);
