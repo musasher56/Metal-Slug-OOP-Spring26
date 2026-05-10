@@ -57,6 +57,10 @@ set(SOURCES
         ProjectileManager.cpp
         Charselectstate.cpp
         Charselectstate.h
+        Perlinnoise.cpp
+        Perlinnoise.h
+        Noiseprofile.cpp
+        Noiseprofile.h
 )
 
 # NOTE: MountainBlock is inside Block.h/Block.cpp, MountainManager is inside

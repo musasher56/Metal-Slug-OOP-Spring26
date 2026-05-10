@@ -7,6 +7,7 @@
 #include "EnemyManager.h"
 #include "EnemyVehicleManager.h"
 #include "LevelConfig.h"
+#include "NoiseProfile.h"
 #include <SFML/Graphics.hpp>
 
 class CharacterManager;
@@ -78,6 +79,14 @@ private:
     bool bossFelledTriggered;     // true once the "GREAT ENEMY FELLED" message has been shown
     int  bossesSpawned;           // how many bosses have been spawned in the current boss level
     int  bossesDefeated;          // how many bosses have been defeated in the current boss level
+
+    // ── Campaign mode tracking ──
+    // campaignLastSpawnX: world X where we last spawned an enemy wave.
+    //   Incremented every 800px to produce a rolling stream of enemies.
+    // campaignProfile: noise profile kept alive for advanceWorld() streaming.
+    //   Owned by PlayState. Created in loadLevel(), deleted in destructor.
+    float          campaignLastSpawnX;
+    NoiseProfile*  campaignProfile;
 
 public:
     PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr, int startLvl = 0);
