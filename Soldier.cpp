@@ -17,8 +17,8 @@ Soldier::Soldier(TextureManager* texMgr, AudioManager* audMgr)
     , meleeCooldown(0.5f)
     , transformState(nullptr), isInvincible(false)
     , inWater(false)
-    , physW(34)   // matches original hardcoded value; subclasses override
-    , physH(40)   // matches original hardcoded value; subclasses override
+    , physW(34)   
+    , physH(40)   
 {
 }
 
@@ -37,7 +37,7 @@ void Soldier::update(float scroll, Level* lvl) {
     this->handleStateTimers();
     if (this->inWater) {
         this->applyWaterPhysics();
-        // ── Swimming controls (checked every frame) ──
+        
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
             this->velocityY -= 0.8f;
             if (this->velocityY < -4.f) this->velocityY = -4.f;
@@ -126,7 +126,7 @@ void Soldier::respawn() {
     this->direction = DIR_RIGHT;
     this->onGround = false;
     this->status = true;
-    // Grant 2 seconds of invincibility after respawn to prevent death loops
+    
     this->isInvincible = true;
     this->invincibilityClock.restart();
 }
@@ -173,12 +173,12 @@ void Soldier::applyGravity() {
 }
 
 void Soldier::applyWaterPhysics() {
-    // Neutral buoyancy: no gravity in water
-    // Moderate drag so player can actually move but still slows down
+    
+    
     this->velocityX *= 0.96f;
     this->velocityY *= 0.96f;
 
-    // Snap tiny velocities to zero so player actually stops
+    
     if (this->velocityX > -0.2f && this->velocityX < 0.2f) this->velocityX = 0.f;
     if (this->velocityY > -0.2f && this->velocityY < 0.2f) this->velocityY = 0.f;
 }
@@ -189,15 +189,15 @@ void Soldier::handleCollision(Level* lvl) {
     float scaleX = std::abs(this->sprite.getScale().x);
     float scaleY = std::abs(this->sprite.getScale().y);
 
-    // ── CRITICAL: use physW/physH, NOT hardcoded values ──────────────────
-    // physW and physH are set per-character in each subclass constructor to
-    // match that character's actual sprite frame size.  Multiplying by the
-    // sprite's current scale gives the exact on-screen collision extent.
-    //
-    // Old code used: 34.f * scaleX, 40.f * scaleY
-    // That was fine for Marco (physW=34, physH=40, scale=3.5) but broke
-    // Fio (physH=18 at scale 8.0 → old formula gave 40*8=320px box height
-    // vs the 18*8=144px visual sprite → collision pushed Fio 176px up → float).
+    
+    
+    
+    
+    
+    
+    
+    
+    
     float colW = static_cast<float>(this->physW) * scaleX;
     float colH = static_cast<float>(this->physH) * scaleY;
 
@@ -256,7 +256,7 @@ void Soldier::handleCollision(Level* lvl) {
                     this->velocityY = 0.f;
                 }
 
-                // Recompute after resolution so the next block uses the new position
+                
                 playerLeft = this->position.x;
                 playerRight = this->position.x + colW;
                 playerTop = this->position.y;
@@ -265,8 +265,8 @@ void Soldier::handleCollision(Level* lvl) {
         }
     }
 
-    // Ground probe: check one pixel below the collision box for a solid tile.
-    // Keeps onGround = true even when standing perfectly flush (no overlap).
+    
+    
     if (!this->onGround) {
         float probeY = playerBottom + 1.0f;
         int probeRow = static_cast<int>(probeY) / cellSize;
@@ -280,13 +280,13 @@ void Soldier::handleCollision(Level* lvl) {
         }
     }
 
-    // Left-edge world clamp
+    
     if (this->position.x < 0.f) {
         this->position.x = 0.f;
         this->velocityX = 0.f;
     }
 
-    // Right-edge world clamp (also uses physW so every character is clamped correctly)
+    
     float maxPlayerX = (float)(lvl->getWidth()) * (float)(lvl->getCellSize()) - colW;
     if (this->position.x > maxPlayerX) {
         this->position.x = maxPlayerX;
@@ -348,15 +348,15 @@ void Soldier::decelerate() {
 }
 
 void Soldier::copyPhysicsFrom(Soldier* other) {
-    // Transfers the complete physics snapshot from 'other' to this soldier.
-    // Called by CharacterManager::switchCharacter() so the incoming character
-    // appears exactly where the outgoing one was — same tile, same momentum,
-    // same facing direction — rather than teleporting to its constructor default.
-    //
-    // position is public on Entity so we assign it directly.
-    // velocityX/Y, onGround, direction are protected on Soldier, so this
-    // method lives here to legally access both sides without breaking
-    // encapsulation or requiring friend declarations.
+    
+    
+    
+    
+    
+    
+    
+    
+    
     if (other == nullptr) return;
 
     this->position = other->position;

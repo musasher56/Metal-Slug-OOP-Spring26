@@ -20,7 +20,7 @@ int GameState::getID() const {
     return this->id;
 }
 
-// Default: no transition. Subclasses override when they're ready to advance.
+
 GameState* GameState::createNextState() {
     return nullptr;
 }

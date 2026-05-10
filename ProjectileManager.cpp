@@ -2,9 +2,9 @@
 #include "Level.h"
 #include <cmath>
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Construction / destruction
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 ProjectileManager::ProjectileManager(TextureManager* t, AudioManager* a)
     : activeCount(0)
@@ -14,22 +14,22 @@ ProjectileManager::ProjectileManager(TextureManager* t, AudioManager* a)
 {
     for (int i = 0; i < MAX_PROJ; i++) this->slots[i] = nullptr;
 
-    // Preload projectile textures so each draw() call finds them cached.
-    // The "bullet" key is used by StraightProjectile's base constructor;
-    // "bullet_draw", "grenade_draw", "bomb_draw" are used by the polymorphic
-    // draw() methods in StraightProjectile and ExplosiveProjectile.
+    
+    
+    
+    
     this->texMgr->loadTexture("bullet", "resources/Sprites/bullet.png");
     this->texMgr->loadTexture("bullet_draw", "resources/Sprites/bullet.png");
     this->texMgr->loadTexture("grenade_draw", "resources/Sprites/grenade.png");
     this->texMgr->loadTexture("bomb_draw", "resources/Sprites/bomb.png");
 
-    // Blast animation pool — initialise every slot so postEntityUpdate() can
-    // safely call anim.update() without a null check.
-    // If blast.png doesn't exist yet, makeColorTexture creates a solid orange
-    // 4×4 placeholder registered under "blast" — getTexture("blast") then finds
-    // it on the first call and never spams the WARN log.
+    
+    
+    
+    
+    
     if (!this->texMgr->loadTexture("blast", "resources/Sprites/blast.png")) {
-        this->texMgr->makeColorTexture("blast", sf::Color(255, 140, 0));  // orange placeholder
+        this->texMgr->makeColorTexture("blast", sf::Color(255, 140, 0));  
     }
     for (int i = 0; i < MAX_BLASTS; i++) {
         this->blasts[i].active = false;
@@ -60,9 +60,9 @@ void ProjectileManager::clearAll() {
     this->blastCount = 0;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Utility helpers
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 sf::Vector2f ProjectileManager::calcBarrelTip(sf::Vector2f entityPos,
     int          dir,
@@ -79,18 +79,18 @@ sf::Vector2f ProjectileManager::calcBarrelTip(sf::Vector2f entityPos,
 void ProjectileManager::angleToVelocity(float angle, int dir, float speed,
     float& outVX, float& outVY)
 {
-    // angle is in degrees where 0 = horizontal, positive = upward.
-    // Convert to standard math radians: positive Y is downward in SFML, so negate.
+    
+    
     float rad = angle * 3.14159f / 180.f;
     outVX = (dir == DIR_RIGHT ? 1.f : -1.f) * std::cosf(rad) * speed;
     outVY = -std::sinf(rad) * speed;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Spawn helpers
-// Each creates the correct Projectile subclass, writes its fields through the
-// friend relationship, and adds it to the dense slot array.
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
 
 void ProjectileManager::spawnStraight(sf::Vector2f origin, int dir,
     float angle, int dmg, bool fromEnemy)
@@ -120,7 +120,7 @@ void ProjectileManager::spawnExplosive(sf::Vector2f origin, int dir,
     p->fromEnemy = fromEnemy;
     p->damage = dmg;
     p->blastRadius = blastRadius;
-    // projectileClass stays PROJ_EXPLOSIVE (set in constructor)
+    
 
     float vx = 0.f, vy = 0.f;
     ProjectileManager::angleToVelocity(angle, dir, 8.f, vx, vy);
@@ -140,7 +140,7 @@ void ProjectileManager::spawnBomb(sf::Vector2f origin, int dir,
     p->fromEnemy = fromEnemy;
     p->damage = dmg;
     p->blastRadius = blastRadius;
-    p->projectileClass = PROJ_BOMB;   // tag differentiates grey bomb from orange rocket
+    p->projectileClass = PROJ_BOMB;   
 
     float vx = 0.f, vy = 0.f;
     ProjectileManager::angleToVelocity(angle, dir, speed, vx, vy);
@@ -149,30 +149,30 @@ void ProjectileManager::spawnBomb(sf::Vector2f origin, int dir,
     this->slots[this->activeCount++] = p;
 }
 
-// ── spawnFlame ─────────────────────────────────────────────────────────────
-// One FlameParticle per call.  At FlameShot fireRate = 10/sec, particles
-// accumulate ~3 deep (each lives 20 frames = 0.33 sec) → stream visual.
-//
-// WHY one particle and not a burst?
-//   A burst of 3-5 per fire() call would saturate the 64-slot pool in
-//   6 fire calls (0.6 sec) and block further fire.  One per call gives a
-//   steady stream without hogging pool slots.
-//   If you WANT a denser visual, lower maxLifetime to 12 or raise fireRate.
+
+
+
+
+
+
+
+
+
 void ProjectileManager::spawnFlame(sf::Vector2f origin, int dir,
     float angle, int dmg, bool fromEnemy)
 {
     if (this->activeCount >= MAX_PROJ) return;
 
-    // 20-frame lifetime: at 60fps and velocity 6px/f, the particle travels
-    // 120px ≈ 3.75 blocks before burning out — close to the spec's 5-block
-    // range (exact range tuning can happen with real sprites).
+    
+    
+    
     FlameParticle* fp = new FlameParticle(this->texMgr, this->audMgr, angle, 20);
     fp->position = origin;
     fp->fromEnemy = fromEnemy;
     fp->damage = dmg;
 
-    // Slightly slower than bullets so the flame visually stays in front of the
-    // player barrel for its lifetime rather than shooting across the screen.
+    
+    
     float vx = 0.f, vy = 0.f;
     ProjectileManager::angleToVelocity(angle, dir, 6.f, vx, vy);
     fp->setVelocity(vx, vy);
@@ -180,14 +180,14 @@ void ProjectileManager::spawnFlame(sf::Vector2f origin, int dir,
     this->slots[this->activeCount++] = fp;
 }
 
-// ── spawnLaser ─────────────────────────────────────────────────────────────
-// One stationary LaserBeam.  Its overridden getBoundingBox() spans SCREEN_W
-// pixels in the fire direction — the AABB check in checkPlayerBulletHits()
-// will hit every enemy in that horizontal strip in the SAME FRAME the beam
-// is spawned.  Damage = 999 to match the spec's "instant kill" requirement.
-//
-// The beam lives 5 frames, flickering in draw() — visible flash without
-// requiring a separate animation system.
+
+
+
+
+
+
+
+
 void ProjectileManager::spawnLaser(sf::Vector2f origin, int dir,
     int dmg, bool fromEnemy)
 {
@@ -197,7 +197,7 @@ void ProjectileManager::spawnLaser(sf::Vector2f origin, int dir,
     lb->position = origin;
     lb->fromEnemy = fromEnemy;
     lb->damage = dmg;
-    // Velocity (0,0) — stationary; movement is suppressed in LaserBeam::move()
+    
 
     this->slots[this->activeCount++] = lb;
 }
@@ -212,21 +212,21 @@ void ProjectileManager::spawnBlast(float x, float y) {
             return;
         }
     }
-    // If all blast slots are full, silently drop — gameplay continues correctly,
-    // we just lose one explosion visual.  Not worth crashing or expanding.
+    
+    
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Per-frame pipeline
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 void ProjectileManager::update(float scroll, Level* lvl) {
     (void)lvl;
-    // Call virtual move() on each active projectile.
-    // The vtable dispatches:  StraightProjectile  → linear advance
-    //                         BallisticProjectile → gravity + advance
-    //                         FlameParticle       → advance + lifetime countdown
-    //                         LaserBeam           → lifetime countdown only
+    
+    
+    
+    
+    
     for (int i = 0; i < this->activeCount; i++) {
         Projectile* p = this->slots[i];
         if (p != nullptr && p->status) {
@@ -245,16 +245,16 @@ void ProjectileManager::postEntityUpdate(float scrollX, float scrollY, Level* lv
         }
 
         if (lvl != nullptr) {
-            // Record impact position before checkTileCollision deactivates the slot.
+            
             float  impactX = p->position.x;
             float  impactY = p->position.y;
             bool   wasExplosive = p->isExplosive;
 
-            // Friend access: calls Projectile::checkTileCollision() directly.
-            // LaserBeam::update() suppresses this call from within its own loop —
-            // but postEntityUpdate() calls it externally.  For LaserBeam (velocity=0,
-            // positioned at barrel in open air) this check always returns false in
-            // practice, so no premature deactivation occurs.
+            
+            
+            
+            
+            
             p->checkTileCollision(lvl);
 
             if (!p->status && wasExplosive) {
@@ -264,14 +264,14 @@ void ProjectileManager::postEntityUpdate(float scrollX, float scrollY, Level* lv
 
         if (!p->status) { this->removeAt(i); continue; }
 
-        // Friend access: bounds-cull off-screen projectiles.
+        
         p->checkBounds(scrollX, scrollY);
         if (!p->status) { this->removeAt(i); continue; }
 
         i++;
     }
 
-    // Tick blast animations; deactivate finished ones.
+    
     for (int b = 0; b < MAX_BLASTS; b++) {
         if (this->blasts[b].active) {
             this->blasts[b].anim.update();
@@ -282,28 +282,28 @@ void ProjectileManager::postEntityUpdate(float scrollX, float scrollY, Level* lv
     }
 }
 
-// ── draw ───────────────────────────────────────────────────────────────────
-// PURE POLYMORPHIC DISPATCH.  No type-checking whatsoever — the vtable does
-// all the routing.  Adding a new projectile subclass with its own visual only
-// requires overriding draw() in that class; zero changes needed here.
-//
-//   StraightProjectile::draw()  → bright yellow rectangle (Pistol / HMG)
-//   BallisticProjectile::draw() → dark orange oval
-//   ExplosiveProjectile::draw() → orange capsule (rocket) or grey sphere (bomb)
-//   FlameParticle::draw()       → fading orange-to-red double rectangle
-//   LaserBeam::draw()           → cyan double-layer beam + muzzle flash
+
+
+
+
+
+
+
+
+
+
 void ProjectileManager::draw(RenderWindow& window, float scrollX, float scrollY) {
     for (int i = 0; i < this->activeCount; i++) {
         Projectile* p = this->slots[i];
         if (p != nullptr && p->getStatus()) {
-            // Virtual dispatch — no switch, no if-else on type.
+            
             p->draw(window, scrollX, scrollY);
         }
     }
 
-    // ── Blast effect animations (explosion sprite frames) ───────────────────
-    // These are separate from Projectile lifetime — they outlive the projectile
-    // and are owned/rendered directly by PM.
+    
+    
+    
     for (int b = 0; b < MAX_BLASTS; b++) {
         if (!this->blasts[b].active) continue;
 
@@ -321,9 +321,9 @@ void ProjectileManager::draw(RenderWindow& window, float scrollX, float scrollY)
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Collision queries
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 int ProjectileManager::checkEntityCollisions(DamagableEntity** targets, int targetCount)
 {
@@ -388,17 +388,17 @@ int ProjectileManager::checkPlayerBulletHits(DamagableEntity** targets, int targ
             if (overlapX && overlapY) {
                 if (proj->isExplosive) this->spawnBlast(proj->position.x, proj->position.y);
 
-                // LaserBeam (PROJ_BEAM) hits ALL enemies in one pass — its wide
-                // AABB means the inner loop keeps running until targetCount.
-                // We don't break on LaserBeam; the inner `!hit` guard does that
-                // for normal bullets (one hit = projectile consumed).
-                // For laser: deactivate is called by the lifetime countdown, not here.
+                
+                
+                
+                
+                
                 int bulletDir = (proj->velocityX >= 0.f) ? 1 : -1;
                 targets[e]->takeDamageFrom(proj->getDamage(), bulletDir);
                 hits++;
 
-                // Only deactivate non-beam projectiles on hit.
-                // LaserBeam must persist for its full lifetime to hit all targets.
+                
+                
                 if (proj->projectileClass != PROJ_BEAM) {
                     proj->deactivate();
                     hit = true;
@@ -445,13 +445,13 @@ bool ProjectileManager::checkEnemyBulletHitPlayer(DamagableEntity* player)
     return false;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Private helpers
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 void ProjectileManager::removeAt(int i) {
-    // O(1) compact removal: copy tail slot into the hole, set tail to nullptr.
-    // This preserves array density for tight iteration in update() and draw().
+    
+    
     delete this->slots[i];
     this->slots[i] = nullptr;
     this->activeCount--;

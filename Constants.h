@@ -75,7 +75,7 @@ const int AI_ATTACK = 3;
 const int AI_RETREAT = 4;
 const int AI_SPECIAL = 5;
 
-// Boss AI states
+
 const int AI_BOSS_IDLE = 10;
 const int AI_BOSS_WALK = 11;
 const int AI_BOSS_ATTACK = 12;
@@ -92,7 +92,7 @@ const int PROJ_STRAIGHT = 0;
 const int PROJ_BALLISTIC = 1;
 const int PROJ_EXPLOSIVE = 2;
 const int PROJ_BEAM = 3;
-const int PROJ_FLAME = 5;   // FlameShot stream particle — short lifetime
+const int PROJ_FLAME = 5;   
 
 
 const int GSTATE_MENU = 0;
@@ -100,7 +100,7 @@ const int GSTATE_PLAY = 1;
 const int GSTATE_PAUSED = 2;
 const int GSTATE_GAME_OVER = 3;
 const int GSTATE_LEADERBOARD = 4;
-const int GSTATE_CHAR_SELECT = 5;   // Character select screen (between menu and PlayState)
+const int GSTATE_CHAR_SELECT = 5;   
 
 
 const int SCREEN_W = 1280;
