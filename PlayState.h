@@ -75,6 +75,7 @@ private:
     bool levelTransitioning;
     float levelTransitionTimer;
     bool hudVisible;              // T key: toggles HUD + debug panel + hitboxes together
+    bool bossFelledTriggered;     // true once the "GREAT ENEMY FELLED" message has been shown
 
 public:
     PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr, int startLvl = 0);

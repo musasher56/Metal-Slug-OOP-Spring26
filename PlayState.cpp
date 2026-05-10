@@ -34,6 +34,7 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
     , currentConfig(nullptr)
     , levelTransitioning(false)
     , levelTransitionTimer(0.f)
+    , bossFelledTriggered(false)
 {
     this->id = GSTATE_PLAY;
 
@@ -111,6 +112,7 @@ void PlayState::loadLevel(int levelIndex) {
     this->flyingTaraClock.restart();
     this->levelTransitioning = false;
     this->levelTransitionTimer = 0.f;
+    this->bossFelledTriggered = false;
 
     // ── Clear old enemies, vehicles, projectiles ──
     if (this->enemyManager) this->enemyManager->clearAll();
@@ -199,7 +201,23 @@ void PlayState::loadLevel(int levelIndex) {
             this->spawnPlatformsFromConfig();
 
             // ── Spawn enemies from config ──
-            this->spawnEnemiesFromConfig();
+            if (!cfg->isBossLevel) {
+                this->spawnEnemiesFromConfig();
+            }
+
+            // ── Spawn boss if this is a boss level ──
+            if (cfg->isBossLevel && this->enemyManager != nullptr) {
+                int cellSize = lvl->getCellSize();
+                int surfaceRow = lvl->getHeight() - 3;
+                float surfaceY = (float)(surfaceRow * cellSize);
+                float bossFootOffset = 360.f;  // bosses are much taller
+
+                if (cfg->bossType == ENEMY_BOSS_IRONOKAVA) {
+                    // Spawn Ironokava close to the player start (1300px from spawn)
+                    float bossX = 1500.f;
+                    this->enemyManager->spawnIronokava(bossX, surfaceY - bossFootOffset);
+                }
+            }
 
             // ── Initialize water pool shape ──
             if (cfg->hasWater) {
@@ -323,6 +341,9 @@ void PlayState::spawnPlatformsFromConfig() {
 // checkLevelTransition — detects when player reaches end of current level
 // ─────────────────────────────────────────────────────────────────────────────
 void PlayState::checkLevelTransition() {
+    // Don't transition while the "GREAT ENEMY FELLED" message is still showing
+    if (this->hud != nullptr && this->hud->isFelledShowing()) return;
+
     PlayerSoldier* player = this->characterManager
         ? this->characterManager->getCurrentCharacter() : nullptr;
     if (player == nullptr) return;
@@ -409,6 +430,24 @@ void PlayState::update(float dt) {
 
     if (this->enemyManager)
         this->enemyManager->update(this->scroll, this->scrollY, lvl, player);
+
+    // ── Update HUD with boss info ──
+    if (this->hud && this->enemyManager) {
+        Boss* boss = this->enemyManager->getActiveBoss();
+        if (boss != nullptr && (boss->isAlive() || boss->isDying())) {
+            this->hud->setBossInfo(boss->getBossName(), boss->getHealthFraction());
+        }
+        else if (this->enemyManager->wasBossKilled()) {
+            // Boss was fully removed — trigger "GREAT ENEMY FELLED" once
+            if (!this->bossFelledTriggered) {
+                this->bossFelledTriggered = true;
+                const char* fallenName = this->enemyManager->getBossDiedName();
+                if (fallenName == nullptr) fallenName = "UNKNOWN";
+                this->hud->showBossFelled(fallenName);
+            }
+            this->hud->clearBossInfo();
+        }
+    }
 
     if (this->enemyVehicleManager)
         this->enemyVehicleManager->update(this->scroll, this->scrollY, lvl, player, this->projectileManager);

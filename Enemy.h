@@ -137,3 +137,58 @@ public:
     virtual void draw(RenderWindow& window, float scrollX, float scrollY);
     virtual void handleCollision(Level* lvl);
 };
+
+// ============================================================
+// Boss — abstract base for all boss enemies.
+// Inherits from Enemy so EnemyManager can store Boss* in the
+// same slot array and call updateAI/draw polymorphically.
+// Adds boss-specific fields: phase tracking, boss name,
+// dramatic death, and a health-fraction query for the HUD.
+// ============================================================
+class Boss : public Enemy {
+protected:
+    int   bossPhase;          // 0 = phase 1, 1 = enraged (phase 2)
+    float phase2Threshold;    // HP fraction that triggers phase 2 (e.g. 0.5)
+    const char* bossName;     // display name for HUD health bar
+    bool  entranceDone;       // false until boss entrance animation finishes
+    float entranceTimer;      // seconds elapsed since boss appeared
+
+    Animation idleAnim;       // boss idle/stance animation
+    Animation chargeAnim;     // boss charge animation (reuses walk)
+    Animation specialAnim;    // boss special attack animation
+
+    float specialCooldown;    // seconds between special attacks
+    Clock specialTimer;       // tracks time since last special
+    float chargeCooldown;     // seconds between charge attacks
+    Clock chargeTimer;        // tracks time since last charge
+    float chargeSpeed;        // velocity multiplier during charge
+    bool  isCharging;         // true while performing a charge
+    float chargeDuration;     // how long a charge lasts (seconds)
+    float chargeElapsed;      // time elapsed in current charge
+
+public:
+    Boss(TextureManager* texMgr, AudioManager* audMgr);
+    virtual ~Boss();
+
+    const char* getBossName() const;
+    float getHealthFraction() const;  // 0.0 – 1.0 for HUD bar
+    bool  isEntranceDone() const;
+
+    virtual void updateAI(PlayerSoldier* player, Level* lvl);
+    virtual void onDeath();
+    virtual void draw(RenderWindow& window, float scrollX, float scrollY);
+};
+
+// ============================================================
+// Ironokava — first boss.
+// A massive armored tank-like boss that charges and fires
+// heavy projectiles. Enters enraged phase at 50% HP.
+// ============================================================
+class Ironokava : public Boss {
+public:
+    Ironokava(TextureManager* texMgr, AudioManager* audMgr);
+    virtual ~Ironokava();
+    virtual void updateAI(PlayerSoldier* player, Level* lvl);
+    virtual void performAttack(PlayerSoldier* player);
+    virtual void draw(RenderWindow& window, float scrollX, float scrollY);
+};

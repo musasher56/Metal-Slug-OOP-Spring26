@@ -37,6 +37,10 @@ struct LevelConfig {
     bool  tileBg;                  // true = tile BG horizontally to cover full level width
     float levelWidth;              // 0.f = use grid width; > 0 = override play area width
 
+    // ── Boss ──
+    bool  isBossLevel;             // true = this level only spawns a boss, no regular enemies
+    int   bossType;                // ENEMY_BOSS_IRONOKAVA, etc. (0 = no boss)
+
     // ── Water pool ──
     bool  hasWater;
     float waterX1, waterY1;        // top-left corner
@@ -76,6 +80,10 @@ static const LevelConfig LEVEL_1 = {
     true,           // enableVerticalScroll
     false,          // tileBg
     0.f,            // levelWidth (0 = use grid width)
+
+    // Boss
+    false,          // isBossLevel
+    0,              // bossType
 
     // Water pool
     true,
@@ -121,7 +129,7 @@ static const LevelConfig LEVEL_1 = {
     }
 };
 
-// Level 2: Desert — fewer enemies, earlier tara attacks (UNCHANGED except new fields)
+// Level 2: Desert — fewer enemies, earlier tara attacks
 static const LevelConfig LEVEL_2 = {
     "resources/Sprites/background2.png",
 
@@ -131,6 +139,10 @@ static const LevelConfig LEVEL_2 = {
     true,           // enableVerticalScroll
     false,          // tileBg
     0.f,            // levelWidth (0 = use grid width)
+
+    // Boss
+    false,          // isBossLevel
+    0,              // bossType
 
     // Water pool — same as level 1
     true,
@@ -180,6 +192,10 @@ static const LevelConfig LEVEL_3 = {
     false,          // enableVerticalScroll
     true,           // tileBg — tile BG to cover full 11000px width
     11000.f,        // levelWidth — 11000px play area
+
+    // Boss
+    false,          // isBossLevel
+    0,              // bossType
 
     // Water pool — none
     false,
@@ -238,14 +254,54 @@ static const LevelConfig LEVEL_3 = {
     }
 };
 
-// Array of all level configs — indexed by level number (0-based)
-static const LevelConfig* ALL_LEVELS[3] = {
-    &LEVEL_1,
-    &LEVEL_2,
-    &LEVEL_3
+// Level 4: Ironokava Boss Arena — same BG/width as level 3, no enemies, only the boss
+static const LevelConfig LEVEL_4 = {
+    "resources/Sprites/background3.png",
+
+    // Terrain — same as level 3: flat, no mountain, invisible ground, tiled BG
+    false,          // hasMountain
+    false,          // visibleGround
+    false,          // enableVerticalScroll
+    true,           // tileBg
+    11000.f,        // levelWidth — same width as level 3
+
+    // Boss
+    true,           // isBossLevel
+    ENEMY_BOSS_IRONOKAVA,  // bossType
+
+    // Water pool — none
+    false,
+    0.f, 0.f,
+    0.f, 0.f,
+
+    // Submarine — none
+    false,
+    0.f, 0.f,
+    DIR_LEFT,
+    0.f,
+
+    // FlyingTara — none (boss level)
+    0,
+    { 0.f, 0.f, 0.f, 0.f },
+
+    // Enemies — none (boss level, boss spawned separately)
+    0,
+    { },
+
+    // Platforms — none (open boss arena)
+    0,
+    { }
 };
 
-static const int TOTAL_LEVELS = 3;
+// Array of all level configs — indexed by level number (0-based)
+static const LevelConfig* ALL_LEVELS[4] = {
+    &LEVEL_1,
+    &LEVEL_2,
+    &LEVEL_3,
+    &LEVEL_4
+};
+
+static const int TOTAL_LEVELS = 4;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Game state ID constants

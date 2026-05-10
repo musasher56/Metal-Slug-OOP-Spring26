@@ -14,6 +14,9 @@ private:
     TextureManager* texMgr;
     AudioManager* audMgr;
     ProjectileManager* pm;
+    Boss* activeBoss;          // pointer to the current boss (if any)
+    bool bossDied;             // true once the boss has been fully removed
+    const char* bossDiedName;  // saved boss name for HUD felled message
 
 public:
     EnemyManager(TextureManager* t, AudioManager* a);
@@ -27,6 +30,7 @@ public:
     int spawnGrenade(float x, float y);
     int spawnMartian(float x, float y);
     int spawnParatrooper(float x, float y, float landY);
+    int spawnIronokava(float x, float y);
 
     void update(float scrollX, float scrollY, Level* lvl, PlayerSoldier* player);
     void draw(RenderWindow& window, float scrollX, float scrollY);
@@ -34,6 +38,12 @@ public:
     DamagableEntity** getDamagableSlots();
     int getActiveCount() const;
     int getTotalKills() const;
+
+    Boss* getActiveBoss() const;
+    bool hasActiveBoss() const;
+    bool isBossDead() const;
+    bool wasBossKilled() const;          // true after boss is fully removed from slots
+    const char* getBossDiedName() const; // name of the boss that died
 
     void cleanup();
     void clearAll();

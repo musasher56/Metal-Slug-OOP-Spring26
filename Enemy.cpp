@@ -1,4 +1,4 @@
-#include "Enemy.h"
+ï»¿#include "Enemy.h"
 #include "PlayerSoldier.h"
 #include "Level.h"
 #include <cmath>
@@ -586,7 +586,7 @@ ShieldedSoldier::ShieldedSoldier(TextureManager* texMgr, AudioManager* audMgr)
     this->shootFrames = 10;
     this->deathFrames = 8;
 
-    // Walk animation — shielded-walk.png (6 frames)
+    // Walk animation Â— shielded-walk.png (6 frames)
     Texture& walkTex = texMgr->getTexture("resources/Sprites/shielded-walk.png");
     this->walkAnim.setTexture(&walkTex);
     this->walkAnim.setFrameCount(this->walkFrames);
@@ -599,7 +599,7 @@ ShieldedSoldier::ShieldedSoldier(TextureManager* texMgr, AudioManager* audMgr)
     this->walkAnim.setFrameRect(5, 655, 0, 131, 169);
     this->walkAnim.setLoop(true);
 
-    // Shoot animation — shielded-shoot.png (10 frames)
+    // Shoot animation Â— shielded-shoot.png (10 frames)
     Texture& shootTex = texMgr->getTexture("resources/Sprites/shielded-shoot.png");
     this->shootAnim.setTexture(&shootTex);
     this->shootAnim.setFrameCount(this->shootFrames);
@@ -616,7 +616,7 @@ ShieldedSoldier::ShieldedSoldier(TextureManager* texMgr, AudioManager* audMgr)
     this->shootAnim.setFrameRect(9, 1347, 5, 155, 174);
     this->shootAnim.setLoop(false);
 
-    // Death animation — shares rebel-death.png (8 frames)
+    // Death animation Â— shares rebel-death.png (8 frames)
     Texture& deathTex = texMgr->getTexture("resources/Sprites/rebel-death.png");
     this->deathAnim.setTexture(&deathTex);
     this->deathAnim.setFrameCount(this->deathFrames);
@@ -667,7 +667,7 @@ void ShieldedSoldier::takeDamageFrom(int amount, int bulletDir) {
         }
     }
 
-    // No shield or hit from behind — take full damage
+    // No shield or hit from behind Â— take full damage
     this->takeDamage(amount);
 }
 
@@ -698,7 +698,7 @@ GrenadeSoldier::GrenadeSoldier(TextureManager* texMgr, AudioManager* audMgr)
     this->shootFrames = 4;
     this->deathFrames = 8;
 
-    // Walk animation — shares rebel-walk.png (9 frames)
+    // Walk animation Â— shares rebel-walk.png (9 frames)
     Texture& walkTex = texMgr->getTexture("resources/Sprites/rebel-walk.png");
     this->walkAnim.setTexture(&walkTex);
     this->walkAnim.setFrameCount(this->walkFrames);
@@ -714,7 +714,7 @@ GrenadeSoldier::GrenadeSoldier(TextureManager* texMgr, AudioManager* audMgr)
     this->walkAnim.setFrameRect(8, 711, 2, 58, 62);
     this->walkAnim.setLoop(true);
 
-    // Shoot animation — grenade-shoot.png (4 frames)
+    // Shoot animation Â— grenade-shoot.png (4 frames)
     Texture& shootTex = texMgr->getTexture("resources/Sprites/grenade-shoot.png");
     this->shootAnim.setTexture(&shootTex);
     this->shootAnim.setFrameCount(this->shootFrames);
@@ -725,7 +725,7 @@ GrenadeSoldier::GrenadeSoldier(TextureManager* texMgr, AudioManager* audMgr)
     this->shootAnim.setFrameRect(3, 448, 15, 123, 123);
     this->shootAnim.setLoop(false);
 
-    // Death animation — shares rebel-death.png (8 frames)
+    // Death animation Â— shares rebel-death.png (8 frames)
     Texture& deathTex = texMgr->getTexture("resources/Sprites/rebel-death.png");
     this->deathAnim.setTexture(&deathTex);
     this->deathAnim.setFrameCount(this->deathFrames);
@@ -846,7 +846,7 @@ Martian::Martian(TextureManager* texMgr, AudioManager* audMgr)
     this->shootFrames = 6;
     this->deathFrames = 8;
 
-    // Walk animation — martian-walk.png (16 frames)
+    // Walk animation Â— martian-walk.png (16 frames)
     Texture& walkTex = texMgr->getTexture("resources/Sprites/martian-walk.png");
     this->walkAnim.setTexture(&walkTex);
     this->walkAnim.setFrameCount(this->walkFrames);
@@ -869,7 +869,7 @@ Martian::Martian(TextureManager* texMgr, AudioManager* audMgr)
     this->walkAnim.setFrameRect(15, 3328, 4, 192, 168);
     this->walkAnim.setLoop(true);
 
-    // Shoot animation — martian-shoot.png (6 frames)
+    // Shoot animation Â— martian-shoot.png (6 frames)
     Texture& shootTex = texMgr->getTexture("resources/Sprites/martian-shoot.png");
     this->shootAnim.setTexture(&shootTex);
     this->shootAnim.setFrameCount(this->shootFrames);
@@ -882,7 +882,7 @@ Martian::Martian(TextureManager* texMgr, AudioManager* audMgr)
     this->shootAnim.setFrameRect(5, 1476, 4, 212, 148);
     this->shootAnim.setLoop(false);
 
-    // Death animation — martian-death.png (8 frames)
+    // Death animation Â— martian-death.png (8 frames)
     Texture& deathTex = texMgr->getTexture("resources/Sprites/martian-death.png");
     this->deathAnim.setTexture(&deathTex);
     this->deathAnim.setFrameCount(this->deathFrames);
@@ -930,7 +930,7 @@ void Martian::performAttack(PlayerSoldier* player) {
         (float)(this->frameH) * 0.4f
     );
 
-    // Martian fires energy blasts — two rapid straight shots
+    // Martian fires energy blasts Â— two rapid straight shots
     float angle = 0.f;
     float dy = player->getPosition().y - this->position.y;
     float dx = player->getPosition().x - this->position.x;
@@ -1014,7 +1014,7 @@ Paratrooper::Paratrooper(TextureManager* texMgr, AudioManager* audMgr)
     this->baseMaxVelocity = 3.5f;
     this->scoreValue = 75;
     this->deathDuration = 1.5f;
-    this->activated = true;  // always active — visible and swaying
+    this->activated = true;  // always active Â— visible and swaying
 
     // Bounding box / frame size matches rebel soldier (used after landing)
     this->frameW = 70;
@@ -1025,7 +1025,7 @@ Paratrooper::Paratrooper(TextureManager* texMgr, AudioManager* audMgr)
     this->shootFrames = 10;
     this->deathFrames = 8;
 
-    // Fly animation — paratrooper.png (single frame)
+    // Fly animation Â— paratrooper.png (single frame)
     Texture& flyTex = texMgr->getTexture("resources/Sprites/paratrooper.png");
     this->flyAnim.setTexture(&flyTex);
     this->flyAnim.setFrameCount(1);
@@ -1033,7 +1033,7 @@ Paratrooper::Paratrooper(TextureManager* texMgr, AudioManager* audMgr)
     this->flyAnim.setFrameRect(0, 181, 234, 681, 894);
     this->flyAnim.setLoop(true);
 
-    // Walk animation — rebel-walk.png (9 frames, same as RebelSoldier)
+    // Walk animation Â— rebel-walk.png (9 frames, same as RebelSoldier)
     Texture& walkTex = texMgr->getTexture("resources/Sprites/rebel-walk.png");
     this->walkAnim.setTexture(&walkTex);
     this->walkAnim.setFrameCount(this->walkFrames);
@@ -1049,7 +1049,7 @@ Paratrooper::Paratrooper(TextureManager* texMgr, AudioManager* audMgr)
     this->walkAnim.setFrameRect(8, 711, 2, 58, 62);
     this->walkAnim.setLoop(true);
 
-    // Shoot animation — rebel-shoot.png (10 frames, same as RebelSoldier)
+    // Shoot animation Â— rebel-shoot.png (10 frames, same as RebelSoldier)
     Texture& shootTex = texMgr->getTexture("resources/Sprites/rebel-shoot.png");
     this->shootAnim.setTexture(&shootTex);
     this->shootAnim.setFrameCount(this->shootFrames);
@@ -1066,7 +1066,7 @@ Paratrooper::Paratrooper(TextureManager* texMgr, AudioManager* audMgr)
     this->shootAnim.setFrameRect(9, 684, 13, 67, 63);
     this->shootAnim.setLoop(false);
 
-    // Death animation — rebel-death.png (8 frames, same as RebelSoldier)
+    // Death animation Â— rebel-death.png (8 frames, same as RebelSoldier)
     Texture& deathTex = texMgr->getTexture("resources/Sprites/rebel-death.png");
     this->deathAnim.setTexture(&deathTex);
     this->deathAnim.setFrameCount(this->deathFrames);
@@ -1139,7 +1139,7 @@ void Paratrooper::updateAI(PlayerSoldier* player, Level* lvl) {
             float dx = fabsf(player->getPosition().x - this->position.x);
             float dy = fabsf(player->getPosition().y - this->landY);
             // Player must be within 800px horizontally AND within 500px
-            // vertically of the landing spot — means they're climbing
+            // vertically of the landing spot Â— means they're climbing
             // the mountain toward the paratrooper
             if (dx < 200.f && dy < 500.f) {
                 this->startDescent = true;
@@ -1156,7 +1156,7 @@ void Paratrooper::updateAI(PlayerSoldier* player, Level* lvl) {
             this->faceRight = false;
             this->switchAnim(&this->walkAnim);
         }
-        // While flying: no attack, no chase — just descend (or hover)
+        // While flying: no attack, no chase Â— just descend (or hover)
         return;
     }
 
@@ -1165,7 +1165,7 @@ void Paratrooper::updateAI(PlayerSoldier* player, Level* lvl) {
 }
 
 void Paratrooper::performAttack(PlayerSoldier* player) {
-    // Same as rebel soldier — straight bullets
+    // Same as rebel soldier Â— straight bullets
     Enemy::performAttack(player);
 }
 
@@ -1248,4 +1248,376 @@ void Paratrooper::draw(RenderWindow& window, float scrollX, float scrollY) {
         this->sprite.setPosition(this->position.x - scrollX, drawY);
         window.draw(this->sprite);
     }
+}
+
+// ============================================================
+// Boss â€” base class for all boss enemies
+// ============================================================
+
+Boss::Boss(TextureManager* texMgr, AudioManager* audMgr)
+    : Enemy(texMgr, audMgr)
+    , bossPhase(0)
+    , phase2Threshold(0.5f)
+    , bossName("UNKNOWN BOSS")
+    , entranceDone(false)
+    , entranceTimer(0.f)
+    , specialCooldown(5.0f)
+    , chargeCooldown(4.0f)
+    , chargeSpeed(8.0f)
+    , isCharging(false)
+    , chargeDuration(1.0f)
+    , chargeElapsed(0.f)
+{
+    this->activated = true;  // bosses are always active
+    this->detectionRange = 2000.f;
+    this->attackRange = 800.f;
+    this->attackCooldown = 2.0f;
+    this->maxVelocity = 2.0f;
+    this->baseMaxVelocity = 2.0f;
+    this->deathDuration = 3.0f;  // bosses have longer death animations
+    this->deathSpriteScale = 2.5f;
+
+    this->idleAnim.setLoop(true);
+    this->chargeAnim.setLoop(true);
+    this->specialAnim.setLoop(false);
+}
+
+Boss::~Boss() {}
+
+const char* Boss::getBossName() const {
+    return this->bossName;
+}
+
+float Boss::getHealthFraction() const {
+    if (this->maxHealth <= 0) return 0.f;
+    float frac = (float)(this->currentHP) / (float)(this->maxHealth);
+    if (frac < 0.f) frac = 0.f;
+    if (frac > 1.f) frac = 1.f;
+    return frac;
+}
+
+bool Boss::isEntranceDone() const {
+    return this->entranceDone;
+}
+
+void Boss::updateAI(PlayerSoldier* player, Level* lvl) {
+    if (this->dying) return;
+    if (player == nullptr) return;
+
+    // Entrance period: boss stands still for 2 seconds
+    if (!this->entranceDone) {
+        this->entranceTimer += 1.f / 60.f;
+        if (this->entranceTimer >= 2.0f) {
+            this->entranceDone = true;
+        }
+        this->velocityX = 0.f;
+        this->switchAnim(&this->idleAnim);
+        return;
+    }
+
+    // Check phase transition
+    if (this->bossPhase == 0 && this->getHealthFraction() <= this->phase2Threshold) {
+        this->bossPhase = 1;
+        this->maxVelocity = this->baseMaxVelocity * 1.5f;
+        this->attackCooldown *= 0.6f;
+        this->specialCooldown *= 0.7f;
+        this->chargeSpeed *= 1.3f;
+    }
+
+    // Handle charging
+    if (this->isCharging) {
+        this->chargeElapsed += 1.f / 60.f;
+        if (this->chargeElapsed >= this->chargeDuration) {
+            this->isCharging = false;
+            this->velocityX = 0.f;
+        }
+        else {
+            float dir = this->faceRight ? 1.f : -1.f;
+            this->velocityX = dir * this->chargeSpeed;
+        }
+        return;
+    }
+
+    float px = player->getPosition().x;
+    this->faceRight = (px > this->position.x);
+
+    // Decide action: attack, charge, special, or walk
+    float dist = this->distanceTo(player);
+
+    if (dist <= this->attackRange) {
+        // In attack range: decide between normal attack, charge, or special
+        bool doSpecial = this->specialTimer.getElapsedTime().asSeconds() >= this->specialCooldown;
+        bool doCharge = !doSpecial && this->chargeTimer.getElapsedTime().asSeconds() >= this->chargeCooldown;
+
+        if (doSpecial) {
+            this->aiState = AI_BOSS_SPECIAL;
+            this->velocityX = 0.f;
+            this->performAttack(player);
+            this->specialTimer.restart();
+            this->switchAnim(&this->specialAnim);
+        }
+        else if (doCharge) {
+            this->aiState = AI_BOSS_CHARGE;
+            this->isCharging = true;
+            this->chargeElapsed = 0.f;
+            this->chargeTimer.restart();
+            this->switchAnim(&this->chargeAnim);
+        }
+        else if (this->attackTimer.getElapsedTime().asSeconds() >= this->attackCooldown) {
+            this->aiState = AI_BOSS_ATTACK;
+            this->velocityX = 0.f;
+            this->performAttack(player);
+            this->attackTimer.restart();
+            this->switchAnim(&this->shootAnim);
+        }
+        else {
+            this->switchAnim(&this->idleAnim);
+        }
+    }
+    else {
+        // Walk toward player
+        this->aiState = AI_BOSS_WALK;
+        this->switchAnim(&this->walkAnim);
+
+        if (px > this->position.x + 20.f) {
+            this->velocityX += 0.5f;
+            if (this->velocityX > this->maxVelocity)
+                this->velocityX = this->maxVelocity;
+        }
+        else if (px < this->position.x - 20.f) {
+            this->velocityX -= 0.5f;
+            if (this->velocityX < -this->maxVelocity)
+                this->velocityX = -this->maxVelocity;
+        }
+        else {
+            this->decelerate();
+        }
+    }
+}
+
+void Boss::onDeath() {
+    if (this->dying) return;
+    this->dying = true;
+    this->deathTimer.restart();
+    this->velocityX = 0.f;
+    this->velocityY = 0.f;
+    this->isCharging = false;
+    this->switchAnim(&this->deathAnim);
+}
+
+void Boss::draw(RenderWindow& window, float scrollX, float scrollY) {
+    if (!this->status) return;
+
+    if (this->dying) {
+        if (this->deathTimer.getElapsedTime().asSeconds() >= this->deathDuration) {
+            this->status = false;
+            return;
+        }
+    }
+
+    if (this->currentAnim != nullptr) {
+        this->currentAnim->update();
+        this->currentAnim->applyToSprite(this->sprite);
+    }
+
+    this->applyDirectionFlip();
+
+    float drawY = this->position.y - scrollY;
+    if (this->dying) {
+        drawY += 40.f;
+    }
+
+    this->sprite.setPosition(this->position.x - scrollX, drawY);
+    window.draw(this->sprite);
+}
+
+// ============================================================
+// Ironokava â€” first boss
+// ============================================================
+
+Ironokava::Ironokava(TextureManager* texMgr, AudioManager* audMgr)
+    : Boss(texMgr, audMgr)
+{
+    this->setEnemyType(ENEMY_BOSS_IRONOKAVA);
+    this->bossName = "IRONOKAVA";
+    this->maxHealth = 200;
+    this->currentHP = 200;
+    this->health = 200;
+    this->scoreValue = 5000;
+    this->detectionRange = 2000.f;
+    this->attackRange = 700.f;
+    this->attackCooldown = 2.0f;
+    this->maxVelocity = 2.5f;
+    this->baseMaxVelocity = 2.5f;
+    this->deathDuration = 3.5f;
+
+    // Ironokava sprite dimensions (idle/walk frames)
+    this->frameW = 176;
+    this->frameH = 120;
+    this->baseFrameW = 176;
+    this->baseFrameH = 120;
+    this->walkFrames = 2;    // ironokava.png has 2 frames
+    this->shootFrames = 2;   // reuse walk frames for attack stance
+    this->deathFrames = 4;   // ironokava-death.png has 4 frames
+
+    this->specialCooldown = 5.0f;
+    this->chargeCooldown = 4.0f;
+    this->chargeSpeed = 8.0f;
+    this->chargeDuration = 1.2f;
+
+    // Walk/idle animation â€” ironokava.png (2 frames)
+    Texture& walkTex = texMgr->getTexture("resources/Sprites/ironokava.png");
+    this->walkAnim.setTexture(&walkTex);
+    this->walkAnim.setFrameCount(this->walkFrames);
+    this->walkAnim.setFrameDelay(15);
+    this->walkAnim.setFrameRect(0, 0, 0, 176, 120);
+    this->walkAnim.setFrameRect(1, 180, 1, 175, 120);
+    this->walkAnim.setLoop(true);
+
+    // Shoot animation â€” reuse ironokava.png (same 2 frames, slower = attack pose)
+    this->shootAnim.setTexture(&walkTex);
+    this->shootAnim.setFrameCount(this->shootFrames);
+    this->shootAnim.setFrameDelay(8);
+    this->shootAnim.setFrameRect(0, 0, 0, 176, 120);
+    this->shootAnim.setFrameRect(1, 180, 1, 175, 120);
+    this->shootAnim.setLoop(false);
+
+    // Death animation â€” ironokava-death.png (4 frames)
+    Texture& deathTex = texMgr->getTexture("resources/Sprites/ironokava-death.png");
+    this->deathAnim.setTexture(&deathTex);
+    this->deathAnim.setFrameCount(this->deathFrames);
+    this->deathAnim.setFrameDelay(12);
+    this->deathAnim.setFrameRect(0, 4, 95, 228, 150);
+    this->deathAnim.setFrameRect(1, 232, 34, 222, 196);
+    this->deathAnim.setFrameRect(2, 442, 40, 220, 199);
+    this->deathAnim.setFrameRect(3, 672, 90, 199, 147);
+    this->deathAnim.setLoop(false);
+
+    // Idle animation â€” reuse walk frames at slower speed
+    this->idleAnim.setTexture(&walkTex);
+    this->idleAnim.setFrameCount(this->walkFrames);
+    this->idleAnim.setFrameDelay(25);
+    this->idleAnim.setFrameRect(0, 0, 0, 176, 120);
+    this->idleAnim.setFrameRect(1, 180, 1, 175, 120);
+    this->idleAnim.setLoop(true);
+
+    // Charge animation â€” reuse walk frames at faster speed
+    this->chargeAnim.setTexture(&walkTex);
+    this->chargeAnim.setFrameCount(this->walkFrames);
+    this->chargeAnim.setFrameDelay(4);
+    this->chargeAnim.setFrameRect(0, 0, 0, 176, 120);
+    this->chargeAnim.setFrameRect(1, 180, 1, 175, 120);
+    this->chargeAnim.setLoop(true);
+
+    // Special attack animation â€” reuse walk
+    this->specialAnim.setTexture(&walkTex);
+    this->specialAnim.setFrameCount(this->walkFrames);
+    this->specialAnim.setFrameDelay(6);
+    this->specialAnim.setFrameRect(0, 0, 0, 176, 120);
+    this->specialAnim.setFrameRect(1, 180, 1, 175, 120);
+    this->specialAnim.setLoop(false);
+
+    this->sprite.setTexture(walkTex);
+    this->sprite.setTextureRect(IntRect(0, 0, 176, 120));
+    this->sprite.setScale(3.0f, 3.0f);
+    this->switchAnim(&this->idleAnim);
+    this->updateBoundingBox();
+}
+
+Ironokava::~Ironokava() {}
+
+void Ironokava::updateAI(PlayerSoldier* player, Level* lvl) {
+    Boss::updateAI(player, lvl);
+}
+
+void Ironokava::performAttack(PlayerSoldier* player) {
+    if (this->pm == nullptr || player == nullptr) return;
+
+    float scaleX = std::abs(this->sprite.getScale().x);
+    sf::Vector2f origin = ProjectileManager::calcBarrelTip(
+        this->position,
+        this->faceRight ? DIR_RIGHT : DIR_LEFT,
+        (float)(this->frameW) * scaleX,
+        (float)(this->frameH) * 0.4f
+    );
+
+    int dir = this->faceRight ? DIR_RIGHT : DIR_LEFT;
+
+    if (this->aiState == AI_BOSS_SPECIAL) {
+        // Special attack: spread of 3 explosive projectiles
+        float baseAngle = 0.f;
+        float dy = player->getPosition().y - this->position.y;
+        float dx = player->getPosition().x - this->position.x;
+        if (dx != 0.f || dy != 0.f) {
+            baseAngle = atan2f(-dy, fabsf(dx)) * 180.f / 3.14159f;
+            if (baseAngle < -20.f) baseAngle = -20.f;
+            if (baseAngle > 45.f) baseAngle = 45.f;
+        }
+
+        // Three shots in a fan pattern
+        this->pm->spawnExplosive(origin, dir, baseAngle - 15.f, 4, 3, true);
+        this->pm->spawnExplosive(origin, dir, baseAngle, 4, 3, true);
+        this->pm->spawnExplosive(origin, dir, baseAngle + 15.f, 4, 3, true);
+    }
+    else {
+        // Normal attack: single heavy explosive projectile aimed at player
+        float angle = 0.f;
+        float dy = player->getPosition().y - this->position.y;
+        float dx = player->getPosition().x - this->position.x;
+        if (dx != 0.f || dy != 0.f) {
+            angle = atan2f(-dy, fabsf(dx)) * 180.f / 3.14159f;
+            if (angle < -15.f) angle = -15.f;
+            if (angle > 45.f) angle = 45.f;
+        }
+        this->pm->spawnExplosive(origin, dir, angle, 3, 2, true);
+
+        // Phase 2: fire an additional straight shot
+        if (this->bossPhase >= 1) {
+            this->pm->spawnStraight(origin, dir, angle, 3, true);
+        }
+    }
+}
+
+void Ironokava::draw(RenderWindow& window, float scrollX, float scrollY) {
+    if (!this->status) return;
+
+    if (this->dying) {
+        if (this->deathTimer.getElapsedTime().asSeconds() >= this->deathDuration) {
+            this->status = false;
+            return;
+        }
+    }
+
+    if (this->currentAnim != nullptr) {
+        this->currentAnim->update();
+        this->currentAnim->applyToSprite(this->sprite);
+    }
+
+    // Ironokava walk/idle frames are ~176x120, death frames vary 199-228 wide, 147-199 tall
+    float scale = 3.0f;
+    if (this->dying) {
+        // Death frames are larger, scale down to match alive size
+        IntRect texRect = this->sprite.getTextureRect();
+        if (texRect.width > 180) {
+            scale = 2.3f;
+        }
+    }
+    else if (this->isCharging) {
+        scale = 3.2f;  // slightly bigger when charging for visual emphasis
+    }
+
+    if (this->faceRight) {
+        this->sprite.setScale(-scale, scale);
+    }
+    else {
+        this->sprite.setScale(scale, scale);
+    }
+
+    float drawY = this->position.y - scrollY;
+    if (this->dying) {
+        drawY += 30.f;
+    }
+
+    this->sprite.setPosition(this->position.x - scrollX, drawY);
+    window.draw(this->sprite);
 }

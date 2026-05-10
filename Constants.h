@@ -47,6 +47,7 @@ const int ENEMY_MARTIAN = 7;
 const int ENEMY_FLYING_TARA = 8;
 const int ENEMY_BRADLEY = 9;
 const int ENEMY_SUB = 10;
+const int ENEMY_BOSS_IRONOKAVA = 11;
 
 
 const int NOISE_AMPLIFIED = 0;
@@ -72,6 +73,13 @@ const int AI_CHASE = 2;
 const int AI_ATTACK = 3;
 const int AI_RETREAT = 4;
 const int AI_SPECIAL = 5;
+
+// Boss AI states
+const int AI_BOSS_IDLE = 10;
+const int AI_BOSS_WALK = 11;
+const int AI_BOSS_ATTACK = 12;
+const int AI_BOSS_CHARGE = 13;
+const int AI_BOSS_SPECIAL = 14;
 
 
 const int TRANSFORM_NONE = 0;

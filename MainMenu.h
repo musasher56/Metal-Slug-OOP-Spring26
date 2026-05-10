@@ -33,7 +33,7 @@ private:
     RectangleShape selector;
 
     // Level select boxes
-    RectangleShape levelBoxes[3];
+    RectangleShape levelBoxes[4];
     int hoveredLevel;
 
     Clock splashTimer;

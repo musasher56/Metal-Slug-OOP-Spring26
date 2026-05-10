@@ -6,7 +6,8 @@
 #include <cstdio>
 
 EnemyManager::EnemyManager(TextureManager* t, AudioManager* a)
-    : activeCount(0), texMgr(t), audMgr(a), pm(nullptr)
+    : activeCount(0), texMgr(t), audMgr(a), pm(nullptr), activeBoss(nullptr)
+    , bossDied(false), bossDiedName(nullptr)
 {
     for (int i = 0; i < MAX_ENEMIES; i++) {
         this->slots[i] = nullptr;
@@ -39,6 +40,12 @@ int EnemyManager::findFreeSlot() {
 
 void EnemyManager::removeAt(int i) {
     if (this->slots[i] != nullptr) {
+        // If the removed enemy is the active boss, save its name and null the pointer
+        if (this->activeBoss != nullptr && this->slots[i] == this->activeBoss) {
+            this->bossDiedName = this->activeBoss->getBossName();
+            this->bossDied = true;
+            this->activeBoss = nullptr;
+        }
         delete this->slots[i];
         this->slots[i] = nullptr;
         this->deSlots[i] = nullptr;
@@ -235,6 +242,33 @@ void EnemyManager::draw(RenderWindow& window, float scrollX, float scrollY) {
     }
 }
 
+int EnemyManager::spawnIronokava(float x, float y) {
+    int slot = this->findFreeSlot();
+    if (slot < 0) return -1;
+
+    Ironokava* boss = new Ironokava(this->texMgr, this->audMgr);
+    boss->position = sf::Vector2f(x, y);
+    boss->setPatrol(x, 300.f);
+    boss->setProjectileManager(this->pm);
+    boss->updateBoundingBox();
+
+    // Track as the active boss
+    this->activeBoss = boss;
+
+    if (slot < this->activeCount) {
+        if (this->slots[slot] != nullptr) {
+            delete this->slots[slot];
+        }
+    }
+    else {
+        this->activeCount = slot + 1;
+    }
+
+    this->slots[slot] = boss;
+    this->deSlots[slot] = boss;
+    return slot;
+}
+
 DamagableEntity** EnemyManager::getDamagableSlots() {
     return this->deSlots;
 }
@@ -245,6 +279,29 @@ int EnemyManager::getActiveCount() const {
 
 int EnemyManager::getTotalKills() const {
     return 0;
+}
+
+Boss* EnemyManager::getActiveBoss() const {
+    return this->activeBoss;
+}
+
+bool EnemyManager::hasActiveBoss() const {
+    if (this->activeBoss == nullptr) return false;
+    return this->activeBoss->isAlive() || this->activeBoss->isDying();
+}
+
+bool EnemyManager::isBossDead() const {
+    if (this->bossDied) return true;
+    if (this->activeBoss == nullptr) return false;
+    return !this->activeBoss->isAlive() && !this->activeBoss->isDying();
+}
+
+bool EnemyManager::wasBossKilled() const {
+    return this->bossDied;
+}
+
+const char* EnemyManager::getBossDiedName() const {
+    return this->bossDiedName;
 }
 
 void EnemyManager::cleanup() {
@@ -269,4 +326,7 @@ void EnemyManager::clearAll() {
         }
     }
     this->activeCount = 0;
+    this->activeBoss = nullptr;
+    this->bossDied = false;
+    this->bossDiedName = nullptr;
 }

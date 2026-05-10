@@ -1,16 +1,18 @@
-#include "MainMenu.h"
+﻿#include "MainMenu.h"
 #include <cstdio>
 
-static const char* LEVEL_NAMES[3] = {
+static const char* LEVEL_NAMES[4] = {
     "Level 1 - Ruins",
     "Level 2 - Cold Death",
-    "Level 3 - Blasphemous City"
+    "Level 3 - Blasphemous City",
+    "Level 4 - Ironokava"
 };
 
-static const char* LEVEL_DESCS[3] = {
+static const char* LEVEL_DESCS[4] = {
     "Mountain + Water",
     "Mountain + Water",
-    "Flat Plains - 11km"
+    "Flat Plains - 11km",
+    "BOSS ARENA"
 };
 
 MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
@@ -52,20 +54,27 @@ MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
     this->selector.setFillColor(Color(220, 80, 0, 180));
 
     // Level select boxes
-    float boxW = 320.f;
+    float boxW = 250.f;
     float boxH = 360.f;
-    float gap = 40.f;
-    float totalW = 3.f * boxW + 2.f * gap;
+    float gap = 30.f;
+    float totalW = 4.f * boxW + 3.f * gap;
     float startX = ((float)SCREEN_W - totalW) / 2.f;
     float boxY = 200.f;
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
         float x = startX + i * (boxW + gap);
         this->levelBoxes[i].setSize(Vector2f(boxW, boxH));
         this->levelBoxes[i].setPosition(x, boxY);
         this->levelBoxes[i].setOutlineThickness(3.f);
-        this->levelBoxes[i].setFillColor(Color(20, 20, 50, 180));
-        this->levelBoxes[i].setOutlineColor(Color(80, 80, 120));
+        // Boss level gets special styling
+        if (i == 3) {
+            this->levelBoxes[i].setFillColor(Color(50, 20, 20, 180));
+            this->levelBoxes[i].setOutlineColor(Color(150, 60, 60));
+        }
+        else {
+            this->levelBoxes[i].setFillColor(Color(20, 20, 50, 180));
+            this->levelBoxes[i].setOutlineColor(Color(80, 80, 120));
+        }
     }
 
     this->loadVideoFrames();
@@ -75,7 +84,7 @@ MainMenu::~MainMenu() {}
 
 bool MainMenu::isReady() const {
     // Ready when a mode AND a level have both been selected
-    return (this->gameMode >= 0 && this->gameMode <= 2) && (this->selectedLevel >= 0 && this->selectedLevel <= 2);
+    return (this->gameMode >= 0 && this->gameMode <= 2) && (this->selectedLevel >= 0 && this->selectedLevel <= 3);
 }
 
 void MainMenu::loadVideoFrames() {
@@ -163,10 +172,10 @@ int MainMenu::handleEvent(Event& event) {
     // ── Level select screen ──
     if (this->menuState == 2) {
         if (event.key.code == Keyboard::Left) {
-            this->hoveredLevel = (this->hoveredLevel + 2) % 3;
+            this->hoveredLevel = (this->hoveredLevel + 3) % 4;
         }
         else if (event.key.code == Keyboard::Right) {
-            this->hoveredLevel = (this->hoveredLevel + 1) % 3;
+            this->hoveredLevel = (this->hoveredLevel + 1) % 4;
         }
         else if (event.key.code == Keyboard::Num1) {
             this->hoveredLevel = 0;
@@ -179,6 +188,10 @@ int MainMenu::handleEvent(Event& event) {
         else if (event.key.code == Keyboard::Num3) {
             this->hoveredLevel = 2;
             this->selectedLevel = 2;
+        }
+        else if (event.key.code == Keyboard::Num4) {
+            this->hoveredLevel = 3;
+            this->selectedLevel = 3;
         }
         else if (event.key.code == Keyboard::Return || event.key.code == Keyboard::Space) {
             this->selectedLevel = this->hoveredLevel;
@@ -291,15 +304,29 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
     window.draw(modeText);
 
     // Level boxes
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
         // Update colors based on hover
         if (i == this->hoveredLevel) {
-            this->levelBoxes[i].setFillColor(Color(40, 60, 120, 200));
-            this->levelBoxes[i].setOutlineColor(Color(255, 215, 0));
+            if (i == 3) {
+                // Boss level hover: bright red highlight
+                this->levelBoxes[i].setFillColor(Color(80, 30, 30, 200));
+                this->levelBoxes[i].setOutlineColor(Color(255, 100, 50));
+            }
+            else {
+                this->levelBoxes[i].setFillColor(Color(40, 60, 120, 200));
+                this->levelBoxes[i].setOutlineColor(Color(255, 215, 0));
+            }
         }
         else {
-            this->levelBoxes[i].setFillColor(Color(20, 20, 50, 180));
-            this->levelBoxes[i].setOutlineColor(Color(80, 80, 120));
+            if (i == 3) {
+                // Boss level default: dark red
+                this->levelBoxes[i].setFillColor(Color(50, 20, 20, 180));
+                this->levelBoxes[i].setOutlineColor(Color(150, 60, 60));
+            }
+            else {
+                this->levelBoxes[i].setFillColor(Color(20, 20, 50, 180));
+                this->levelBoxes[i].setOutlineColor(Color(80, 80, 120));
+            }
         }
 
         window.draw(this->levelBoxes[i]);
@@ -318,7 +345,8 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
         numText.setString(buf);
         numText.setCharacterSize(80);
         numText.setFillColor(i == this->hoveredLevel
-            ? Color(255, 215, 0, 200) : Color(100, 140, 200, 120));
+            ? (i == 3 ? Color(255, 100, 50, 200) : Color(255, 215, 0, 200))
+            : (i == 3 ? Color(150, 60, 60, 120) : Color(100, 140, 200, 120)));
         FloatRect nr = numText.getLocalBounds();
         numText.setOrigin(nr.width / 2.f, 0.f);
         numText.setPosition(bx + bw / 2.f, by + 30.f);
@@ -328,10 +356,11 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
         Text nameText;
         nameText.setFont(this->font);
         nameText.setString(LEVEL_NAMES[i]);
-        nameText.setCharacterSize(18);
-        nameText.setStyle(Text::Bold);
+        nameText.setCharacterSize(16);
+        nameText.setStyle(i == 3 ? Text::Bold : Text::Regular);
         nameText.setFillColor(i == this->hoveredLevel
-            ? Color(255, 255, 255) : Color(160, 160, 180));
+            ? (i == 3 ? Color(255, 180, 130) : Color(255, 255, 255))
+            : (i == 3 ? Color(180, 100, 100) : Color(160, 160, 180)));
         FloatRect nm = nameText.getLocalBounds();
         nameText.setOrigin(nm.width / 2.f, 0.f);
         nameText.setPosition(bx + bw / 2.f, by + 140.f);
@@ -342,7 +371,7 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
         descText.setFont(this->font);
         descText.setString(LEVEL_DESCS[i]);
         descText.setCharacterSize(15);
-        descText.setFillColor(Color(130, 130, 160));
+        descText.setFillColor(i == 3 ? Color(200, 120, 80) : Color(130, 130, 160));
         FloatRect dr = descText.getLocalBounds();
         descText.setOrigin(dr.width / 2.f, 0.f);
         descText.setPosition(bx + bw / 2.f, by + 175.f);
@@ -361,12 +390,27 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
         keyText.setOrigin(kr.width / 2.f, 0.f);
         keyText.setPosition(bx + bw / 2.f, by + bh - 50.f);
         window.draw(keyText);
+
+        // Boss skull indicator for level 4
+        if (i == 3) {
+            Text skullText;
+            skullText.setFont(this->font);
+            skullText.setString("!! BOSS !!");
+            skullText.setCharacterSize(18);
+            skullText.setStyle(Text::Bold);
+            skullText.setFillColor(i == this->hoveredLevel
+                ? Color(255, 60, 30) : Color(180, 50, 30));
+            FloatRect sr = skullText.getLocalBounds();
+            skullText.setOrigin(sr.width / 2.f, 0.f);
+            skullText.setPosition(bx + bw / 2.f, by + 210.f);
+            window.draw(skullText);
+        }
     }
 
     // Instructions
     Text hint;
     hint.setFont(this->font);
-    hint.setString("[LEFT/RIGHT] Browse   [1/2/3] Quick Select   [ENTER] Confirm   [ESC] Back");
+    hint.setString("[LEFT/RIGHT] Browse   [1/2/3/4] Quick Select   [ENTER] Confirm   [ESC] Back");
     hint.setCharacterSize(20);
     hint.setFillColor(Color(150, 150, 150));
     FloatRect hb = hint.getLocalBounds();

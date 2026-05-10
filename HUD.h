@@ -29,8 +29,8 @@ private:
     Clock        elapsedTime;
     Font         font;
     float        redHueAlpha;
-    const char*  weaponName;
-    const char*  characterName;
+    const char* weaponName;
+    const char* characterName;
 
     // Four heart sprites representing health states:
     // heartTex[0] = heart1.png (3/3 — full)
@@ -40,6 +40,21 @@ private:
     // Selection: index = MAX_HEARTS - hp  (hp=3→0, hp=2→1, hp=1→2, hp=0→3)
     Texture      heartTex[4];
     bool         heartsLoaded;
+
+    // ── Boss health bar (Souls-style) ──
+    float        bossHealthFraction;      // current boss HP (0.0 – 1.0)
+    float        bossHealthDisplayed;     // smoothly animated displayed HP
+    const char* bossName;               // boss name for display
+    bool         bossBarVisible;          // true when a boss is active
+    float        bossBarAppearTimer;      // animation timer for bar appearing
+    float        bossBarAlpha;            // fade-in alpha
+
+    // ── "GREAT ENEMY FELLED" overlay (Elden Ring style) ──
+    bool         felledVisible;           // true while the felled message is on screen
+    int          felledPhase;             // 0=fade in, 1=hold, 2=fade out
+    float        felledTimer;             // seconds elapsed in current phase
+    float        felledAlpha;             // current alpha (0–255)
+    const char* felledBossName;          // name of the defeated boss
 
 public:
     HUD();
@@ -51,4 +66,15 @@ public:
     int  getScore() const;
     void showDamageHue(float intensity);
     void setWeaponName(const char* name);
+
+    // Boss health bar control
+    void setBossInfo(const char* name, float healthFrac);
+    void clearBossInfo();
+
+    // Boss felled message
+    void showBossFelled(const char* bossName);
+    bool isFelledShowing() const;
+
+private:
+    void drawBossFelled(RenderWindow& window);
 };

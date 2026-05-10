@@ -28,7 +28,7 @@ class GameState {
 public:
     // Shared context — public so Game.cpp can copy them forward between states
     int gameMode;
-    int selectedLevel;    // 0, 1, or 2
+    int selectedLevel;    // 0, 1, 2, or 3
     int selectedChar;     // 0=Marco, 1=Tarma, 2=Eri, 3=Fio
 
     TextureManager* texManager;
