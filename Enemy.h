@@ -115,13 +115,13 @@ public:
 
 class Paratrooper : public Enemy {
 private:
-    int paraState;       // 0 = flying (parachute), 1 = grounded (rebel)
-    float landY;         // target Y where landing completes
-    float fallSpeed;     // slow descent speed while parachuting
-    Animation flyAnim;   // single-frame parachute animation
-    float swayTimer;     // timer for gentle left-right sway
-    bool startDescent;   // true once player is near mountain height
-    float triggerX;      // X position that triggers descent when player crosses it
+    int paraState;       
+    float landY;         
+    float fallSpeed;     
+    Animation flyAnim;   
+    float swayTimer;     
+    bool startDescent;   
+    float triggerX;      
 
 protected:
     virtual void applyGravity();
@@ -138,40 +138,40 @@ public:
     virtual void handleCollision(Level* lvl);
 };
 
-// ============================================================
-// Boss — abstract base for all boss enemies.
-// Inherits from Enemy so EnemyManager can store Boss* in the
-// same slot array and call updateAI/draw polymorphically.
-// Adds boss-specific fields: phase tracking, boss name,
-// dramatic death, and a health-fraction query for the HUD.
-// ============================================================
+
+
+
+
+
+
+
 class Boss : public Enemy {
 protected:
-    int   bossPhase;          // 0 = phase 1, 1 = enraged (phase 2)
-    float phase2Threshold;    // HP fraction that triggers phase 2 (e.g. 0.5)
-    const char* bossName;     // display name for HUD health bar
-    bool  entranceDone;       // false until boss entrance animation finishes
-    float entranceTimer;      // seconds elapsed since boss appeared
+    int   bossPhase;          
+    float phase2Threshold;    
+    const char* bossName;     
+    bool  entranceDone;       
+    float entranceTimer;      
 
-    Animation idleAnim;       // boss idle/stance animation
-    Animation chargeAnim;     // boss charge animation (reuses walk)
-    Animation specialAnim;    // boss special attack animation
+    Animation idleAnim;       
+    Animation chargeAnim;     
+    Animation specialAnim;    
 
-    float specialCooldown;    // seconds between special attacks
-    Clock specialTimer;       // tracks time since last special
-    float chargeCooldown;     // seconds between charge attacks
-    Clock chargeTimer;        // tracks time since last charge
-    float chargeSpeed;        // velocity multiplier during charge
-    bool  isCharging;         // true while performing a charge
-    float chargeDuration;     // how long a charge lasts (seconds)
-    float chargeElapsed;      // time elapsed in current charge
+    float specialCooldown;    
+    Clock specialTimer;       
+    float chargeCooldown;     
+    Clock chargeTimer;        
+    float chargeSpeed;        
+    bool  isCharging;         
+    float chargeDuration;     
+    float chargeElapsed;      
 
 public:
     Boss(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~Boss();
 
     const char* getBossName() const;
-    float getHealthFraction() const;  // 0.0 – 1.0 for HUD bar
+    float getHealthFraction() const;  
     bool  isEntranceDone() const;
 
     virtual void updateAI(PlayerSoldier* player, Level* lvl);
@@ -179,11 +179,11 @@ public:
     virtual void draw(RenderWindow& window, float scrollX, float scrollY);
 };
 
-// ============================================================
-// Ironokava — first boss.
-// A massive armored tank-like boss that charges and fires
-// heavy projectiles. Enters enraged phase at 50% HP.
-// ============================================================
+
+
+
+
+
 class Ironokava : public Boss {
 public:
     Ironokava(TextureManager* texMgr, AudioManager* audMgr);
@@ -193,32 +193,32 @@ public:
     virtual void draw(RenderWindow& window, float scrollX, float scrollY);
 };
 
-// ============================================================
-// Hairbuster — second boss.
-// A flying boss that circles around a mountain peak, swooping
-// and diving at the player. Uses sinusoidal flight patterns
-// and drops explosive projectiles from above.
-// Enters enraged phase at 40% HP (faster, wider circles, more bombs).
-// ============================================================
+
+
+
+
+
+
+
 class Hairbuster : public Boss {
 private:
-    float flyCenterX;        // X center of the circular flight path
-    float flyCenterY;        // Y center of the circular flight path
-    float flyRadiusX;        // horizontal radius of flight ellipse
-    float flyRadiusY;        // vertical radius of flight ellipse
-    float flyAngle;          // current angle on the ellipse (radians)
-    float flySpeed;          // angular speed (radians per tick)
-    float diveTargetX;       // X target when diving at player
-    float diveTargetY;       // Y target when diving at player
-    bool  isDiving;          // true during a dive attack
-    float diveSpeed;         // speed during a dive
-    float diveTimer;         // time elapsed during dive
-    float diveDuration;      // max time a dive lasts
-    float bombCooldown;      // seconds between bomb drops
-    Clock bombTimer;         // tracks time since last bomb
+    float flyCenterX;        
+    float flyCenterY;        
+    float flyRadiusX;        
+    float flyRadiusY;        
+    float flyAngle;          
+    float flySpeed;          
+    float diveTargetX;       
+    float diveTargetY;       
+    bool  isDiving;          
+    float diveSpeed;         
+    float diveTimer;         
+    float diveDuration;      
+    float bombCooldown;      
+    Clock bombTimer;         
 
 protected:
-    virtual void applyGravity();  // flying boss — no gravity
+    virtual void applyGravity();  
 
 public:
     Hairbuster(TextureManager* texMgr, AudioManager* audMgr);

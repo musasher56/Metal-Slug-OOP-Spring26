@@ -50,9 +50,9 @@ private:
     sf::Font   debugFont;
     sf::Text   debugText;
 
-    // ── Developer / God Mode (G key) ─────────────────────────────────────
-    // Single press of G toggles immortality ON/OFF.
-    // devKeyTimer drives the pulsing animation on the on-screen banner.
+    
+    
+    
     bool       devModeActive;
     sf::Clock  devKeyTimer;
 
@@ -64,20 +64,20 @@ private:
     int   flyingTaraPhase;
     bool  submarineSpawned;
 
-    // Water pool overlay
+    
     sf::ConvexShape waterShape;
     float waterBaseY;
 
-    // ── Level management ──
-    int startLevel;               // which level to begin at (0 = campaign, 1/2 = skip ahead)
+    
+    int startLevel;               
     int currentLevelIndex;
     const LevelConfig* currentConfig;
     bool levelTransitioning;
     float levelTransitionTimer;
-    bool hudVisible;              // T key: toggles HUD + debug panel + hitboxes together
-    bool bossFelledTriggered;     // true once the "GREAT ENEMY FELLED" message has been shown
-    int  bossesSpawned;           // how many bosses have been spawned in the current boss level
-    int  bossesDefeated;          // how many bosses have been defeated in the current boss level
+    bool hudVisible;              
+    bool bossFelledTriggered;     
+    int  bossesSpawned;           
+    int  bossesDefeated;          
 
 public:
     PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr, int startLvl = 0);

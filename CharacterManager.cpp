@@ -16,13 +16,13 @@ CharacterManager::CharacterManager(TextureManager* texMgr, AudioManager* audMgr,
     this->characters[2] = new Eri(texMgr, audMgr);
     this->characters[3] = new Fio(texMgr, audMgr);
 
-    // Clamp startChar to a valid slot so a bad value from CharSelectState
-    // (e.g. -1 or 4) never leaves currentCharacter pointing at nullptr.
+    
+    
     if (startChar >= 0 && startChar < 4 && this->characters[startChar] != nullptr) {
         this->currentCharacter = startChar;
     }
     else {
-        this->currentCharacter = 0;  // fallback to Marco
+        this->currentCharacter = 0;  
     }
 }
 
@@ -33,16 +33,16 @@ CharacterManager::~CharacterManager() {
             this->characters[i] = nullptr;
         }
     }
-    // pm is aggregated (owned by PlayState), never deleted here.
+    
     this->fusionCompanion = nullptr;
 }
 
 void CharacterManager::setProjectileManager(ProjectileManager* manager) {
-    // Store so future switches can forward the pointer to incoming characters.
+    
     this->pm = manager;
 
-    // Distribute immediately to every existing slot so no character ever
-    // tries to fire with a null pm, regardless of which one is active first.
+    
+    
     for (int i = 0; i < 4; i++) {
         if (this->characters[i] != nullptr) {
             this->characters[i]->setProjectileManager(manager);
@@ -51,9 +51,9 @@ void CharacterManager::setProjectileManager(ProjectileManager* manager) {
 }
 
 void CharacterManager::initAllPositions(sf::Vector2f startPos) {
-    // Sets every character slot to the same world position so they all
-    // start standing on the surface rather than at the constructor-default
-    // (200, 300) which may be mid-air or inside terrain depending on the level.
+    
+    
+    
     for (int i = 0; i < 4; i++) {
         if (this->characters[i] != nullptr) {
             this->characters[i]->position = startPos;
@@ -91,7 +91,7 @@ void CharacterManager::handleInput(Event& event) {
 
     if (event.type == Event::KeyPressed) {
         if (event.key.code == Keyboard::Space) {
-            // Only jump on ground; swimming is handled in Soldier::update
+            
             if (!current->getInWater()) {
                 current->handleJump();
             }
@@ -100,8 +100,8 @@ void CharacterManager::handleInput(Event& event) {
 }
 
 void CharacterManager::switchCharacter() {
-    // Capture outgoing character before advancing the index.
-    // We need its physics state to hand to the incoming character.
+    
+    
     PlayerSoldier* outgoing = this->characters[this->currentCharacter];
 
     int startIdx = this->currentCharacter;
@@ -111,38 +111,38 @@ void CharacterManager::switchCharacter() {
 
             PlayerSoldier* incoming = this->characters[this->currentCharacter];
 
-            // --- Physics handoff ---
-            // copyPhysicsFrom() writes position, velocityX/Y, onGround, and
-            // direction into the incoming soldier.
+            
+            
+            
             if (outgoing != nullptr) {
                 incoming->copyPhysicsFrom(outgoing);
             }
 
-            // ── Feet-level correction ──────────────────────────────────────
-            // Every character is scaled so physH * scale ≈ 143px (normalised
-            // in the constructor), making bounding-box heights nearly equal.
-            // This residual adjustment handles the small floating-point delta
-            // that remains (~0–2px) so the character never phases through
-            // the ground or floats above it after a Z-switch.
-            //
-            // Logic: the world Y of the FEET = position.y + box.height.
-            // After copyPhysicsFrom the position is shared but box heights
-            // may differ by a pixel or two.  We shift incoming->position.y
-            // by that delta so the feet land at exactly the same world Y.
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
             if (outgoing != nullptr) {
                 int outH = outgoing->getBoundingBox().height;
-                incoming->updateBoundingBox();           // build box with new scale
+                incoming->updateBoundingBox();           
                 int inH = incoming->getBoundingBox().height;
-                int delta = outH - inH;                  // positive = outgoing was taller
+                int delta = outH - inH;                  
                 if (delta != 0) {
                     incoming->position.y += static_cast<float>(delta);
                 }
             }
 
-            // Rebuild bounding box after the position adjustment
+            
             incoming->updateBoundingBox();
 
-            // Ensure pm is valid for the incoming character.
+            
             if (this->pm != nullptr) {
                 incoming->setProjectileManager(this->pm);
             }

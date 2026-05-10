@@ -166,7 +166,7 @@ void BlockManager::buildMountainTerrain(float baseX, float baseY, int maxColHeig
 
     for (int col = 0; col < MOUNTAIN_HEIGHTMAP_LEN && this->mountainBlockCount < MAX_MOUNTAIN_BLOCKS; col++) {
         int colHeight = heightmap[col];
-        // Cap column height for smaller mountains (e.g. boss level with no vertical scroll)
+        
         if (colHeight > maxColHeight) colHeight = maxColHeight;
         float wx = baseX + col * MOUNTAIN_COL_STEP;
 

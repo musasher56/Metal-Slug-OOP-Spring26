@@ -20,7 +20,7 @@ public:
     virtual void onEnter();
     virtual void onExit();
 
-    // Polymorphic transition: when the player has chosen both a mode and a
-    // level, this returns a new CharSelectState. Otherwise returns nullptr.
+    
+    
     virtual GameState* createNextState();
 };

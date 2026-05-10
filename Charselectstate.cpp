@@ -14,9 +14,9 @@ CharSelectState::CharSelectState(TextureManager* texMgr, AudioManager* audMgr)
     this->id = GSTATE_CHAR_SELECT;
     this->shouldGoBack = false;
     this->shouldExit = false;
-    // selectedChar, gameMode, selectedLevel are inherited from GameState
-    // and already set by MenuState before this object was created.
-    // selectedChar is -1 until player confirms.
+    
+    
+    
 
     if (this->bgTexture.loadFromFile("resources/Sprites/CharacterSelect.png")) {
         this->bgLoaded = true;
@@ -175,7 +175,7 @@ void CharSelectState::onEnter() {
 void CharSelectState::onExit() {}
 
 GameState* CharSelectState::createNextState() {
-    // Only transition when a character has been confirmed
+    
     if (this->selectedChar >= 0 && this->selectedChar <= 3) {
         PlayState* play = new PlayState(this->gameMode,
             this->selectedChar,

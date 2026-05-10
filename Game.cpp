@@ -50,23 +50,23 @@ void Game::handleEvents() {
             GameState* current = this->stateManager->peek();
             if (current == nullptr) continue;
 
-            // ── Polymorphic transition: no if-chains on state IDs ────────
-            // Each state overrides createNextState() to return the next
-            // screen when the player has made a selection, or nullptr if
-            // they're still deciding.  Game.cpp doesn't need to know which
-            // concrete state it's dealing with.
+            
+            
+            
+            
+            
 
-            // Check exit request
+            
             if (current->getShouldExit()) {
                 this->running = false;
                 this->window.close();
                 return;
             }
 
-            // Check go-back request (ESC to return to previous screen)
+            
             if (current->getShouldGoBack()) {
                 this->stateManager->pop();
-                // If nothing left on the stack, push a fresh main menu
+                
                 if (this->stateManager->peek() == nullptr) {
                     MenuState* menu = new MenuState(this->texManager, this->audManager);
                     this->stateManager->push(menu);
@@ -74,10 +74,10 @@ void Game::handleEvents() {
                 continue;
             }
 
-            // Ask the current state for the next transition
+            
             GameState* next = current->createNextState();
             if (next != nullptr) {
-                // Copy context forward so the next state can read it
+                
                 next->gameMode = current->gameMode;
                 next->selectedLevel = current->selectedLevel;
                 next->selectedChar = current->selectedChar;

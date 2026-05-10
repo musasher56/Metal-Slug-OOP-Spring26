@@ -4,13 +4,13 @@
 #include "AudioManager.h"
 #include <SFML/Graphics.hpp>
 
-// ============================================================================
-//  CharSelectState
-//  Player picks their soldier (Marco/Tarma/Eri/Fio).
-//  When selection is confirmed, createNextState() returns a PlayState
-//  initialised with the game mode, selected level, and chosen character
-//  that were accumulated through the menu chain.
-// ============================================================================
+
+
+
+
+
+
+
 
 class CharSelectState : public GameState {
 private:
@@ -40,7 +40,7 @@ public:
     virtual void onEnter();
     virtual void onExit();
 
-    // Polymorphic transition: once a character is chosen, returns PlayState
+    
     virtual GameState* createNextState();
 
 private:

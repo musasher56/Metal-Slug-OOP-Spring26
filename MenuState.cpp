@@ -42,8 +42,8 @@ void MenuState::handleEvent(Event& event) {
         }
     }
 
-    // Sync context from MainMenu into GameState fields so createNextState()
-    // can read them without knowing about MainMenu internals.
+    
+    
     if (this->mainMenu != nullptr) {
         this->gameMode = this->mainMenu->getSelectedMode();
         this->selectedLevel = this->mainMenu->getSelectedLevel();
@@ -51,21 +51,21 @@ void MenuState::handleEvent(Event& event) {
 }
 
 void MenuState::onEnter() {
-    // Start title screen music (Track 0 = title_theme.ogg) when entering menu.
+    
     if (this->audManager != nullptr) {
         this->audManager->playMusicTrack(0);
     }
 }
 
 void MenuState::onExit() {
-    // Stop title music when leaving the menu (entering game or exiting app).
+    
     if (this->audManager != nullptr) {
         this->audManager->stopMusic();
     }
 }
 
 GameState* MenuState::createNextState() {
-    // Only transition when MainMenu reports both mode and level are chosen
+    
     if (this->mainMenu != nullptr && this->mainMenu->isReady()) {
         return new CharSelectState(this->texManager, this->audManager);
     }

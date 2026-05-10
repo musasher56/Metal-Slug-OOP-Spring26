@@ -4,9 +4,9 @@
 #include <cmath>
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PlayerSoldier — base
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 PlayerSoldier::PlayerSoldier(TextureManager* texMgr, AudioManager* audMgr)
     : Soldier(texMgr, audMgr)
@@ -39,8 +39,8 @@ PlayerSoldier::PlayerSoldier(TextureManager* texMgr, AudioManager* audMgr)
 }
 
 PlayerSoldier::~PlayerSoldier() {
-    // currentWeapon always points into devWeaponPool — null it to prevent
-    // any stale delete in code that checks currentWeapon != nullptr.
+    
+    
     this->currentWeapon = nullptr;
 
     if (this->pistol != nullptr) {
@@ -209,9 +209,9 @@ void PlayerSoldier::draw(RenderWindow& window, float scrollX, float scrollY) {
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Marco  (existing sprite sheet — unchanged)
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 Marco::Marco(TextureManager* texMgr, AudioManager* audMgr)
     : PlayerSoldier(texMgr, audMgr)
@@ -260,20 +260,20 @@ void Marco::handleInput() {
 void Marco::meleeAttack() { Soldier::meleeAttack(); }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tarma
-//
-// Sprite  : resources/Sprites/tarma.png  (1024×1024, RGB black background)
-// Crop    : (47, 64, 913, 896) — user-specified
-// Scale   : 0.2f  — user-specified
-//   On-screen: 182 × 179 px
-//
-// WHY loadTextureWithMask is assigned directly (no getTexture call):
-//   The previous pattern of loadTextureWithMask() → getTexture() required a
-//   second findSlot() lookup that sometimes failed to locate the just-stored
-//   key (visible in log as "[WARN] Texture not found: tarma-idle").
-//   loadTextureWithMask now returns Texture& directly — zero lookup risk.
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 Tarma::Tarma(TextureManager* texMgr, AudioManager* audMgr)
     : PlayerSoldier(texMgr, audMgr)
@@ -281,22 +281,22 @@ Tarma::Tarma(TextureManager* texMgr, AudioManager* audMgr)
     , vehicleDurabilityBonus(0.20f)
     , immunityActive(false)
 {
-    // loadTextureWithMask returns Texture& directly — no second lookup needed.
+    
     Texture& tex = texMgr->loadTextureWithMask(
         "tarma-idle",
         "resources/Sprites/tarma.png",
         sf::Color::Black, 50
     );
 
-    // Single idle/shoot frame — setFrameRect sets useExplicitFrames = true
+    
     this->animation.setTexture(&tex);
     this->animation.setFrameCount(1);
     this->animation.setFrameRect(0, 47, 64, 913, 896);
     this->animation.setLoop(true);
 
-    // physW at 60 % of crop to exclude gun barrel from hitbox:
-    //   913 * 0.6 = 547;  547 * 0.2 = 109 px effective hitbox width
-    // physH = full crop:  896 * 0.2 = 179 px height
+    
+    
+    
     this->physW = static_cast<int>(913 * 0.6f);
     this->physH = 896;
 
@@ -324,13 +324,13 @@ void Tarma::handleInput() {
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Eri
-//
-// Sprite  : resources/Sprites/eri-idle.png  (300×258, RGB black background)
-// Crop    : (13, 0, 287, 258) — pixel-scanned, exact match with user spec
-// Scale   : 0.55f → 258 * 0.55 = 142 px  ≈  Marco's 41 * 3.5 = 143 px
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
 
 Eri::Eri(TextureManager* texMgr, AudioManager* audMgr)
     : PlayerSoldier(texMgr, audMgr)
@@ -391,13 +391,13 @@ void Eri::throwGrenade() {
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Fio (Germi)
-//
-// Sprite  : resources/Sprites/germi-idle.png  (334×264, RGB black background)
-// Crop    : (25, 0, 304, 260) — measured by pixel scan
-// Scale   : 0.55f → 260 * 0.55 = 143 px  ←  matches Marco exactly
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
 
 Fio::Fio(TextureManager* texMgr, AudioManager* audMgr)
     : PlayerSoldier(texMgr, audMgr)
@@ -445,9 +445,9 @@ void Fio::handleInput() {
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PlayerSoldier::throwGrenade  (base — Marco, Tarma)
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 
 void PlayerSoldier::throwGrenade() {
     if (this->pm == nullptr)     return;
