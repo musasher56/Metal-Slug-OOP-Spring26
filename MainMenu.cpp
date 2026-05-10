@@ -53,7 +53,7 @@ MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
     this->selector.setSize(Vector2f(500.f, 50.f));
     this->selector.setFillColor(Color(220, 80, 0, 180));
 
-    
+    // Level select boxes
     float boxW = 250.f;
     float boxH = 360.f;
     float gap = 30.f;
@@ -66,7 +66,7 @@ MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
         this->levelBoxes[i].setSize(Vector2f(boxW, boxH));
         this->levelBoxes[i].setPosition(x, boxY);
         this->levelBoxes[i].setOutlineThickness(3.f);
-        
+        // Boss level gets special styling
         if (i == 3) {
             this->levelBoxes[i].setFillColor(Color(50, 20, 20, 180));
             this->levelBoxes[i].setOutlineColor(Color(150, 60, 60));
@@ -83,7 +83,9 @@ MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
 MainMenu::~MainMenu() {}
 
 bool MainMenu::isReady() const {
-    
+    // Ready when a mode AND a level have both been selected.
+    // For CAMPAIGN mode, the level is auto-selected (0) — no level select needed.
+    // For SURVIVAL/SELF-PLAY, the user must pick a level from the 4 options.
     return (this->gameMode >= 0 && this->gameMode <= 2) && (this->selectedLevel >= 0 && this->selectedLevel <= 3);
 }
 
@@ -143,25 +145,35 @@ void MainMenu::updateVideo(float dt) {
 int MainMenu::handleEvent(Event& event) {
     if (event.type != Event::KeyPressed) return -1;
 
-    
+    // ── Splash screen ── any key advances to mode select
     if (this->menuState == 0) {
         this->menuState = 1;
         return -1;
     }
 
-    
+    // ── Mode select screen ──
     if (this->menuState == 1) {
         if (event.key.code == Keyboard::Up)
             this->selectedOption = (this->selectedOption - 1 + 4) % 4;
         else if (event.key.code == Keyboard::Down)
             this->selectedOption = (this->selectedOption + 1) % 4;
         else if (event.key.code == Keyboard::Return || event.key.code == Keyboard::Space) {
-            if (this->selectedOption == 3) return 99;  
+            if (this->selectedOption == 3) return 99;  // EXIT
             this->gameMode = this->selectedOption;
-            
-            this->menuState = 2;
-            this->selectedLevel = -1;
-            this->hoveredLevel = 0;
+
+            if (this->gameMode == MODE_CAMPAIGN) {
+                // ── Campaign mode: only ONE Perlin level — auto-select it ──
+                // Skip the level select screen entirely since campaign has
+                // a single procedural Perlin terrain level (no predefined levels).
+                this->selectedLevel = 0;
+                // isReady() is now true → MenuState will transition to CharSelect
+            }
+            else {
+                // Survival / Self-Play: show level select with 4 predefined levels
+                this->menuState = 2;
+                this->selectedLevel = -1;
+                this->hoveredLevel = 0;
+            }
         }
         else if (event.key.code == Keyboard::Escape) {
             return 99;
@@ -169,7 +181,7 @@ int MainMenu::handleEvent(Event& event) {
         return -1;
     }
 
-    
+    // ── Level select screen ── (only reached for SURVIVAL / SELF-PLAY)
     if (this->menuState == 2) {
         if (event.key.code == Keyboard::Left) {
             this->hoveredLevel = (this->hoveredLevel + 3) % 4;
@@ -197,7 +209,7 @@ int MainMenu::handleEvent(Event& event) {
             this->selectedLevel = this->hoveredLevel;
         }
         else if (event.key.code == Keyboard::Escape) {
-            
+            // Go back to mode select
             this->menuState = 1;
             this->selectedLevel = -1;
         }
@@ -276,7 +288,7 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
 
     if (!this->fontLoaded) return;
 
-    
+    // Title
     Text title;
     title.setFont(this->font);
     title.setString("SELECT LEVEL");
@@ -288,10 +300,9 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
     title.setPosition((float)SCREEN_W / 2.f, 30.f);
     window.draw(title);
 
-    
+    // Mode subtitle
     const char* modeName = "SURVIVAL";
-    if (this->gameMode == MODE_CAMPAIGN) modeName = "CAMPAIGN";
-    else if (this->gameMode == MODE_SELF_PLAY) modeName = "SELF-PLAY";
+    if (this->gameMode == MODE_SELF_PLAY) modeName = "SELF-PLAY";
 
     Text modeText;
     modeText.setFont(this->font);
@@ -303,12 +314,12 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
     modeText.setPosition((float)SCREEN_W / 2.f, 95.f);
     window.draw(modeText);
 
-    
+    // Level boxes (only survival/self-play reach this screen)
     for (int i = 0; i < 4; i++) {
-        
+        // Update colors based on hover
         if (i == this->hoveredLevel) {
             if (i == 3) {
-                
+                // Boss level hover: bright red highlight
                 this->levelBoxes[i].setFillColor(Color(80, 30, 30, 200));
                 this->levelBoxes[i].setOutlineColor(Color(255, 100, 50));
             }
@@ -319,7 +330,7 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
         }
         else {
             if (i == 3) {
-                
+                // Boss level default: dark red
                 this->levelBoxes[i].setFillColor(Color(50, 20, 20, 180));
                 this->levelBoxes[i].setOutlineColor(Color(150, 60, 60));
             }
@@ -336,7 +347,7 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
         float bw = this->levelBoxes[i].getSize().x;
         float bh = this->levelBoxes[i].getSize().y;
 
-        
+        // Big level number
         Text numText;
         numText.setFont(this->font);
         char buf[4];
@@ -352,7 +363,7 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
         numText.setPosition(bx + bw / 2.f, by + 30.f);
         window.draw(numText);
 
-        
+        // Level name
         Text nameText;
         nameText.setFont(this->font);
         nameText.setString(LEVEL_NAMES[i]);
@@ -366,7 +377,7 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
         nameText.setPosition(bx + bw / 2.f, by + 140.f);
         window.draw(nameText);
 
-        
+        // Level description
         Text descText;
         descText.setFont(this->font);
         descText.setString(LEVEL_DESCS[i]);
@@ -377,7 +388,7 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
         descText.setPosition(bx + bw / 2.f, by + 175.f);
         window.draw(descText);
 
-        
+        // Key hint
         Text keyText;
         keyText.setFont(this->font);
         char keyBuf[8];
@@ -391,7 +402,7 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
         keyText.setPosition(bx + bw / 2.f, by + bh - 50.f);
         window.draw(keyText);
 
-        
+        // Boss skull indicator for level 4
         if (i == 3) {
             Text skullText;
             skullText.setFont(this->font);
@@ -407,7 +418,7 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
         }
     }
 
-    
+    // Instructions
     Text hint;
     hint.setFont(this->font);
     hint.setString("[LEFT/RIGHT] Browse   [1/2/3/4] Quick Select   [ENTER] Confirm   [ESC] Back");

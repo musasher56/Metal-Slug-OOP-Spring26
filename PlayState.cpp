@@ -7,11 +7,9 @@
 #include "HUD.h"
 #include "BlockManager.h"
 #include "DamagableEntity.h"
+#include "PerlinNoise.h"  // all noise classes in one file
 #include <cstdio>
-#include "NoiseProfile.h"
-#include "PerlinNoise.h"
 #include <cmath>
-
 
 
 PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr, int startLvl)
@@ -38,8 +36,9 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
     , bossFelledTriggered(false)
     , bossesSpawned(0)
     , bossesDefeated(0)
-    , campaignLastSpawnX(0.f)
-    , campaignProfile(nullptr)
+    , fractalNoise(nullptr)
+    , campaignSeed(42)
+    , campaignProfileType(NOISE_NORMAL)
 {
     this->id = GSTATE_PLAY;
 
@@ -80,15 +79,20 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
         -(float)SCREEN_H * 0.05f
     );
 
-    // Load the starting level (0 = campaign from beginning)
-    if (this->startLevel < 0) this->startLevel = 0;
-    if (this->startLevel >= TOTAL_LEVELS) this->startLevel = TOTAL_LEVELS - 1;
-    this->loadLevel(this->startLevel);
+    // Load the starting level
+    // Campaign mode uses procedural terrain; Survival uses predefined levels
+    if (this->gameMode == MODE_CAMPAIGN) {
+        this->loadCampaignLevel();
+    }
+    else {
+        if (this->startLevel < 0) this->startLevel = 0;
+        if (this->startLevel >= TOTAL_LEVELS) this->startLevel = TOTAL_LEVELS - 1;
+        this->loadLevel(this->startLevel);
+    }
 }
 
 PlayState::~PlayState() {
-    // Clean up campaign noise profile (owned by PlayState)
-    if (this->campaignProfile) { delete this->campaignProfile; this->campaignProfile = nullptr; }
+    if (this->fractalNoise) { delete this->fractalNoise; this->fractalNoise = nullptr; }
     if (this->enemyVehicleManager) { delete this->enemyVehicleManager; this->enemyVehicleManager = nullptr; }
     if (this->enemyManager) { delete this->enemyManager; this->enemyManager = nullptr; }
     if (this->blockManager) { delete this->blockManager;      this->blockManager = nullptr; }
@@ -100,90 +104,188 @@ PlayState::~PlayState() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// loadLevel — initializes (or re-initializes) everything for a given level
+// setCampaignProfile — set the noise profile type BEFORE the level loads
+//
+// Call this after creating PlayState but before the game loop starts.
+// profileType must be one of: NOISE_AMPLIFIED, NOISE_FLAT, NOISE_NORMAL
 // ─────────────────────────────────────────────────────────────────────────────
-void PlayState::loadLevel(int levelIndex) {
 
-    // ── Pick config based on game mode ──────────────────────────────────────
-    // Campaign mode uses LEVEL_CAMPAIGN regardless of levelIndex.
-    // Survival mode uses the indexed ALL_LEVELS array as before.
-    const LevelConfig* cfg = nullptr;
-
-    if (this->gameMode == MODE_CAMPAIGN) {
-        cfg = &LEVEL_CAMPAIGN;
-
-        // ── Swap in a Perlin noise Level ──
-        // NoiseProfile::create() uses the function pointer array factory (P5 safe).
-        // We use NOISE_NORMAL as default — the menu could pass a choice here later.
-        NoiseProfile* noiseProfile = NoiseProfile::create(NOISE_NORMAL);
-
-        // Level(NoiseProfile*) constructor generates the full noise terrain grid.
-        // Level does NOT store the profile — it only reads it during construction.
-        // So we can safely delete the profile right after.
-        Level* noiseLevel = new Level(noiseProfile);
-        delete noiseProfile;  // Level finished reading it, safe to release
-
-        // LevelManager takes ownership of noiseLevel and deletes the old flat Level
-        if (this->levelManager != nullptr) {
-            this->levelManager->setLevel(noiseLevel);
-        }
-
-        // Do NOT increment currentLevelIndex for campaign — it's one infinite level
+void PlayState::setCampaignProfile(int profileType) {
+    if (profileType >= 0 && profileType < 3) {
+        this->campaignProfileType = profileType;
     }
-    else {
-        // ── Survival mode ── original path, unchanged
-        if (levelIndex < 0 || levelIndex >= TOTAL_LEVELS) return;
-        this->currentLevelIndex = levelIndex;
-        cfg = ALL_LEVELS[levelIndex];
-    }
+}
 
-    if (cfg == nullptr) return;  // safety guard
-    this->currentConfig = cfg;  // CRITICAL: sets config for camera/scroll/water/enemies
+// ─────────────────────────────────────────────────────────────────────────────
+// loadCampaignLevel — generate procedural terrain for Campaign Mode
+//
+// THIS IS THE SIMPLE VERSION. Here's how it works:
+//
+//   1. Create PerlinNoise with a seed (same seed = same terrain every time)
+//   2. Create FractalNoise wrapping that PerlinNoise
+//   3. Create a NoiseProfile (Amplified/Flat/Normal) via Factory pattern
+//   4. Apply the profile to FractalNoise (sets amplitude, frequency, etc.)
+//   5. Generate a heightmap array (one int per column = block height)
+//   6. Build terrain from that heightmap using buildProceduralTerrain()
+//   7. Clean up noise objects (they're temporary — only needed for generation)
+//
+// The terrain uses your EXISTING MountainBlock (dirt.png) system.
+// No new rendering code. No new block types. Just a generated heightmap
+// instead of a hardcoded one.
+// ─────────────────────────────────────────────────────────────────────────────
 
-    // ── Reset scrolling ──
-    this->scroll  = 0.f;
+void PlayState::loadCampaignLevel() {
+    this->currentLevelIndex = 0;
+    this->currentConfig = &CAMPAIGN_LEVEL;  // dedicated Perlin campaign config (infinite.png bg)
+
+    // ── Reset scrolling and state ──
+    this->scroll = 0.f;
     this->scrollY = 0.f;
-
-    // ── Reset vehicle/animation state ──
-    this->flyingTaraPhase    = 0;
-    this->submarineSpawned   = false;
+    this->flyingTaraPhase = 0;
+    this->submarineSpawned = false;
     this->flyingTaraClock.restart();
-    this->levelTransitioning   = false;
+    this->levelTransitioning = false;
     this->levelTransitionTimer = 0.f;
-    this->bossFelledTriggered  = false;
-    this->bossesSpawned  = 0;
+    this->bossFelledTriggered = false;
+    this->bossesSpawned = 0;
     this->bossesDefeated = 0;
 
     // ── Clear old enemies, vehicles, projectiles ──
-    if (this->enemyManager)        this->enemyManager->clearAll();
+    if (this->enemyManager) this->enemyManager->clearAll();
     if (this->enemyVehicleManager) this->enemyVehicleManager->clearAll();
-    if (this->projectileManager)   this->projectileManager->clearAll();
+    if (this->projectileManager) this->projectileManager->clearAll();
 
-    // ── Delete old BlockManager (mountain + ground blocks) ──
+    // ── Delete old BlockManager ──
     if (this->blockManager) {
         delete this->blockManager;
         this->blockManager = nullptr;
     }
 
-    // ── Reset the Level grid for survival mode ──
-    // For campaign, the grid was just created fresh by Level(NoiseProfile*),
-    // so there's nothing stale to clear.
-    if (this->gameMode != MODE_CAMPAIGN) {
-        if (this->levelManager) {
-            Level* lvl = this->levelManager->getLevel();
-            if (lvl != nullptr) {
-                for (int r = 0; r < lvl->getHeight(); r++) {
-                    for (int c = 0; c < lvl->getWidth(); c++) {
-                        lvl->setSolid(r, c, false);
-                    }
+    // ── Create Perlin noise profile ──
+    NoiseProfile* profile = NoiseProfile::create(this->campaignProfileType);
+    profile->setSeed(this->campaignSeed);
+
+    // ── Create campaign Level via LevelManager ──
+    // This replaces the survival Level with a 50x420 Perlin campaign Level.
+    // The Level(NoiseProfile*) constructor generates the ENTIRE grid from
+    // Perlin noise — ground, bedrock, water, biomes — all done internally.
+    // We no longer need to build terrain via BlockManager at all.
+    if (this->levelManager != nullptr) {
+        this->levelManager->createCampaignLevel(profile);
+    }
+
+    Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
+
+    // ── Load background ──
+    // Campaign uses infinite.png — tiled horizontally for infinite scrolling feel
+    if (this->currentConfig != nullptr) {
+        this->bgTex.loadFromFile(this->currentConfig->bgPath);
+        this->bgSprite.setTexture(this->bgTex);
+        float texH = static_cast<float>(this->bgTex.getSize().y);
+        if (texH > 0.f) {
+            // Scale to fill screen height, tile horizontally via render()
+            this->bgScaleY = (float)SCREEN_H / texH;
+            this->bgSprite.setScale(this->bgScaleY, this->bgScaleY);
+        }
+    }
+
+    if (lvl == nullptr) {
+        delete profile;
+        return;
+    }
+
+    // ── Load dirt texture and pass to Level for campaign rendering ──
+    // Level::Draw() uses the dirt texture to render terrain blocks with
+    // viewport culling. No MountainBlocks needed — avoids double-rendering
+    // and collision corruption issues.
+    this->texManager->loadTexture("dirt", "resources/Sprites/dirt.png");
+    sf::Texture* dirtTex = &this->texManager->getTexture("dirt");
+    lvl->setDirtTexture(dirtTex);
+
+    // ── Create BlockManager (needed for destructible Block objects only) ──
+    // For campaign mode, BlockManager is created but NOT used for terrain.
+    // Terrain collision = Level::isSolid(), terrain rendering = Level::Draw().
+    // BlockManager exists for future use (enemy-placed blocks, etc.)
+    this->blockManager = new BlockManager(this->texManager, this->audManager, lvl);
+
+    // Clean up the profile — Level already used it during construction
+    delete profile;
+
+    // ── Spawn player ON TOP of the Perlin terrain ──
+    // getSurfaceRow() scans from top to find the first solid row.
+    // Player Y = surface row * cellSize - offset (above the ground).
+    if (this->characterManager != nullptr) {
+        int cellSize = lvl->getCellSize();
+        int worldOffX = lvl->getWorldOffX();
+        float spawnWorldX = 200.f;
+
+        // Convert world X to grid column: col = (worldX / cellSize) - worldOffX
+        int spawnCol = static_cast<int>(spawnWorldX) / cellSize - worldOffX;
+        if (spawnCol < 0) spawnCol = 0;
+        if (spawnCol >= lvl->getWidth()) spawnCol = lvl->getWidth() - 1;
+
+        int actualSurfaceRow = lvl->getSurfaceRow(spawnCol);
+        float actualSurfaceY = (float)(actualSurfaceRow * cellSize);
+
+        sf::Vector2f spawnPos(spawnWorldX, actualSurfaceY - 140.f);
+        this->characterManager->initAllPositions(spawnPos);
+    }
+
+    // ── Set scrollY for this level ──
+    // Campaign levels have vertical scroll enabled
+    this->scrollY = 0.f;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// loadLevel — initializes (or re-initializes) everything for a given level
+// (SURVIVAL MODE — uses predefined levels from LevelConfig)
+// ─────────────────────────────────────────────────────────────────────────────
+
+void PlayState::loadLevel(int levelIndex) {
+    if (levelIndex < 0 || levelIndex >= TOTAL_LEVELS) return;
+
+    this->currentLevelIndex = levelIndex;
+    this->currentConfig = ALL_LEVELS[levelIndex];
+    const LevelConfig* cfg = this->currentConfig;
+
+    // ── Reset scrolling ──
+    this->scroll = 0.f;
+    this->scrollY = 0.f;
+
+    // ── Reset vehicle/animation state ──
+    this->flyingTaraPhase = 0;
+    this->submarineSpawned = false;
+    this->flyingTaraClock.restart();
+    this->levelTransitioning = false;
+    this->levelTransitionTimer = 0.f;
+    this->bossFelledTriggered = false;
+    this->bossesSpawned = 0;
+    this->bossesDefeated = 0;
+
+    // ── Clear old enemies, vehicles, projectiles ──
+    if (this->enemyManager) this->enemyManager->clearAll();
+    if (this->enemyVehicleManager) this->enemyVehicleManager->clearAll();
+    if (this->projectileManager) this->projectileManager->clearAll();
+
+    // ── Delete old BlockManager ──
+    if (this->blockManager) {
+        delete this->blockManager;
+        this->blockManager = nullptr;
+    }
+
+    // ── Reset the Level grid ──
+    if (this->levelManager) {
+        Level* lvl = this->levelManager->getLevel();
+        if (lvl != nullptr) {
+            for (int r = 0; r < lvl->getHeight(); r++) {
+                for (int c = 0; c < lvl->getWidth(); c++) {
+                    lvl->setSolid(r, c, false);
                 }
             }
         }
     }
 
     // ── Load background ──
-    // For campaign: cfg->bgPath = "resources/backgrounds/infinite.jpg"
-    // PlayState's bgTex/bgSprite handles drawing — Level::Draw only draws blocks.
     this->bgTex.loadFromFile(cfg->bgPath);
     this->bgSprite.setTexture(this->bgTex);
     float texH = static_cast<float>(this->bgTex.getSize().y);
@@ -193,7 +295,6 @@ void PlayState::loadLevel(int levelIndex) {
             this->bgScaleY = (float)SCREEN_H / texH * 1.4f;
         }
         else {
-            // Campaign and flat levels: scale BG to fill screen height exactly
             this->bgScaleY = (float)SCREEN_H / texH;
         }
         this->bgSprite.setScale(this->bgScaleY, this->bgScaleY);
@@ -207,127 +308,92 @@ void PlayState::loadLevel(int levelIndex) {
         Level* lvl = this->levelManager->getLevel();
         if (lvl != nullptr) {
             this->blockManager = new BlockManager(this->texManager, this->audManager, lvl);
+
             this->texManager->loadTexture("dirt", "resources/Sprites/dirt.png");
 
-            int cellSize    = lvl->getCellSize();
-            int groundRow   = lvl->getHeight() - 1;
-            int surfaceRow  = groundRow - 2;
-            float surfaceY  = (float)(surfaceRow * cellSize);
+            int cellSize = lvl->getCellSize();
+            int groundRow = lvl->getHeight() - 1;
+            int surfaceRow = groundRow - 2;
+            float surfaceY = (float)(surfaceRow * cellSize);
 
-            if (this->gameMode == MODE_CAMPAIGN) {  // replaces fragile cfg->isPerlinLevel
-                // ── Campaign / Perlin mode ────────────────────────────────
-                // Level::Draw() renders terrain from the noise grid.
-                // BlockManager is created but buildGroundTerrain is NOT called.
-
-                // ── Store noise profile for advanceWorld() streaming ──
-                // Recreate it here so it's always in sync with what generated the level.
-                if (this->campaignProfile != nullptr) {
-                    delete this->campaignProfile;
-                    this->campaignProfile = nullptr;
-                }
-                this->campaignProfile = NoiseProfile::create(NOISE_NORMAL);
-
-                // ── Reset spawn tracker ──
-                this->campaignLastSpawnX = 0.f;
-
-                // ── Player spawn position ──
-                // Spawn at column 25 (world x = 1200px) so there are 25 columns
-                // of noise terrain to the LEFT of spawn — the player can scroll
-                // left 1200px before hitting the level boundary. Row 1 = y=48px
-                // (near top); gravity drops the player onto the noise surface.
-                if (this->characterManager != nullptr) {
-                    sf::Vector2f spawnPos(25.f * static_cast<float>(cellSize),
-                                         1.f  * static_cast<float>(cellSize));
-                    this->characterManager->initAllPositions(spawnPos);
-                }
-
-                // NOTE: Enemies removed during Perlin noise development.
-                // Will be re-added once terrain is finalized.
+            if (cfg->visibleGround) {
+                this->blockManager->buildGroundTerrain(surfaceRow, 3);
             }
             else {
-                // ── Survival / normal mode ────────────────────────────────
-                // Original terrain building path — unchanged from before.
-                if (cfg->visibleGround) {
-                    this->blockManager->buildGroundTerrain(surfaceRow, 3);
-                }
-                else {
-                    // Invisible ground — mark cells solid but no dirt sprites
-                    for (int rowOff = 0; rowOff < 3; rowOff++) {
-                        int row = surfaceRow + rowOff;
-                        if (row >= lvl->getHeight()) break;
-                        for (int col = 0; col < lvl->getWidth(); col++) {
-                            lvl->setSolid(row, col, true);
-                        }
-                    }
-                }
-
-                if (cfg->hasMountain) {
-                    this->blockManager->buildMountainTerrain(4000.f, surfaceY);
-                }
-
-                // ── Reset player position (survival) ──
-                if (this->characterManager != nullptr) {
-                    sf::Vector2f spawnPos(200.f, surfaceY - 140.f);
-                    this->characterManager->initAllPositions(spawnPos);
-                }
-
-                // ── Spawn platforms ──
-                this->spawnPlatformsFromConfig();
-
-                // ── Spawn enemies ──
-                if (!cfg->isBossLevel) {
-                    this->spawnEnemiesFromConfig();
-                }
-
-                // ── Spawn boss if boss level ──
-                if (cfg->isBossLevel && this->enemyManager != nullptr) {
-                    int bCellSize   = lvl->getCellSize();
-                    int bSurfaceRow = lvl->getHeight() - 3;
-                    float bSurfaceY = (float)(bSurfaceRow * bCellSize);
-                    float bossFootOffset = 360.f;
-
-                    if (cfg->bossType == ENEMY_BOSS_IRONOKAVA) {
-                        float bossX = 1500.f;
-                        this->enemyManager->spawnIronokava(bossX, bSurfaceY - bossFootOffset);
-                        this->bossesSpawned = 1;
-                    }
-                }
-
-                // ── Build pool for boss level ──
-                if (cfg->isBossLevel && this->blockManager != nullptr && lvl != nullptr) {
-                    int cs         = lvl->getCellSize();
-                    int bSurfRow   = lvl->getHeight() - 3;
-                    float bSurfY   = (float)(bSurfRow * cs);
-                    float poolLeft   = 8350.f;
-                    float poolRight  = 10125.f;
-                    int poolDepth    = 20;
-                    float poolBottomY = bSurfY + (float)(poolDepth * cs);
-
-                    float leftWallX = poolLeft - (float)cs;
-                    for (int row = 0; row < poolDepth + 1; row++) {
-                        float wy = bSurfY + (float)(row * cs);
-                        this->blockManager->spawnIndestructibleBlock(leftWallX, wy);
-                    }
-                    float rightWallX = poolRight;
-                    for (int row = 0; row < poolDepth + 1; row++) {
-                        float wy = bSurfY + (float)(row * cs);
-                        this->blockManager->spawnIndestructibleBlock(rightWallX, wy);
-                    }
-                    int poolWidthBlocks = (int)((poolRight - poolLeft) / cs);
-                    for (int col = 0; col <= poolWidthBlocks; col++) {
-                        float wx = poolLeft + (float)(col * cs);
-                        this->blockManager->spawnIndestructibleBlock(wx, poolBottomY);
-                    }
-                    int stairSteps = poolDepth - 1;
-                    for (int step = 0; step < stairSteps; step++) {
-                        float stairX = poolLeft + (float)(step * cs);
-                        float stairY = bSurfY + (float)((step + 1) * cs);
-                        this->blockManager->spawnIndestructibleBlock(stairX, stairY);
+                for (int rowOff = 0; rowOff < 3; rowOff++) {
+                    int row = surfaceRow + rowOff;
+                    if (row >= lvl->getHeight()) break;
+                    for (int col = 0; col < lvl->getWidth(); col++) {
+                        lvl->setSolid(row, col, true);
                     }
                 }
             }
 
-            // ── Water pool shape (both modes) ──
+            if (cfg->hasMountain) {
+                this->blockManager->buildMountainTerrain(4000.f, surfaceY);
+            }
+
+            // ── Reset player position ──
+            if (this->characterManager != nullptr) {
+                sf::Vector2f spawnPos(200.f, surfaceY - 140.f);
+                this->characterManager->initAllPositions(spawnPos);
+            }
+
+            this->spawnPlatformsFromConfig();
+
+            if (!cfg->isBossLevel) {
+                this->spawnEnemiesFromConfig();
+            }
+
+            if (cfg->isBossLevel && this->enemyManager != nullptr) {
+                int cellSize = lvl->getCellSize();
+                int surfaceRow = lvl->getHeight() - 3;
+                float surfaceY = (float)(surfaceRow * cellSize);
+                float bossFootOffset = 360.f;
+
+                if (cfg->bossType == ENEMY_BOSS_IRONOKAVA) {
+                    float bossX = 1500.f;
+                    this->enemyManager->spawnIronokava(bossX, surfaceY - bossFootOffset);
+                    this->bossesSpawned = 1;
+                }
+            }
+
+            if (cfg->isBossLevel && this->blockManager != nullptr && lvl != nullptr) {
+                int cs = lvl->getCellSize();
+                int surfaceRow = lvl->getHeight() - 3;
+                float surfaceY = (float)(surfaceRow * cs);
+
+                float poolLeft = 8350.f;
+                float poolRight = 10125.f;
+                int poolDepthBlocks = 20;
+                float poolBottomY = surfaceY + (float)(poolDepthBlocks * cs);
+
+                float leftWallX = poolLeft - (float)cs;
+                for (int row = 0; row < poolDepthBlocks + 1; row++) {
+                    float wy = surfaceY + (float)(row * cs);
+                    this->blockManager->spawnIndestructibleBlock(leftWallX, wy);
+                }
+
+                float rightWallX = poolRight;
+                for (int row = 0; row < poolDepthBlocks + 1; row++) {
+                    float wy = surfaceY + (float)(row * cs);
+                    this->blockManager->spawnIndestructibleBlock(rightWallX, wy);
+                }
+
+                int poolWidthBlocks = (int)((poolRight - poolLeft) / cs);
+                for (int col = 0; col <= poolWidthBlocks; col++) {
+                    float wx = poolLeft + (float)(col * cs);
+                    this->blockManager->spawnIndestructibleBlock(wx, poolBottomY);
+                }
+
+                int stairSteps = poolDepthBlocks - 1;
+                for (int step = 0; step < stairSteps; step++) {
+                    float stairX = poolLeft + (float)(step * cs);
+                    float stairY = surfaceY + (float)((step + 1) * cs);
+                    this->blockManager->spawnIndestructibleBlock(stairX, stairY);
+                }
+            }
+
             if (cfg->hasWater) {
                 this->waterShape.setPointCount(4);
                 this->waterShape.setPoint(0, sf::Vector2f(cfg->waterX1, cfg->waterY1));
@@ -345,10 +411,7 @@ void PlayState::loadLevel(int levelIndex) {
                 this->waterShape.setFillColor(Color(0, 0, 0, 0));
             }
 
-            // ── scrollY for flat/campaign levels ──
             if (!cfg->enableVerticalScroll) {
-                // Lock camera so the ground line sits near the bottom of the screen.
-                // For campaign (15-row grid): surfaceRow=12, surfaceY=576, scrollY→0
                 this->scrollY = surfaceY - (float)SCREEN_H * 0.85f;
                 if (this->scrollY < 0.f) this->scrollY = 0.f;
             }
@@ -356,9 +419,6 @@ void PlayState::loadLevel(int levelIndex) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// spawnEnemiesFromConfig — reads enemy list from currentConfig and spawns them
-// ─────────────────────────────────────────────────────────────────────────────
 void PlayState::spawnEnemiesFromConfig() {
     if (this->enemyManager == nullptr) return;
     if (this->currentConfig == nullptr) return;
@@ -371,7 +431,6 @@ void PlayState::spawnEnemiesFromConfig() {
     float surfaceY = (float)(surfaceRow * cellSize);
     float rebelFootOffset = 140.f;
 
-    // Mountain coordinates for filling in x=0 enemies
     float mtBaseX = 4000.f;
     float mtTop30 = surfaceY - 11.f * 48.f;
     float mtTop65 = surfaceY - 25.f * 48.f;
@@ -384,23 +443,18 @@ void PlayState::spawnEnemiesFromConfig() {
         float ex = e->x;
         float ey = e->y;
 
-        // Fill in Y=0 enemies with surface Y
         if (ey == 0.f) {
             ey = surfaceY - rebelFootOffset;
         }
 
-        // Fill in mountain enemies (x=0 means mountain position)
-        // Only assign mountain positions if this level has a mountain
         if (ex == 0.f) {
             if (cfg->hasMountain) {
-                // Assign mountain positions based on index pattern
                 if (i % 4 == 0) { ex = mtBaseX + 30.f * 48.f; ey = mtTop30 - rebelFootOffset; }
                 else if (i % 4 == 1) { ex = mtBaseX + 90.f * 48.f; ey = mtTop90 - rebelFootOffset; }
                 else if (i % 4 == 2) { ex = mtBaseX + 65.f * 48.f; ey = mtTop65 - rebelFootOffset; }
                 else { ex = mtBaseX + 80.f * 48.f; ey = mtTop90 - rebelFootOffset; }
             }
             else {
-                // No mountain — place these enemies on flat ground instead
                 ex = (float)(15 + i * 8) * 48.f;
                 ey = surfaceY - rebelFootOffset;
             }
@@ -429,9 +483,6 @@ void PlayState::spawnEnemiesFromConfig() {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// spawnPlatformsFromConfig — reads platform list from currentConfig
-// ─────────────────────────────────────────────────────────────────────────────
 void PlayState::spawnPlatformsFromConfig() {
     if (this->blockManager == nullptr) return;
     if (this->currentConfig == nullptr) return;
@@ -445,18 +496,11 @@ void PlayState::spawnPlatformsFromConfig() {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// checkLevelTransition — detects when player reaches end of current level
-// ─────────────────────────────────────────────────────────────────────────────
 void PlayState::checkLevelTransition() {
-    // Don't transition while the "GREAT ENEMY FELLED" message is still showing
     if (this->hud != nullptr && this->hud->isFelledShowing()) return;
 
-    // Don't transition out of a boss level while there are still bosses to fight
     if (this->currentConfig != nullptr && this->currentConfig->isBossLevel) {
         if (this->enemyManager != nullptr && this->enemyManager->hasActiveBoss()) return;
-        // Also block if we haven't spawned all bosses yet (sequential boss gauntlet)
-        // bossesSpawned < 2 means Hairbuster hasn't been spawned yet for the Level 4 gauntlet
         if (this->bossesSpawned < 2) return;
     }
 
@@ -464,7 +508,6 @@ void PlayState::checkLevelTransition() {
         ? this->characterManager->getCurrentCharacter() : nullptr;
     if (player == nullptr) return;
 
-    // Use levelWidth from config if set, otherwise fall back to grid width
     float levelWidth = 0.f;
     if (this->currentConfig != nullptr && this->currentConfig->levelWidth > 0.f) {
         levelWidth = this->currentConfig->levelWidth;
@@ -477,28 +520,24 @@ void PlayState::checkLevelTransition() {
 
     float playerX = player->getPosition().x;
 
-    // Trigger transition when player is near the right edge
     if (playerX >= levelWidth - 200.f && !this->levelTransitioning) {
         this->levelTransitioning = true;
         this->levelTransitionTimer = 0.f;
     }
 
     if (this->levelTransitioning) {
-        this->levelTransitionTimer += 1.f / 60.f;  // approx 60fps
+        this->levelTransitionTimer += 1.f / 60.f;
 
-        // Short delay before transitioning (0.5 sec)
         if (this->levelTransitionTimer >= 0.5f) {
             int nextLevel = this->currentLevelIndex + 1;
 
             if (nextLevel >= TOTAL_LEVELS) {
-                // Beat all levels — go to GameOver (victory)
                 if (this->stateManager != nullptr) {
                     int finalScore = this->scoreManager ? this->scoreManager->getScore() : 0;
                     this->stateManager->changeState(new GameOverState(finalScore));
                 }
             }
             else {
-                // Load next level
                 this->loadLevel(nextLevel);
             }
         }
@@ -547,52 +586,12 @@ void PlayState::update(float dt) {
     if (this->enemyManager)
         this->enemyManager->update(this->scroll, this->scrollY, lvl, player);
 
-    // ── Campaign: terrain streaming + rolling enemy spawn ──────────────────
-    // Two campaign-only systems that run every frame:
-    //
-    // 1. advanceWorld: when the player is within 150 columns of the right
-    //    edge of the terrain buffer, shift the buffer left and generate
-    //    50 new columns on the right. Noise is deterministic so the same
-    //    column always produces the same terrain — no seams or gaps.
-    //
-    // 2. Rolling spawn: every 800px the player moves right, spawn a fresh
-    //    enemy wave just ahead of the visible screen. Wave difficulty
-    //    scales with distance: more enemy types appear further along.
-    //    Per spec: "dynamic at runtime, no fixed positions."
-    // ── Campaign: bi-directional infinite terrain streaming ──────────────────
-    // The 420-column buffer slides like a window over the infinite noise field.
-    // RIGHT: when player approaches right edge, advanceWorld shifts buffer left
-    //        and generates fresh columns on the right.
-    // LEFT:  when player approaches left edge, retreatWorld shifts buffer right
-    //        and generates fresh columns on the left.
-    // Both directions use the SAME noise function — deterministic, no seams.
-    // ─────────────────────────────────────────────────────────────────────────
-    if (this->gameMode == MODE_CAMPAIGN && lvl != nullptr && player != nullptr
-        && this->campaignProfile != nullptr && lvl->isCampaignMode()) {
-
-        int playerCol = static_cast<int>(player->getPosition().x / lvl->getCellSize())
-                        - lvl->getWorldOffset();
-
-        // Right-side streaming: player within 150 cols of right edge
-        if (playerCol > lvl->getWidth() - 150) {
-            lvl->advanceWorld(50, this->campaignProfile);
-        }
-
-        // Left-side streaming: player within 150 cols of left edge
-        if (playerCol < 150) {
-            lvl->retreatWorld(50, this->campaignProfile);
-        }
-    }
-    // ─────────────────────────────────────────────────────────────────────────
-
-    // ── Update HUD with boss info ──
     if (this->hud && this->enemyManager) {
         Boss* boss = this->enemyManager->getActiveBoss();
         if (boss != nullptr && (boss->isAlive() || boss->isDying())) {
             this->hud->setBossInfo(boss->getBossName(), boss->getHealthFraction());
         }
         else if (this->enemyManager->wasBossKilled()) {
-            // Boss was fully removed — trigger "GREAT ENEMY FELLED" once
             if (!this->bossFelledTriggered) {
                 this->bossFelledTriggered = true;
                 this->bossesDefeated++;
@@ -600,47 +599,36 @@ void PlayState::update(float dt) {
                 if (fallenName == nullptr) fallenName = "UNKNOWN";
                 this->hud->showBossFelled(fallenName);
 
-                // ── Heal player to full HP after boss defeat ──
-                // Recover current HP to max (do NOT increase max HP)
                 if (this->characterManager != nullptr) {
                     PlayerSoldier* currentPlayer = this->characterManager->getCurrentCharacter();
                     if (currentPlayer != nullptr) {
-                        currentPlayer->healFullAndIncreaseHP(0);  // heal to full, no max HP increase
+                        currentPlayer->healFullAndIncreaseHP(0);
                     }
                 }
 
-                // ── Spawn next boss after current boss is defeated ──
-                // After Ironokava (1st boss), spawn Hairbuster (2nd boss)
                 if (this->currentConfig != nullptr && this->currentConfig->isBossLevel
                     && this->bossesDefeated == 1 && this->bossesSpawned == 1)
                 {
-                    // Spawn Hairbuster further right — no mountain, flies in open sky
                     Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
                     if (lvl != nullptr) {
                         int cellSize = lvl->getCellSize();
                         int surfaceRow = lvl->getHeight() - 3;
                         float surfaceY = (float)(surfaceRow * cellSize);
 
-                        // Hairbuster flies in open sky above the arena (no mountain)
-                        // Fly center is at X=7000, Y is well above ground
                         float flyCenterX = 7000.f;
-                        float flyCenterY = surfaceY - 400.f;  // 400px above ground
+                        float flyCenterY = surfaceY - 400.f;
                         float bossX = flyCenterX;
-                        float bossY = flyCenterY - 100.f;  // start above fly center
+                        float bossY = flyCenterY - 100.f;
                         this->enemyManager->spawnHairbuster(bossX, bossY, flyCenterX, flyCenterY);
-                        this->bossesSpawned = 2;  // second boss spawned
+                        this->bossesSpawned = 2;
                     }
                 }
             }
-            // Keep the boss health bar visible during the felled message
-            // (let it drain to zero gracefully), then clear after message ends
             if (!this->hud->isFelledShowing()) {
                 this->hud->clearBossInfo();
-                // Reset boss death tracking so next boss can trigger felled message
                 if (this->enemyManager != nullptr) {
                     this->enemyManager->resetBossDied();
                 }
-                // Allow the next boss defeat to trigger the felled message
                 this->bossFelledTriggered = false;
             }
         }
@@ -680,8 +668,6 @@ void PlayState::update(float dt) {
         this->projectileManager->checkEnemyBulletHitPlayer(player);
     }
 
-    // ── Update HUD (HP, score, weapon) AFTER damage is applied ──
-    // This ensures hearts reflect the current HP immediately, not one frame late.
     if (this->hud && this->characterManager) {
         this->hud->update(this->characterManager, this->currentLevelIndex + 1);
     }
@@ -715,7 +701,6 @@ void PlayState::update(float dt) {
         if (this->scroll > maxScroll) this->scroll = maxScroll;
     }
 
-    // Vertical scroll — only if the level config allows it
     if (player != nullptr && lvl != nullptr &&
         this->currentConfig != nullptr && this->currentConfig->enableVerticalScroll)
     {
@@ -728,7 +713,6 @@ void PlayState::update(float dt) {
         if (this->scrollY > maxScrollY) this->scrollY = maxScrollY;
     }
     else if (this->currentConfig != nullptr && !this->currentConfig->enableVerticalScroll) {
-        // No vertical scroll — lock camera so ground is near bottom of screen
         if (lvl != nullptr) {
             int surfaceRow = lvl->getHeight() - 3;
             float surfaceY = (float)(surfaceRow * lvl->getCellSize());
@@ -737,7 +721,6 @@ void PlayState::update(float dt) {
         }
     }
 
-    // ── Check if player is in the water region ──
     if (player != nullptr && this->currentConfig != nullptr && this->currentConfig->hasWater) {
         float px = player->getPosition().x;
         float py = player->getPosition().y;
@@ -754,7 +737,6 @@ void PlayState::update(float dt) {
     if (this->levelManager)
         this->levelManager->update(dt);
 
-    // ── FlyingTara: spawn based on config timings ──
     if (this->currentConfig != nullptr && this->enemyVehicleManager != nullptr &&
         player != nullptr && lvl != nullptr)
     {
@@ -768,7 +750,6 @@ void PlayState::update(float dt) {
                 float surfaceY = (float)(surfaceRow * cellSize);
                 float taraY = surfaceY - 500.f;
 
-                // Alternate spawn direction: even = from left, odd = from right
                 int dir = (i % 2 == 0) ? DIR_RIGHT : DIR_LEFT;
                 float spawnX = (dir == DIR_RIGHT)
                     ? player->getPosition().x - (float)SCREEN_W - 200.f
@@ -780,7 +761,6 @@ void PlayState::update(float dt) {
         }
     }
 
-    // ── Submarine: spawn when player reaches trigger X ──
     if (this->currentConfig != nullptr && this->currentConfig->hasSubmarine &&
         !this->submarineSpawned && player != nullptr &&
         player->getPosition().x >= this->currentConfig->submarineTriggerX &&
@@ -793,7 +773,6 @@ void PlayState::update(float dt) {
         this->submarineSpawned = true;
     }
 
-    // ── Check level transition ──
     this->checkLevelTransition();
 }
 
@@ -810,7 +789,6 @@ void PlayState::render(RenderWindow& window) {
     Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
 
     if (this->currentConfig != nullptr && this->currentConfig->enableVerticalScroll) {
-        // Levels with vertical scroll — align BG ground line with world ground
         const float BG_GROUND_RATIO = 0.82f;
 
         float groundY = 0.f;
@@ -827,17 +805,12 @@ void PlayState::render(RenderWindow& window) {
         if (bgY < -maxBgY) bgY = -maxBgY;
     }
     else if (this->currentConfig != nullptr && !this->currentConfig->enableVerticalScroll) {
-        // Flat levels — BG is scaled to fill screen height exactly
-        // Keep it pinned to the screen (bgY = 0), don't scroll vertically
         bgY = 0.f;
     }
 
     if (bgX > 0.f) bgX = 0.f;
 
-    // ── Draw BG (with optional tiling for levels where BG is shorter than level) ──
     if (this->currentConfig != nullptr && this->currentConfig->tileBg) {
-        // Tile BG horizontally to cover the full level width
-        // Calculate how many copies we need and which ones are visible
         float levelWidth = this->currentConfig->levelWidth > 0.f
             ? this->currentConfig->levelWidth
             : (float)(lvl != nullptr ? lvl->getWidth() * lvl->getCellSize() : bgWidth);
@@ -850,15 +823,14 @@ void PlayState::render(RenderWindow& window) {
 
         for (int t = firstTile; t < firstTile + totalTiles && t * bgWidth < viewRight + bgWidth; t++) {
             float tileX = (float)t * bgWidth - this->scroll;
-            if (tileX + bgWidth < 0.f) continue;   // off-screen left
-            if (tileX > (float)SCREEN_W) break;     // off-screen right
+            if (tileX + bgWidth < 0.f) continue;
+            if (tileX > (float)SCREEN_W) break;
 
             this->bgSprite.setPosition(tileX, bgY);
             window.draw(this->bgSprite);
         }
     }
     else {
-        // Normal single-BG draw with clamping
         float maxBgX = bgWidth - (float)SCREEN_W; if (maxBgX < 0.f) maxBgX = 0.f;
         if (bgX < -maxBgX) bgX = -maxBgX;
 
@@ -873,7 +845,6 @@ void PlayState::render(RenderWindow& window) {
     if (this->characterManager)  this->characterManager->draw(window, this->scroll, this->scrollY);
     if (this->projectileManager) this->projectileManager->draw(window, this->scroll, this->scrollY);
 
-    // ── Draw water pool (dark layer only) ──
     if (this->currentConfig != nullptr && this->currentConfig->hasWater) {
         sf::ConvexShape drawWater = this->waterShape;
         for (int i = 0; i < drawWater.getPointCount(); i++) {
@@ -885,10 +856,9 @@ void PlayState::render(RenderWindow& window) {
         window.draw(drawWater);
     }
 
-    // ── Level transition overlay ──
     if (this->levelTransitioning) {
         sf::RectangleShape overlay(sf::Vector2f((float)SCREEN_W, (float)SCREEN_H));
-        float alpha = this->levelTransitionTimer / 0.5f;  // 0→1 over 0.5s
+        float alpha = this->levelTransitionTimer / 0.5f;
         if (alpha > 1.f) alpha = 1.f;
         overlay.setFillColor(sf::Color(0, 0, 0, static_cast<sf::Uint8>(255.f * alpha)));
         overlay.setPosition(0.f, 0.f);
@@ -911,8 +881,11 @@ void PlayState::renderDebug(RenderWindow& window) {
         int j = 0; while (src[j]) buf[k++] = src[j++]; buf[k] = '\0';
         };
 
-    sprintf(line, "Level: %d/%d  Projectiles: %d\n",
-        this->currentLevelIndex + 1, TOTAL_LEVELS,
+    const char* modeStr = (this->gameMode == MODE_CAMPAIGN) ? "Campaign" : "Survival";
+    // Campaign has 1 Perlin level; Survival has TOTAL_LEVELS predefined levels
+    int displayTotal = (this->gameMode == MODE_CAMPAIGN) ? 1 : TOTAL_LEVELS;
+    sprintf(line, "Mode: %s  Level: %d/%d  Projectiles: %d\n",
+        modeStr, this->currentLevelIndex + 1, displayTotal,
         this->projectileManager ? this->projectileManager->getActiveCount() : -1);
     append(line);
     sprintf(line, "Blocks: %d / %d  Enemies: %d  Vehicles: %d\n",
@@ -921,6 +894,12 @@ void PlayState::renderDebug(RenderWindow& window) {
         this->enemyManager ? this->enemyManager->getActiveCount() : -1,
         this->enemyVehicleManager ? this->enemyVehicleManager->getActiveCount() : -1);
     append(line);
+    if (this->gameMode == MODE_CAMPAIGN) {
+        const char* profileStr = (this->campaignProfileType == NOISE_AMPLIFIED) ? "Amplified" :
+            (this->campaignProfileType == NOISE_FLAT) ? "Flat" : "Normal";
+        sprintf(line, "Terrain Profile: %s  Seed: %d\n", profileStr, this->campaignSeed);
+        append(line);
+    }
     sprintf(line, "Aim: %.1f deg  |  Mouse: (%.0f, %.0f)\n",
         player ? player->getAimAngle() : -1.f,
         this->lastMouseWorld.x, this->lastMouseWorld.y);
@@ -938,7 +917,7 @@ void PlayState::renderDebug(RenderWindow& window) {
     append(line);
 
     this->debugText.setString(buf);
-    RectangleShape bg(sf::Vector2f(480.f, 130.f));
+    RectangleShape bg(sf::Vector2f(480.f, 150.f));
     bg.setFillColor(Color(0, 0, 0, 170));
     bg.setPosition(5.f, 5.f);
     window.draw(bg);
@@ -1023,102 +1002,29 @@ void PlayState::renderBloodOverlay(RenderWindow& window) {
 }
 
 void PlayState::handleEvent(Event& event) {
-    if (event.type == Event::KeyPressed && event.key.code == Keyboard::H) {
-        this->showHitboxes = !this->showHitboxes;
+    // Forward to CharacterManager first so gameplay keys (Space=jump, etc.)
+    // are processed before debug toggles.
+    if (this->characterManager) {
+        this->characterManager->handleInput(event);
     }
 
-    if (event.type == Event::KeyPressed && event.key.code == Keyboard::Z) {
-        if (this->characterManager != nullptr) {
-            this->characterManager->switchCharacter();
+    if (event.type == Event::KeyPressed) {
+        if (event.key.code == Keyboard::H) {
+            this->showHitboxes = !this->showHitboxes;
+        }
+        if (event.key.code == Keyboard::T) {
+            this->hudVisible = !this->hudVisible;
+            this->debugMode = this->hudVisible;
+            this->showHitboxes = this->hudVisible;
+        }
+        if (event.key.code == Keyboard::G) {
+            this->devModeActive = !this->devModeActive;
         }
     }
-
-    if (this->characterManager)
-        this->characterManager->handleInput(event);
 }
 
 void PlayState::onEnter() {}
 void PlayState::onExit() {}
 
-// ── Legacy spawn functions (kept for compatibility, not used by loadLevel) ──
-
-void PlayState::spawnTestBlocks() {
-    if (this->blockManager == nullptr) return;
-
-    Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
-    if (lvl == nullptr) return;
-
-    this->blockManager->spawnPlatform(
-        static_cast<float>(8 * 48),
-        static_cast<float>(32 * 48),
-        8
-    );
-
-    this->blockManager->spawnPlatform(
-        static_cast<float>(22 * 48),
-        static_cast<float>(30 * 48),
-        7
-    );
-    this->blockManager->spawnPlatform(
-        static_cast<float>(32 * 48),
-        static_cast<float>(30 * 48),
-        4
-    );
-
-    this->blockManager->spawnPlatform(
-        static_cast<float>(42 * 48),
-        static_cast<float>(30 * 48),
-        10
-    );
-}
-
-void PlayState::spawnTestEnemies() {
-    if (this->enemyManager == nullptr) return;
-
-    Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
-    if (lvl == nullptr) return;
-
-    int cellSize = lvl->getCellSize();
-    int surfaceRow = lvl->getHeight() - 3;
-    float surfaceY = (float)(surfaceRow * cellSize);
-
-    float rebelFootOffset = 140.f;
-
-    this->enemyManager->spawnMartian(15.f * 48.f, surfaceY - rebelFootOffset);
-    this->enemyManager->spawnRebel(35.f * 48.f, surfaceY - rebelFootOffset);
-
-    float platY1 = 32.f * 48.f;
-    float platY2 = 30.f * 48.f;
-
-    this->enemyManager->spawnRebel(10.f * 48.f, platY1 - rebelFootOffset);
-    this->enemyManager->spawnRebel(24.f * 48.f, platY2 - rebelFootOffset);
-    this->enemyManager->spawnRebel(34.f * 48.f, platY2 - rebelFootOffset);
-    this->enemyManager->spawnRebel(48.f * 48.f, platY2 - rebelFootOffset);
-
-    float mtBaseX = 4000.f;
-    float mtTop30 = surfaceY - 11.f * 48.f;
-    float mtTop90 = surfaceY - 25.f * 48.f;
-    this->enemyManager->spawnRebel(mtBaseX + 30.f * 48.f, mtTop30 - rebelFootOffset);
-    this->enemyManager->spawnRebel(mtBaseX + 90.f * 48.f, mtTop90 - rebelFootOffset);
-
-    this->enemyManager->spawnBazooka(25.f * 48.f, surfaceY - rebelFootOffset);
-    this->enemyManager->spawnBazooka(50.f * 48.f, surfaceY - rebelFootOffset);
-
-    this->enemyManager->spawnShielded(20.f * 48.f, surfaceY - rebelFootOffset);
-    this->enemyManager->spawnShielded(40.f * 48.f, surfaceY - rebelFootOffset);
-    this->enemyManager->spawnShielded(mtBaseX + 90.f * 48.f, mtTop90 - rebelFootOffset);
-
-    this->enemyManager->spawnGrenade(12.f * 48.f, platY1 - rebelFootOffset);
-    this->enemyManager->spawnGrenade(33.f * 48.f, platY2 - rebelFootOffset);
-    this->enemyManager->spawnGrenade(mtBaseX + 30.f * 48.f, mtTop30 - rebelFootOffset);
-
-    float mtPeak = surfaceY - 25.f * 48.f;
-    this->enemyManager->spawnMartian(mtBaseX + 65.f * 48.f, mtPeak - rebelFootOffset);
-
-    float paraLandingY = mtPeak - rebelFootOffset;
-    this->enemyManager->spawnParatrooper(
-        mtBaseX + 80.f * 48.f,
-        paraLandingY - 500.f,
-        paraLandingY
-    );
-}
+void PlayState::spawnTestBlocks() {}
+void PlayState::spawnTestEnemies() {}

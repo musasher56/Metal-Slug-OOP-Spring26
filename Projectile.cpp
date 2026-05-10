@@ -2,9 +2,9 @@
 #include "Level.h"
 #include <cmath>
 
-
-
-
+// ─────────────────────────────────────────────────────────────────────────────
+// Projectile (abstract base)
+// ─────────────────────────────────────────────────────────────────────────────
 
 Projectile::Projectile(TextureManager* texMgr, AudioManager* audMgr)
     : Entity(texMgr, audMgr)
@@ -25,8 +25,8 @@ void Projectile::setVelocity(float vx, float vy) {
     this->velocityY = vy;
 }
 
-
-
+// Standard per-frame lifecycle: advance position, check tile collision, cull OOB.
+// Subclasses (LaserBeam) may override this to suppress tile collision.
 void Projectile::update(float scroll, Level* lvl) {
     if (!this->status) return;
 
@@ -41,14 +41,14 @@ void Projectile::update(float scroll, Level* lvl) {
     this->checkBounds(scroll, 0.f);
 }
 
-
-
-
+// Default draw() — subclasses replace this entirely.
+// Kept in the base so any accidental un-overridden concrete class at least
+// renders something visible during debugging.
 void Projectile::draw(RenderWindow& window, float scrollX, float scrollY) {
     if (!this->status) return;
 
-    
-    
+    // Magenta — highly visible "placeholder for a placeholder" indicator.
+    // If you see a magenta rect in-game, a projectile subclass is missing draw().
     sf::RectangleShape dbg(sf::Vector2f(8.f, 6.f));
     dbg.setFillColor(sf::Color(255, 0, 255));
     dbg.setPosition(this->position.x - scrollX, this->position.y - scrollY);
@@ -59,11 +59,12 @@ void Projectile::checkTileCollision(Level* lvl) {
     if (lvl == nullptr) return;
 
     const int cell = lvl->getCellSize();
+    const int worldOffX = lvl->getWorldOffX();
     const int PROJ_W = 8;
     const int PROJ_H = 8;
 
-    
-    
+    // Sample the leading edge in each axis independently.
+    // Two separate checks let us detect corner-grazes correctly.
     float frontX = (this->velocityX >= 0.f)
         ? this->position.x + PROJ_W
         : this->position.x;
@@ -72,11 +73,11 @@ void Projectile::checkTileCollision(Level* lvl) {
         ? this->position.y + PROJ_H
         : this->position.y;
 
-    int colX = (int)frontX / cell;
+    int colX = (int)frontX / cell - worldOffX;
     int rowY = (int)frontY / cell;
 
     int rowForX = (int)(this->position.y + PROJ_H / 2.f) / cell;
-    int colForY = (int)(this->position.x + PROJ_W / 2.f) / cell;
+    int colForY = (int)(this->position.x + PROJ_W / 2.f) / cell - worldOffX;
 
     bool hitX = lvl->isSolid(rowForX, colX);
     bool hitY = lvl->isSolid(rowY, colForY);
@@ -88,9 +89,9 @@ void Projectile::checkTileCollision(Level* lvl) {
 }
 
 void Projectile::checkBounds(float scrollX, float scrollY) {
-    
-    
-    
+    // Generous off-screen margin keeps in-flight bullets valid slightly
+    // beyond the viewport edge so fast-moving projectiles don't pop away
+    // while still partially visible.
     const float MARGIN = 300.f;
 
     if (this->position.x + 8.f < scrollX - MARGIN) { this->deactivate(); return; }
@@ -100,7 +101,7 @@ void Projectile::checkBounds(float scrollX, float scrollY) {
 }
 
 IntRect Projectile::getBoundingBox() const {
-    
+    // Standard 8x6 box — LaserBeam overrides this to span the full screen.
     return IntRect(
         static_cast<int>(this->position.x),
         static_cast<int>(this->position.y),
@@ -112,16 +113,16 @@ int  Projectile::getDamage()   const { return this->damage; }
 bool Projectile::isFromEnemy() const { return this->fromEnemy; }
 
 void Projectile::onImpact(EnemyManager* em, CharacterManager* cm) {
-    
+    // Base: no-op.  ExplosiveProjectile overrides to deal blast damage.
     (void)em; (void)cm;
 }
 
-
-
-
-
-
-
+// ─────────────────────────────────────────────────────────────────────────────
+// StraightProjectile
+// Represents: Pistol bullets, HMG rounds
+// Placeholder colour: bright yellow  (distinguishes from orange explosives and
+//                                     cyan laser — immediately readable)
+// ─────────────────────────────────────────────────────────────────────────────
 
 StraightProjectile::StraightProjectile(TextureManager* texMgr,
     AudioManager* audMgr,
@@ -135,8 +136,8 @@ StraightProjectile::StraightProjectile(TextureManager* texMgr,
 
 StraightProjectile::~StraightProjectile() {}
 
-void StraightProjectile::move(float ) {
-    
+void StraightProjectile::move(float /*scroll*/) {
+    // Simple Euler integration — velocity is set once on spawn and never changes.
     this->position.x += this->velocityX;
     this->position.y += this->velocityY;
 }
@@ -146,7 +147,7 @@ void StraightProjectile::draw(RenderWindow& window, float scrollX, float scrollY
 
     float rot = std::atan2f(this->velocityY, this->velocityX) * 180.f / 3.14159f;
 
-    
+    // Try to use the bullet sprite if the texture was loaded
     if (this->textureManager->loadTexture("bullet_draw", "resources/Sprites/bullet.png")) {
         sf::Texture& tex = this->textureManager->getTexture("bullet_draw");
         sf::Sprite bulletSprite;
@@ -160,7 +161,7 @@ void StraightProjectile::draw(RenderWindow& window, float scrollX, float scrollY
         window.draw(bulletSprite);
     }
     else {
-        
+        // Fallback: yellow rectangle placeholder
         sf::RectangleShape bullet(sf::Vector2f(10.f, 4.f));
         bullet.setFillColor(sf::Color(255, 240, 40));
         bullet.setOrigin(5.f, 2.f);
@@ -170,13 +171,13 @@ void StraightProjectile::draw(RenderWindow& window, float scrollX, float scrollY
     }
 }
 
-
-
-
-
-
-
-
+// ─────────────────────────────────────────────────────────────────────────────
+// BallisticProjectile
+// Gravity accumulates into velocityY each tick, producing a parabolic arc.
+// No direct weapon fires a plain ballistic (all explosives go through
+// ExplosiveProjectile), but the class exists as a reusable physics base.
+// Placeholder colour: dark orange
+// ─────────────────────────────────────────────────────────────────────────────
 
 BallisticProjectile::BallisticProjectile(TextureManager* texMgr, AudioManager* audMgr)
     : Projectile(texMgr, audMgr)
@@ -187,9 +188,9 @@ BallisticProjectile::BallisticProjectile(TextureManager* texMgr, AudioManager* a
 
 BallisticProjectile::~BallisticProjectile() {}
 
-void BallisticProjectile::move(float ) {
-    
-    
+void BallisticProjectile::move(float /*scroll*/) {
+    // Gravity accumulates into Y each frame — this simulates constant downward
+    // acceleration (roughly 0.5 * g for the game's exaggerated ballistic feel).
     this->velocityY += this->gravity;
     this->position.x += this->velocityX;
     this->position.y += this->velocityY;
@@ -199,7 +200,7 @@ void BallisticProjectile::draw(RenderWindow& window, float scrollX, float scroll
     if (!this->status) return;
 
     sf::RectangleShape shot(sf::Vector2f(9.f, 6.f));
-    shot.setFillColor(sf::Color(200, 100, 20));  
+    shot.setFillColor(sf::Color(200, 100, 20));  // dark orange
     shot.setOrigin(4.5f, 3.f);
 
     float rot = std::atan2f(this->velocityY, this->velocityX) * 180.f / 3.14159f;
@@ -208,21 +209,21 @@ void BallisticProjectile::draw(RenderWindow& window, float scrollX, float scroll
     window.draw(shot);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// ─────────────────────────────────────────────────────────────────────────────
+// ExplosiveProjectile
+// Extends BallisticProjectile with a blast radius and onImpact() detonation.
+//
+// WHY internal projectileClass check in draw() doesn't violate P1:
+//   P1 prohibits external type-dispatch ("if enemy->getType == REBEL, do X").
+//   Here the class is checking its OWN internal tag to decide ITS OWN visual.
+//   This is equivalent to a member function consulting its own private state —
+//   semantically no different from checking a bool flag.  The vtable still
+//   dispatched correctly to get HERE; there's no external switch.
+//
+// Colours:
+//   PROJ_EXPLOSIVE (rocket): red-orange elongated oval (rocket body shape)
+//   PROJ_BOMB      (enemy):  dark grey circle (metal bomb silhouette)
+// ─────────────────────────────────────────────────────────────────────────────
 
 ExplosiveProjectile::ExplosiveProjectile(TextureManager* texMgr, AudioManager* audMgr)
     : BallisticProjectile(texMgr, audMgr)
@@ -241,7 +242,7 @@ void ExplosiveProjectile::draw(RenderWindow& window, float scrollX, float scroll
     float rot = std::atan2f(this->velocityY, this->velocityX) * 180.f / 3.14159f;
 
     if (this->projectileClass == PROJ_BOMB) {
-        
+        // Enemy-thrown bomb — try bomb.png sprite, fallback to grey circle
         if (this->textureManager->loadTexture("bomb_draw", "resources/Sprites/bomb.png")) {
             sf::Texture& tex = this->textureManager->getTexture("bomb_draw");
             sf::Sprite bombSprite;
@@ -264,7 +265,7 @@ void ExplosiveProjectile::draw(RenderWindow& window, float scrollX, float scroll
         }
     }
     else {
-        
+        // Rocket / grenade — try grenade.png sprite, fallback to orange rectangle
         if (this->textureManager->loadTexture("grenade_draw", "resources/Sprites/grenade.png")) {
             sf::Texture& tex = this->textureManager->getTexture("grenade_draw");
             sf::Sprite grenadeSprite;
@@ -298,26 +299,26 @@ void ExplosiveProjectile::draw(RenderWindow& window, float scrollX, float scroll
 }
 
 void ExplosiveProjectile::onImpact(EnemyManager* em, CharacterManager* cm) {
-    
-    
-    
-    
+    // Blast-radius damage against nearby entities is handled by
+    // ProjectileManager::checkPlayerBulletHits() which calls spawnBlast() for
+    // explosion visuals.  Actual area-of-effect health deduction will hook in
+    // once EnemyManager exposes takeAreaDamage(origin, radius, dmg).
     (void)em; (void)cm;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+// ─────────────────────────────────────────────────────────────────────────────
+// FlameParticle
+//
+// One individual particle emitted by FlameShot::fire().
+// At fireRate 10/sec each particle lasts 20 frames → about 3 overlap at once
+// → continuous stream visual even though each fire() call only spawns 1.
+//
+// Extends StraightProjectile for its linear move() — FlameParticle just wraps
+// it with a lifetime countdown so particles burn out after travelling ~3 blocks.
+//
+// The alpha-fade in draw() communicates "the flame is weakening" intuitively
+// and helps players gauge the effective range of the weapon.
+// ─────────────────────────────────────────────────────────────────────────────
 
 FlameParticle::FlameParticle(TextureManager* texMgr, AudioManager* audMgr,
     float ang, int frames)
@@ -325,20 +326,20 @@ FlameParticle::FlameParticle(TextureManager* texMgr, AudioManager* audMgr,
     , lifetime(frames)
     , maxLifetime(frames)
 {
-    
-    
-    
+    // Override the class tag so PM and collision code can identify flame hits.
+    // Needed for the Mummy kill-condition (only fire or explosives deal lethal
+    // damage to Mummy Warriors — the MummyWarrior::takeDamage() reads this tag).
     this->projectileClass = PROJ_FLAME;
 }
 
 FlameParticle::~FlameParticle() {}
 
 void FlameParticle::move(float scroll) {
-    
+    // Advance spatially via parent's linear integrator, THEN count down.
     StraightProjectile::move(scroll);
 
-    
-    
+    // Self-deactivate when the particle burns out.
+    // PM's postEntityUpdate() removes deactivated slots on the next frame.
     if (--this->lifetime <= 0) {
         this->deactivate();
     }
@@ -347,21 +348,21 @@ void FlameParticle::move(float scroll) {
 void FlameParticle::draw(RenderWindow& window, float scrollX, float scrollY) {
     if (!this->status) return;
 
-    
-    
+    // Lifetime ratio [0,1] — 1.0 at birth, 0.0 when expired.
+    // Used to fade both green channel (orange→red) and alpha (fully opaque→gone).
     float ratio = (float)this->lifetime / (float)this->maxLifetime;
 
-    sf::Uint8 g = static_cast<sf::Uint8>(90.f * ratio);  
+    sf::Uint8 g = static_cast<sf::Uint8>(90.f * ratio);  // green component fades out
     sf::Uint8 alpha = static_cast<sf::Uint8>(200.f * ratio + 55.f);
 
-    
+    // Outer halo — larger, more transparent
     sf::RectangleShape halo(sf::Vector2f(12.f, 8.f));
     halo.setFillColor(sf::Color(255, g, 0, static_cast<sf::Uint8>(alpha / 2)));
     halo.setOrigin(6.f, 4.f);
     halo.setPosition(this->position.x - scrollX, this->position.y - scrollY);
     window.draw(halo);
 
-    
+    // Inner core — smaller, more opaque, brighter
     sf::RectangleShape core(sf::Vector2f(8.f, 5.f));
     core.setFillColor(sf::Color(255, g + 50 > 255 ? 255 : g + 50, 10, alpha));
     core.setOrigin(4.f, 2.5f);
@@ -369,18 +370,18 @@ void FlameParticle::draw(RenderWindow& window, float scrollX, float scrollY) {
     window.draw(core);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
+// ─────────────────────────────────────────────────────────────────────────────
+// LaserBeam
+//
+// A stationary projectile whose getBoundingBox() spans the full screen width.
+// "Stationary" is the key architectural trick: the AABB check in PM hits every
+// enemy in the beam's path in the same frame it's spawned (no tunnelling).
+// The beam deactivates after `lifetime` frames, producing a visible flash.
+//
+// update() override: skips tile collision (spec says raycast, passes through
+// solid geometry).  Bounds check still applies to deactivate beams that were
+// spawned off-screen in edge cases.
+// ─────────────────────────────────────────────────────────────────────────────
 
 LaserBeam::LaserBeam(TextureManager* texMgr, AudioManager* audMgr,
     int dir, int frames)
@@ -390,15 +391,15 @@ LaserBeam::LaserBeam(TextureManager* texMgr, AudioManager* audMgr,
 {
     this->projectileClass = PROJ_BEAM;
     this->isExplosive = false;
-    
+    // Velocity stays at (0,0) — the beam occupies its extent from the spawn frame.
 }
 
 LaserBeam::~LaserBeam() {}
 
 IntRect LaserBeam::getBoundingBox() const {
-    
-    
-    
+    // The beam extends SCREEN_W pixels from the barrel tip in beamDir.
+    // Height of 8 gives a forgiving hit window without feeling unfair.
+    // Vertically centred on the barrel: subtract 4 from Y for symmetry.
     if (this->beamDir == DIR_RIGHT) {
         return IntRect(
             static_cast<int>(this->position.x),
@@ -415,21 +416,21 @@ IntRect LaserBeam::getBoundingBox() const {
     }
 }
 
-void LaserBeam::update(float scroll, Level* ) {
-    
-    
-    
+void LaserBeam::update(float scroll, Level* /*lvl*/) {
+    // lvl is intentionally discarded — laser raycasts through solid tiles.
+    // We still need the move() call for the lifetime countdown,
+    // and bounds check to cull a beam that was somehow spawned off-screen.
     if (!this->status) return;
 
     this->move(scroll);
     if (this->status) {
-        
+        // Use a very large margin so an on-screen beam is never culled early.
         this->checkBounds(scroll, 0.f);
     }
 }
 
-void LaserBeam::move(float ) {
-    
+void LaserBeam::move(float /*scroll*/) {
+    // No spatial displacement — pure lifetime countdown.
     if (--this->lifetime <= 0) {
         this->deactivate();
     }
@@ -438,8 +439,8 @@ void LaserBeam::move(float ) {
 void LaserBeam::draw(RenderWindow& window, float scrollX, float scrollY) {
     if (!this->status) return;
 
-    
-    
+    // Flicker intensity drops as the beam expires.
+    // lifetime starts at 5, so ratio goes 1.0 → 0.2 → 0 (then deactivated).
     float ratio = (float)this->lifetime / 5.f;
     if (ratio > 1.f) ratio = 1.f;
 
@@ -448,27 +449,27 @@ void LaserBeam::draw(RenderWindow& window, float scrollX, float scrollY) {
 
     float beamLen = static_cast<float>(SCREEN_W);
 
-    
+    // Start X in screen space
     float startX = (this->beamDir == DIR_RIGHT)
         ? (this->position.x - scrollX)
         : (this->position.x - scrollX - beamLen);
     float y = this->position.y - scrollY;
 
-    
+    // ── Outer glow: wide, semi-transparent cyan ───────────────────────────────
     sf::RectangleShape glow(sf::Vector2f(beamLen, 8.f));
     glow.setFillColor(sf::Color(0, 220, 255, alpha));
     glow.setOrigin(0.f, 4.f);
     glow.setPosition(startX, y);
     window.draw(glow);
 
-    
+    // ── Inner core: narrow, nearly opaque, near-white ─────────────────────────
     sf::RectangleShape core(sf::Vector2f(beamLen, 3.f));
     core.setFillColor(sf::Color(180, 255, 255, coreAlpha));
     core.setOrigin(0.f, 1.5f);
     core.setPosition(startX, y);
     window.draw(core);
 
-    
+    // ── Muzzle flash: small circle at barrel end ───────────────────────────────
     float flashX = (this->beamDir == DIR_RIGHT)
         ? this->position.x - scrollX
         : this->position.x - scrollX;

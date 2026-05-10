@@ -14,14 +14,14 @@ public:
 
     int getSelectedMode() const { return gameMode; }
     int getSelectedLevel() const { return selectedLevel; }
-    bool isReady() const;          
+    bool isReady() const;          // true when both mode and level are chosen
 
 private:
     char options[4][MAX_NAME_LEN];
     int selectedOption;
     int gameMode;
     int selectedLevel;
-    int menuState;   
+    int menuState;   // 0=splash, 1=mode select, 2=level select
 
     TextureManager* texManager;
     AudioManager* audManager;
@@ -32,7 +32,7 @@ private:
     RectangleShape overlay;
     RectangleShape selector;
 
-    
+    // Level select boxes
     RectangleShape levelBoxes[4];
     int hoveredLevel;
 

@@ -7,7 +7,6 @@
 #include "EnemyManager.h"
 #include "EnemyVehicleManager.h"
 #include "LevelConfig.h"
-#include "NoiseProfile.h"
 #include <SFML/Graphics.hpp>
 
 class CharacterManager;
@@ -15,6 +14,7 @@ class GameStateManager;
 class LevelManager;
 class ScoreManager;
 class HUD;
+class FractalNoise;
 
 class PlayState : public GameState {
 private:
@@ -51,9 +51,7 @@ private:
     sf::Font   debugFont;
     sf::Text   debugText;
 
-    
-    
-    
+    // Developer / God Mode
     bool       devModeActive;
     sf::Clock  devKeyTimer;
 
@@ -65,28 +63,25 @@ private:
     int   flyingTaraPhase;
     bool  submarineSpawned;
 
-    
+    // Water pool overlay
     sf::ConvexShape waterShape;
     float waterBaseY;
 
-    
-    int startLevel;               
+    // Level management
+    int startLevel;
     int currentLevelIndex;
     const LevelConfig* currentConfig;
     bool levelTransitioning;
     float levelTransitionTimer;
-    bool hudVisible;              
-    bool bossFelledTriggered;     
-    int  bossesSpawned;           
-    int  bossesDefeated;          
+    bool hudVisible;
+    bool bossFelledTriggered;
+    int  bossesSpawned;
+    int  bossesDefeated;
 
-    // ── Campaign mode tracking ──
-    // campaignLastSpawnX: world X where we last spawned an enemy wave.
-    //   Incremented every 800px to produce a rolling stream of enemies.
-    // campaignProfile: noise profile kept alive for advanceWorld() streaming.
-    //   Owned by PlayState. Created in loadLevel(), deleted in destructor.
-    float          campaignLastSpawnX;
-    NoiseProfile*  campaignProfile;
+    // ── Campaign mode: procedural terrain ──
+    FractalNoise* fractalNoise;       // owned by PlayState (composition)
+    int  campaignSeed;                 // seed for this campaign run
+    int  campaignProfileType;          // NOISE_AMPLIFIED / FLAT / NORMAL
 
 public:
     PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr, int startLvl = 0);
@@ -98,6 +93,9 @@ public:
     virtual void onEnter();
     virtual void onExit();
 
+    // Set the noise profile for campaign mode (call before onEnter)
+    void setCampaignProfile(int profileType);
+
 private:
     void renderDebug(RenderWindow& window);
     void renderHitboxes(RenderWindow& window);
@@ -105,6 +103,7 @@ private:
     void spawnTestBlocks();
     void spawnTestEnemies();
     void loadLevel(int levelIndex);
+    void loadCampaignLevel();            // generate procedural terrain for campaign
     void checkLevelTransition();
     void spawnEnemiesFromConfig();
     void spawnPlatformsFromConfig();

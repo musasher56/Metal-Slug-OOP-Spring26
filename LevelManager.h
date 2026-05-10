@@ -4,6 +4,7 @@
 using namespace sf;
 
 class Level;
+class NoiseProfile;
 class TextureManager;
 
 
@@ -19,16 +20,12 @@ public:
     void update(float dt);
     void draw(RenderWindow& window, float scrollX, float scrollY);
     Level* getLevel();
+
+    // Replace the current Level with a campaign-mode Level
+    // (procedural Perlin terrain). Call this before loadCampaignLevel().
+    void createCampaignLevel(NoiseProfile* profile);
+
     void nextLevel(TextureManager* tex);
     void saveData();
     void loadData();
-
-    // -------------------------------------------------------------------------
-    // setLevel: Replaces the current Level with a new one.
-    // Used by PlayState when switching to campaign mode — it creates a
-    // noise-generated Level(NoiseProfile*) and passes ownership here.
-    // LevelManager deletes the old level and takes ownership of the new one.
-    // Called BEFORE loadLevel() rebuilds terrain so the grid is correct.
-    // -------------------------------------------------------------------------
-    void setLevel(Level* newLevel);
 };

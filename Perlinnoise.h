@@ -1,114 +1,259 @@
 #pragma once
+#include "Constants.h"
 
-// =============================================================================
-// PerlinNoise.h
-// Custom 1D gradient noise engine for Metal Slug OOP terrain generation.
+// ─────────────────────────────────────────────────────────────────────────────
+// PerlinNoise.h — ALL noise/terrain-profile classes in ONE file
 //
-// DESIGN CHOICES (intentionally distinct from standard implementations):
+// Contains:
+//   1. PerlinNoise      — seeded noise generator (permutation table + interpolation)
+//   2. FractalNoise     — layers PerlinNoise octaves → produces heightmap for dirt blocks
+//   3. NoiseProfile     — abstract base for terrain profiles (Factory pattern)
+//   4. AmplifiedProfile — big dramatic mountains
+//   5. FlatProfile      — gentle rolling terrain
+//   6. NormalProfile    — balanced playable terrain
 //
-//  1. NO PERMUTATION TABLE.
-//     The classic Ken Perlin implementation stores a 256-element shuffled
-//     integer array and doubles it for wraparound. We derive gradient
-//     directions purely from a mathematical integer hash — lattice point +
-//     seed go through a 3-step bit scramble that produces statistically
-//     uniform +1/-1 output. Zero lookup tables in memory.
+// Factory Pattern: NoiseProfile::create(type) uses function pointer array
+//   (NO switch statement — avoids P5 penalty)
 //
-//  2. CUBIC HERMITE SMOOTHSTEP (not quintic).
-//     Perlin's 2002 "improved" version uses 6t^5 - 15t^4 + 10t^3.
-//     We use the simpler 3t^2 - 2t^3 (H01 cubic Hermite basis).
-//     Both are C1-continuous at lattice boundaries (zero first derivative
-//     at t=0 and t=1), which is all we need for smooth terrain. The quintic
-//     additionally zeroes the second derivative — overkill for block terrain.
+// TWO WAYS TO USE:
 //
-//  3. LACUNARITY = 2.17 (not 2.0).
-//     Standard fractal noise doubles frequency each octave. A slightly
-//     irrational multiplier prevents any two harmonic frequencies from
-//     landing on shared multiples, which would produce subtle aliasing
-//     patterns visible as terrain "striping" over long horizontal distances.
+// 1. Instance-based (for survival mode with BlockManager):
+//    PerlinNoise perlin(seed);
+//    FractalNoise fractal(&perlin);
+//    NoiseProfile* profile = NoiseProfile::create(NOISE_AMPLIFIED);
+//    fractal.setProfile(profile);
+//    int* heightmap = new int[levelWidth];
+//    fractal.generateHeightMap(levelWidth, heightmap);
+//    blockManager->buildProceduralTerrain(0.f, surfaceY, heightmap, levelWidth);
+//    delete[] heightmap;
+//    delete profile;
 //
-//  4. PRIME-SPACED PER-HARMONIC SEEDS.
-//     Each stacked noise layer uses a different seed offset (drawn from a
-//     prime-gap sequence). This prevents inter-harmonic correlation — if two
-//     layers shared a seed they would constructively reinforce at the same
-//     x values, making the sum look like a single layer with higher amplitude.
+// 2. Static method (for campaign mode Level::generateColumn):
+//    float h = PerlinNoise::fractal(worldX, amplitude, frequency,
+//                                   persistence, harmonics, seed);
+//    // h is in [0, 1] — directly use as terrain height
+// ─────────────────────────────────────────────────────────────────────────────
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PerlinNoise — seeded 2D noise generator
 //
-//  5. "HARMONICS" not "octaves".
-//     Terminology that is accurate (each layer IS a harmonic of the base
-//     frequency) and avoids being identical to every other implementation.
-// =============================================================================
+// UML: PerlinNoise (C) with permutation[], seed, noise(x,y), fade, lerp, grad
+//
+// How it works:
+//   1. Seed generates a shuffled permutation table (0-255, doubled for wrapping)
+//   2. noise(x, y) looks up 4 grid-corner gradients, interpolates with fade
+//   3. Output is in range [-1, +1], typically mapped to [0, 1] by the caller
+//
+// Also provides a static fractal() method for campaign mode Level generation.
+// ─────────────────────────────────────────────────────────────────────────────
 
 class PerlinNoise {
 private:
+    int permutation[512];   // doubled permutation table for overflow-free access
+    int seed;
 
-    // -------------------------------------------------------------------------
-    // hashGrad: Maps a lattice integer and seed to a gradient direction.
-    //
-    // The three-step mix is:
-    //   Step 1: Linear combine with two primes so (x=0, seed=0) != 0
-    //   Step 2: XOR-shift — high bits feed back into low bits, breaking
-    //           the linearity introduced in step 1
-    //   Step 3: Polynomial scramble — thorough bit avalanche.
-    //           Constants chosen from Numerical Recipes (different from
-    //           Perlin's own constants to ensure distinct output)
-    //
-    // Bit 17 of the result determines gradient: +1.0 or -1.0.
-    // In 1D terrain generation, two gradient directions are sufficient.
-    // -------------------------------------------------------------------------
-    static float hashGrad(int latticeX, int seed);
-
-    // -------------------------------------------------------------------------
-    // smoothStep: Cubic Hermite basis H01.
-    //   f(t)  = 3t^2 - 2t^3
-    //   f(0)  = 0,  f(1)  = 1
-    //   f'(0) = 0,  f'(1) = 0   <- C1 continuity at lattice boundaries
-    //
-    // t is always the fractional part of x, so it's in [0, 1) by construction.
-    // No clamping needed.
-    // -------------------------------------------------------------------------
-    static float smoothStep(float t);
-
-    // Standard linear interpolation: a + t * (b - a)
-    static float lerp(float a, float b, float t);
-
-    // -------------------------------------------------------------------------
-    // sampleRaw: Single-harmonic 1D Perlin sample.
-    //   - Finds integer lattice points x0 = floor(x), x1 = x0 + 1
-    //   - Computes gradient contribution at each: grad * distance_to_lattice
-    //     (x0 contribution: grad(x0) * (x - x0)
-    //      x1 contribution: grad(x1) * (x - x1) = grad(x1) * (dx - 1))
-    //   - Blends with smooth weight
-    //   Result lies in approximately [-0.5, 0.5].
-    // -------------------------------------------------------------------------
-    static float sampleRaw(float x, int seed);
+    // Gradient lookup table — replaces switch statement in grad()
+    // 4 gradient directions: (1,1), (-1,1), (1,-1), (-1,-1)
+    // Stored as [gx0, gy0, gx1, gy1, gx2, gy2, gx3, gy3]
+    static const float GRAD_TABLE[8];
 
 public:
+    PerlinNoise(int seed);
 
-    // -------------------------------------------------------------------------
-    // fractal: Multi-harmonic (fractal / fBm) noise.
+    // Returns noise value in [-1, +1] for given coordinates
+    float noise(float x, float y);
+
+    // Smooth interpolation helper (6t^5 - 15t^4 + 10t^3)
+    float fade(float t);
+
+    // Linear interpolation: a + t*(b-a)
+    float lerp(float t, float a, float b);
+
+    // Dot product of gradient vector and distance vector
+    // Uses GRAD_TABLE array lookup (NO switch statement)
+    float grad(int hash, float x, float y);
+
+    // ── Static fractal noise — for campaign mode Level::generateColumn ──
     //
-    // Stacks 'harmonics' Perlin layers. Layer h uses:
-    //   - frequency: freq * LACUNARITY^h
-    //   - amplitude: amp  * persistence^h
-    //   - seed:      seed + HARMONIC_SEEDS[h]  (prime-spaced, prevents correlation)
-    //
-    // After stacking, normalizes the signed sum to [0.0, 1.0].
-    //
-    // Parameters come from a NoiseProfile pointer — the math engine itself has
-    // no concept of "Amplified" vs "Flat"; it only sees numbers.
+    // Convenience method that creates a cached PerlinNoise instance internally
+    // and layers multiple octaves. Returns value in [0, 1].
     //
     // Parameters:
-    //   x           - world column (deterministic: same x always gives same height)
-    //   amplitude   - base amplitude of the first harmonic
-    //   frequency   - base frequency (horizontal compression)
-    //   persistence - amplitude decay per harmonic (0 = all in first, 1 = equal)
-    //   harmonics   - number of layers to stack (capped at MAX_HARMONICS = 6)
-    //   seed        - domain offset (different seeds = different terrain shapes,
-    //                 even at identical amplitude/frequency)
-    // -------------------------------------------------------------------------
-    static float fractal(float x,
-                         float amplitude,
-                         float frequency,
-                         float persistence,
-                         int   harmonics,
-                         int   seed);
+    //   x           — world X position to sample
+    //   amplitude   — controls terrain height (doesn't change [0,1] output,
+    //                 but affects how profiles are applied internally)
+    //   frequency   — hill width (lower = wider hills)
+    //   persistence — how much each octave contributes (0.3-0.6 typical)
+    //   harmonics   — number of noise layers (same as octaves)
+    //   seed        — permutation table seed (same seed = same terrain)
+    static float fractal(float x, float amplitude, float frequency,
+        float persistence, int harmonics, int seed);
+};
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FractalNoise — generates terrain heightmaps from PerlinNoise
+//
+// UML: FractalNoise (C) with perlin, octaves, persistence, lacunarity,
+//      amplitude, frequency. Methods: sample(), generateHeightMap(),
+//      mapToBiome(), setProfile()
+//
+// How it works:
+//   1. PerlinNoise gives you smooth random values per coordinate
+//   2. FractalNoise layers (octaves) of noise at different scales
+//   3. generateHeightMap() samples across your level width and produces
+//      an int array where each value = number of dirt blocks to stack
+//   4. That int array feeds directly into BlockManager to build terrain
+//
+// Default: 2 octaves (smooth rolling hills, not noisy spiky garbage).
+// Parameters tuned to produce BLOCK heights (0-25 range).
+// ─────────────────────────────────────────────────────────────────────────────
+
+class NoiseProfile;  // forward declaration
+
+class FractalNoise {
+private:
+    PerlinNoise* perlin;
+    float octaves;        // how many layers of noise (default: 2)
+    float persistence;    // how much each octave contributes (default: 0.5)
+    float lacunarity;     // how much frequency increases per octave (default: 2.0)
+    float amplitude;      // max terrain height in blocks (default: 15)
+    float frequency;      // how wide the hills are (default: 0.02 — big rolling hills)
+
+public:
+    FractalNoise(PerlinNoise* perlin);
+    ~FractalNoise();
+
+    // Sample fractal noise at (x, y). Returns value in [0, 1]
+    float sample(float x, float y);
+
+    // Generate a 1D heightmap for terrain.
+    // out[] is filled with integer heights (number of blocks per column).
+    // width = number of columns to generate.
+    // Each column is one MountainBlock wide (48px).
+    void generateHeightMap(int width, int* out);
+
+    // Map a normalized height [0,1] to a biome constant (BIOME_AERIAL/PLAINS/AQUATIC)
+    int mapToBiome(float height);
+
+    // Apply a NoiseProfile to set amplitude/frequency/etc.
+    void setProfile(NoiseProfile* profile);
+
+    // ── Parameter setters (used by NoiseProfile::applyProfile) ──
+    void setAmplitude(float a) { this->amplitude = a; }
+    void setFrequency(float f) { this->frequency = f; }
+    void setPersistence(float p) { this->persistence = p; }
+    void setLacunarity(float l) { this->lacunarity = l; }
+    void setOctaves(float o) { this->octaves = o; }
+
+    // ── Parameter getters (for inspection) ──
+    float getAmplitude()   const { return this->amplitude; }
+    float getFrequency()   const { return this->frequency; }
+    float getPersistence() const { return this->persistence; }
+    float getLacunarity()  const { return this->lacunarity; }
+    float getOctaves()     const { return this->octaves; }
+};
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NoiseProfile — Abstract base + Factory for terrain profiles
+//
+// UML: NoiseProfile (A) with amplitude, frequency, persistence, lacunarity,
+//      octaves, type, seed. Methods: applyProfile(), getType(), static create()
+//
+// Three concrete profiles:
+//   AmplifiedProfile — big dramatic mountains (tall peaks, deep valleys)
+//   FlatProfile      — gentle rolling terrain (barely any elevation change)
+//   NormalProfile    — medium hills (balanced, playable)
+//
+// Factory Pattern: NoiseProfile::create(type) uses function pointer array
+//   (NO switch statement — avoids P5 penalty)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class NoiseProfile {
+protected:
+    float amplitude;      // max terrain height in blocks
+    float frequency;      // hill width (lower = wider hills)
+    float persistence;    // how much each octave adds (0.3-0.6 typical)
+    float lacunarity;     // frequency multiplier per octave (2.0 standard)
+    float octaves;        // number of noise layers (1-3 for simplicity)
+    int type;             // NOISE_AMPLIFIED, NOISE_FLAT, or NOISE_NORMAL
+    int seed;             // noise seed — same seed = same terrain every time
+
+public:
+    NoiseProfile();
+    virtual ~NoiseProfile();
+
+    // Apply this profile's parameters to a FractalNoise instance
+    virtual void applyProfile(FractalNoise* noise) = 0;
+
+    // Return the type constant (NOISE_AMPLIFIED / NOISE_FLAT / NOISE_NORMAL)
+    virtual int getType() = 0;
+
+    // ── Factory: create a profile by type constant ──
+    // Uses function pointer array (NO switch statement — avoids P5 penalty)
+    static NoiseProfile* create(int type);
+
+    // ── Getters (used by Level::generateColumn via PerlinNoise::fractal) ──
+    float getAmplitude()   const { return this->amplitude; }
+    float getFrequency()   const { return this->frequency; }
+    float getPersistence() const { return this->persistence; }
+    float getLacunarity()  const { return this->lacunarity; }
+    float getOctaves()     const { return this->octaves; }
+
+    // getHarmonics — alias for getOctaves (same concept, different name)
+    // Used by Level::generateColumn when calling PerlinNoise::fractal()
+    int   getHarmonics()   const { return static_cast<int>(this->octaves); }
+
+    int   getSeed()        const { return this->seed; }
+    int   getTypeValue()   const { return this->type; }
+
+    // ── Setters ──
+    void  setSeed(int s) { this->seed = s; }
+};
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AmplifiedProfile — big dramatic terrain
+//
+// Tall mountains, deep valleys. Like the Amplified world type in Minecraft.
+// amplitude = 25 blocks, frequency = 0.015 (very wide hills)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class AmplifiedProfile : public NoiseProfile {
+public:
+    AmplifiedProfile();
+    virtual void applyProfile(FractalNoise* noise);
+    virtual int getType();
+};
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FlatProfile — minimal terrain variation
+//
+// Almost flat with gentle undulation. Good for vehicle sections.
+// amplitude = 3 blocks, frequency = 0.05 (tight subtle bumps)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class FlatProfile : public NoiseProfile {
+public:
+    FlatProfile();
+    virtual void applyProfile(FractalNoise* noise);
+    virtual int getType();
+};
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NormalProfile — balanced playable terrain
+//
+// Medium hills, good for standard gameplay on foot.
+// amplitude = 15 blocks, frequency = 0.02 (medium rolling hills)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class NormalProfile : public NoiseProfile {
+public:
+    NormalProfile();
+    virtual void applyProfile(FractalNoise* noise);
+    virtual int getType();
 };

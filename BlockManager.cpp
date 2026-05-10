@@ -3,12 +3,9 @@
 #include "TextureManager.h"
 
 
-
-
 const int BlockManager::heightmap[BlockManager::MOUNTAIN_HEIGHTMAP_LEN] = {
 
      1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-
 
       1, 1, 2, 2, 3, 3, 4, 4, 5, 5,
       6, 6, 7, 7, 8, 8, 9, 9,10,10,
@@ -16,7 +13,6 @@ const int BlockManager::heightmap[BlockManager::MOUNTAIN_HEIGHTMAP_LEN] = {
      16,16,17,17,18,18,19,19,20,20,
      21,21,22,22,23,23,24,24,25,25,
 
-
      25,25,25,25,25,25,25,25,25,25,
      25,25,25,25,25,25,25,25,25,25,
      25,25,25,25,25,25,25,25,25,25,
@@ -24,7 +20,6 @@ const int BlockManager::heightmap[BlockManager::MOUNTAIN_HEIGHTMAP_LEN] = {
      25,25,25,25,25,25,25,25,25,25,
      25,25,25,25,25,25,25,25,25,25,
      25,25,25,25,25,25,25,25,25,25,
-
 
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -134,9 +129,6 @@ void BlockManager::spawnPlatform(float startX, float startY, int count) {
 }
 
 
-
-
-
 void BlockManager::buildGroundTerrain(int surfaceRow, int depth) {
     if (this->level == nullptr) return;
 
@@ -166,7 +158,7 @@ void BlockManager::buildMountainTerrain(float baseX, float baseY, int maxColHeig
 
     for (int col = 0; col < MOUNTAIN_HEIGHTMAP_LEN && this->mountainBlockCount < MAX_MOUNTAIN_BLOCKS; col++) {
         int colHeight = heightmap[col];
-        
+        // Cap column height for smaller mountains (e.g. boss level with no vertical scroll)
         if (colHeight > maxColHeight) colHeight = maxColHeight;
         float wx = baseX + col * MOUNTAIN_COL_STEP;
 
@@ -176,6 +168,62 @@ void BlockManager::buildMountainTerrain(float baseX, float baseY, int maxColHeig
             MountainBlock* mb = new MountainBlock(this->texMgr, wx, wy);
             this->mountainBlocks[this->mountainBlockCount++] = mb;
 
+            if (this->level != nullptr) {
+                int gc = static_cast<int>(wx + bsz * 0.5f) / cellSize;
+                int gr = static_cast<int>(wy + bsz * 0.5f) / cellSize;
+                this->level->setSolid(gr, gc, true);
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// buildProceduralTerrain — build terrain from a generated heightmap
+//
+// This is the SAME as buildMountainTerrain, but instead of using the
+// hardcoded heightmap[] array, it takes a dynamically generated one.
+//
+// The heightmap is produced by FractalNoise::generateHeightMap().
+// Each entry = number of MountainBlocks to stack upward from baseY.
+//
+// HOW TO USE:
+//   1. Create PerlinNoise(seed)
+//   2. Create FractalNoise(&perlin)
+//   3. Create NoiseProfile* profile = NoiseProfile::create(NOISE_AMPLIFIED)
+//   4. fractalNoise->setProfile(profile)
+//   5. fractalNoise->generateHeightMap(levelWidth, heightmapArray)
+//   6. blockManager->buildProceduralTerrain(baseX, baseY, heightmapArray, levelWidth)
+//   7. delete profile; delete fractalNoise; delete perlin;
+//
+// That's the entire pipeline. 6 lines of code for infinite procedural terrain.
+// ─────────────────────────────────────────────────────────────────────────────
+
+void BlockManager::buildProceduralTerrain(float baseX, float baseY,
+    int* heightmap, int heightmapLen, int maxColHeight)
+{
+    if (heightmap == nullptr || heightmapLen <= 0) return;
+
+    int bsz = MountainBlock::BLOCK_SIZE;  // 48
+    int cellSize = 48;
+
+    for (int col = 0; col < heightmapLen && this->mountainBlockCount < MAX_MOUNTAIN_BLOCKS; col++) {
+        int colHeight = heightmap[col];
+
+        // Cap column height if requested (for levels with limited vertical space)
+        if (colHeight > maxColHeight) colHeight = maxColHeight;
+
+        // Skip columns with zero height (gaps / valleys)
+        if (colHeight <= 0) continue;
+
+        float wx = baseX + (float)(col * bsz);
+
+        for (int row = 0; row < colHeight && this->mountainBlockCount < MAX_MOUNTAIN_BLOCKS; row++) {
+            float wy = baseY - (float)((row + 1) * bsz);
+
+            MountainBlock* mb = new MountainBlock(this->texMgr, wx, wy);
+            this->mountainBlocks[this->mountainBlockCount++] = mb;
+
+            // Mark this cell as solid in the Level grid for collision
             if (this->level != nullptr) {
                 int gc = static_cast<int>(wx + bsz * 0.5f) / cellSize;
                 int gr = static_cast<int>(wy + bsz * 0.5f) / cellSize;
