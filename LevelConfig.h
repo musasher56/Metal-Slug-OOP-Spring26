@@ -278,7 +278,7 @@ static const LevelConfig LEVEL_4 = {
     // Pool: X=8350 to X=10125, 10 blocks deep (480px), indestructible blocks
     // Water fills from 1 block below ground to pool bottom
     true,
-    8350.f, 1824.f,      // top-left  (waterX1, waterY1) — 1 block below ground
+    8350.f, 1450.f,      // top-left  (waterX1, waterY1) — 1 block below ground
     10125.f, 2256.f,     // bottom-right (waterX2, waterY2) — surfaceY + 10*48 = 2256
 
     // Submarine — none

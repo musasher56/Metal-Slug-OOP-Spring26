@@ -238,7 +238,7 @@ void PlayState::loadLevel(int levelIndex) {
                 // Pool dimensions
                 float poolLeft = 8350.f;
                 float poolRight = 10125.f;
-                int poolDepthBlocks = 10;  // 10 blocks deep = 480px
+                int poolDepthBlocks = 20;  // 10 blocks deep = 480px
                 float poolBottomY = surfaceY + (float)(poolDepthBlocks * cs);
 
                 // ── Left wall (full height from surface down) ──
