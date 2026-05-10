@@ -35,7 +35,7 @@ protected:
     //   [1] HeavyMachineGun — bright yellow,  100 rounds,  8/sec
     //   [2] RocketLauncher  — orange capsule, 10 rockets,  2s reload
     //   [3] FlameShot       — orange→red fade, 50 fuel,    stream
-    //   [4] LaserGun        — cyan beam,       20 charges, 0.2s cooldown
+    //   [4] LaserGun        — cyan beam,       20 charges, 2s cooldown
     //
     // WHY store as a flat pool instead of using inventory[3]?
     //   inventory[] is the gameplay pickup system (supply crates).
@@ -68,7 +68,6 @@ public:
     void switchWeapon(Weapon* w);
     void throwGrenade();
     void shoot();
-    virtual void meleeAttack();   // Spawns a MeleeSlash projectile through pm
 
     void enterVehicle(Vehicle* v);
     void exitVehicle();
@@ -97,13 +96,6 @@ private:
     float fireRateMultiplier;
     bool  dualFireActive;
     Clock dualFireTimer;
-    Animation hmgAnim;
-    Animation laserAnim;
-   Animation flameAnim;
-  Animation rocketAnim;
-  sf::Sprite weaponSpr;      // visual-only, never affects physics
-  bool       usingWeaponSpr;
-  int        lastWeaponType; // tracks previous weapon type to detect switches
 public:
     Marco(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~Marco();
@@ -111,7 +103,6 @@ public:
     virtual void activatePowerUp();
     virtual void handleInput();
     virtual void meleeAttack();
-    virtual void draw(RenderWindow& window, float scrollX, float scrollY);
 };
 
 

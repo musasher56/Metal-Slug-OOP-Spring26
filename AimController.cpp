@@ -17,10 +17,7 @@ void AimController::update(sf::Vector2f mousePos, sf::Vector2f charCenter, int d
         dx = -dx;
     }
 
-    // clampAngle() existed but was never called — raw angles like 170° (mouse
-    // behind the player) caused bullets to fire backward.  One-line fix.
-    float raw = atan2f(-dy, dx) * 180.f / 3.14159f;
-    this->currentAngle = this->clampAngle(raw);
+    this->currentAngle = atan2f(-dy, dx) * 180.f / 3.14159f;
 }
 
 float AimController::getAngle() const {

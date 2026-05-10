@@ -170,20 +170,9 @@ void CharSelectState::onEnter() {
     this->selectedChar = -1;
     this->hoveredChar = 0;
     this->shouldGoBack = false;
-
-    // Continue playing title theme during character selection.
-    // If the music was stopped (e.g. returning from PlayState), restart it.
-    if (this->audManager != nullptr && !this->audManager->isMusicPlaying()) {
-        this->audManager->playMusicTrack(0);  // Track 0 = title_theme.ogg
-    }
 }
 
-void CharSelectState::onExit() {
-    // Stop title music when leaving char select (entering gameplay or going back).
-    if (this->audManager != nullptr) {
-        this->audManager->stopMusic();
-    }
-}
+void CharSelectState::onExit() {}
 
 GameState* CharSelectState::createNextState() {
     // Only transition when a character has been confirmed

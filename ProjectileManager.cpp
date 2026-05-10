@@ -23,24 +23,6 @@ ProjectileManager::ProjectileManager(TextureManager* t, AudioManager* a)
     this->texMgr->loadTexture("grenade_draw", "resources/Sprites/grenade.png");
     this->texMgr->loadTexture("bomb_draw", "resources/Sprites/bomb.png");
 
-    // ── Weapon projectile sprite placeholders ──────────────────────────────
-    // These are the filenames you should use for your custom sprites.
-    // Create the PNG files with these EXACT names in resources/Sprites/:
-    //
-    //   flame_particle.png   — Flamethrower / FlameShot projectile sprite
-    //   laser_beam.png       — LaserGun beam sprite
-    //
-    // If the file doesn't exist, a fallback colored rectangle is drawn instead.
-    // Recommended sizes:
-    //   flame_particle.png:  16x16 or 32x32 pixels (will be scaled at runtime)
-    //   laser_beam.png:      64x8 or 128x8 pixels (elongated beam shape)
-    if (!this->texMgr->loadTexture("flame_particle", "resources/Sprites/flame_particle.png")) {
-        this->texMgr->makeColorTexture("flame_particle", sf::Color(255, 120, 0));  // orange placeholder
-    }
-    if (!this->texMgr->loadTexture("laser_beam", "resources/Sprites/laser_beam.png")) {
-        this->texMgr->makeColorTexture("laser_beam", sf::Color(80, 200, 255));  // cyan placeholder
-    }
-
     // Blast animation pool — initialise every slot so postEntityUpdate() can
     // safely call anim.update() without a null check.
     // If blast.png doesn't exist yet, makeColorTexture creates a solid orange
@@ -81,20 +63,19 @@ void ProjectileManager::clearAll() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Utility helpers
 // ─────────────────────────────────────────────────────────────────────────────
+
 sf::Vector2f ProjectileManager::calcBarrelTip(sf::Vector2f entityPos,
-                                               int          dir,
-                                               float        spriteWidth,
-                                               float        barrelOffsetY)
+    int          dir,
+    float        spriteWidth,
+    float        barrelOffsetY)
 {
     const float GAP = 4.f;
-    // Facing RIGHT: barrel exits from the RIGHT edge of the sprite body.
-    // entityPos.x is the LEFT edge, so add spriteWidth to reach the right side.
-    // Facing LEFT: barrel exits from the LEFT edge = entityPos.x − GAP.
-    float bx = (dir == DIR_RIGHT)
+    float x = (dir == DIR_RIGHT)
         ? entityPos.x + spriteWidth + GAP
         : entityPos.x - GAP;
-    return sf::Vector2f(bx, entityPos.y + barrelOffsetY);
+    return sf::Vector2f(x, entityPos.y + barrelOffsetY);
 }
+
 void ProjectileManager::angleToVelocity(float angle, int dir, float speed,
     float& outVX, float& outVY)
 {
@@ -122,7 +103,7 @@ void ProjectileManager::spawnStraight(sf::Vector2f origin, int dir,
     p->damage = dmg;
 
     float vx = 0.f, vy = 0.f;
-    ProjectileManager::angleToVelocity(angle, dir, 18.f, vx, vy);
+    ProjectileManager::angleToVelocity(angle, dir, 15.f, vx, vy);
     p->setVelocity(vx, vy);
 
     this->slots[this->activeCount++] = p;
@@ -182,16 +163,18 @@ void ProjectileManager::spawnFlame(sf::Vector2f origin, int dir,
 {
     if (this->activeCount >= MAX_PROJ) return;
 
-    // 30-frame lifetime: at 60fps and velocity 10px/f, the particle travels
-    // 300px ≈ 6.25 blocks before burning out — covers good range for a stream weapon.
-    FlameParticle* fp = new FlameParticle(this->texMgr, this->audMgr, angle, 30);
+    // 20-frame lifetime: at 60fps and velocity 6px/f, the particle travels
+    // 120px ≈ 3.75 blocks before burning out — close to the spec's 5-block
+    // range (exact range tuning can happen with real sprites).
+    FlameParticle* fp = new FlameParticle(this->texMgr, this->audMgr, angle, 20);
     fp->position = origin;
     fp->fromEnemy = fromEnemy;
     fp->damage = dmg;
 
-    // Moderate speed — fast enough to reach enemies, slow enough to see the stream.
+    // Slightly slower than bullets so the flame visually stays in front of the
+    // player barrel for its lifetime rather than shooting across the screen.
     float vx = 0.f, vy = 0.f;
-    ProjectileManager::angleToVelocity(angle, dir, 10.f, vx, vy);
+    ProjectileManager::angleToVelocity(angle, dir, 6.f, vx, vy);
     fp->setVelocity(vx, vy);
 
     this->slots[this->activeCount++] = fp;
@@ -205,63 +188,19 @@ void ProjectileManager::spawnFlame(sf::Vector2f origin, int dir,
 //
 // The beam lives 5 frames, flickering in draw() — visible flash without
 // requiring a separate animation system.
-void ProjectileManager::spawnLaser(sf::Vector2f origin, int dir, float angle,
-                                    int dmg, bool fromEnemy) {
-    if (this->activeCount >= MAX_PROJ) return;
-
-    LaserBeam* p = new LaserBeam(this->texMgr, this->audMgr, dir, 5);
-    p->position        = origin;
-    p->damage          = dmg;
-    p->fromEnemy       = fromEnemy;
-    p->isExplosive     = false;
-    p->blastRadius     = 0;
-    p->projectileClass = PROJ_BEAM;
-    p->status          = true;
-
-    // Convert aim angle to a unit direction vector.
-    // This is NOT a movement velocity — LaserBeam never moves.
-    // It is a DIRECTION ONLY, read by getBoundingBox() and draw()
-    // to orient the beam toward the mouse position.
-    float ux, uy;
-    this->angleToVelocity(angle, dir, 1.f, ux, uy);  // speed=1 → unit vector
-    p->setVelocity(ux, uy);
-
-    this->slots[this->activeCount++] = p;
-}
-
-
-// ── spawnMelee ────────────────────────────────────────────────────────────
-// One short-range MeleeSlash.  Position is set to the player's front so the
-// slash hitbox overlaps enemies within knife range.  The slash lasts 8 frames
-// and deals the specified damage on hit.
-void ProjectileManager::spawnMelee(sf::Vector2f origin, int dir,
-                                    int dmg, bool fromEnemy)
+void ProjectileManager::spawnLaser(sf::Vector2f origin, int dir,
+    int dmg, bool fromEnemy)
 {
     if (this->activeCount >= MAX_PROJ) return;
 
-    MeleeSlash* p = new MeleeSlash(this->texMgr, this->audMgr, dir, 8);
-    p->position        = origin;
-    p->damage          = dmg;
-    p->fromEnemy       = fromEnemy;
-    p->isExplosive     = false;
-    p->blastRadius     = 0;
-    p->projectileClass = PROJ_MELEE;
-    p->status          = true;
+    LaserBeam* lb = new LaserBeam(this->texMgr, this->audMgr, dir, 5);
+    lb->position = origin;
+    lb->fromEnemy = fromEnemy;
+    lb->damage = dmg;
+    // Velocity (0,0) — stationary; movement is suppressed in LaserBeam::move()
 
-    // Set a directional velocity so that checkPlayerBulletHits() computes
-    // the correct bulletDir for shield-blocking logic.  MeleeSlash::move()
-    // ignores velocity (it's a lifetime-countdown projectile), so this value
-    // is ONLY used for the bulletDir calculation:
-    //   bulletDir = (velocityX >= 0) ? 1 : -1
-    // Without this, velocityX was always 0, making bulletDir always 1,
-    // which caused ShieldedSoldier to block ALL melee attacks from the front
-    // regardless of which side the player was actually on.
-    p->velocityX = (dir == DIR_RIGHT) ? 1.f : -1.f;
-    p->velocityY = 0.f;
-
-    this->slots[this->activeCount++] = p;
+    this->slots[this->activeCount++] = lb;
 }
-
 
 void ProjectileManager::spawnBlast(float x, float y) {
     for (int i = 0; i < MAX_BLASTS; i++) {
@@ -312,14 +251,11 @@ void ProjectileManager::postEntityUpdate(float scrollX, float scrollY, Level* lv
             bool   wasExplosive = p->isExplosive;
 
             // Friend access: calls Projectile::checkTileCollision() directly.
-            // LaserBeam and MeleeSlash skip tile collision — they override update()
-            // to suppress it.  But postEntityUpdate() calls it externally.
-            // For LaserBeam (velocity=0, positioned at barrel in open air) this
-            // check always returns false in practice.  For MeleeSlash, we skip
-            // the check entirely since melee hits entities, not walls.
-            if (p->projectileClass != PROJ_MELEE) {
-                p->checkTileCollision(lvl);
-            }
+            // LaserBeam::update() suppresses this call from within its own loop —
+            // but postEntityUpdate() calls it externally.  For LaserBeam (velocity=0,
+            // positioned at barrel in open air) this check always returns false in
+            // practice, so no premature deactivation occurs.
+            p->checkTileCollision(lvl);
 
             if (!p->status && wasExplosive) {
                 this->spawnBlast(impactX, impactY);
@@ -329,10 +265,7 @@ void ProjectileManager::postEntityUpdate(float scrollX, float scrollY, Level* lv
         if (!p->status) { this->removeAt(i); continue; }
 
         // Friend access: bounds-cull off-screen projectiles.
-        // Skip for MeleeSlash — it stays with the player and dies by lifetime.
-        if (p->projectileClass != PROJ_MELEE) {
-            p->checkBounds(scrollX, scrollY);
-        }
+        p->checkBounds(scrollX, scrollY);
         if (!p->status) { this->removeAt(i); continue; }
 
         i++;
@@ -464,11 +397,9 @@ int ProjectileManager::checkPlayerBulletHits(DamagableEntity** targets, int targ
                 targets[e]->takeDamageFrom(proj->getDamage(), bulletDir);
                 hits++;
 
-                // Only deactivate non-beam, non-melee projectiles on hit.
+                // Only deactivate non-beam projectiles on hit.
                 // LaserBeam must persist for its full lifetime to hit all targets.
-                // MeleeSlash also persists so it can hit multiple nearby enemies.
-                if (proj->projectileClass != PROJ_BEAM &&
-                    proj->projectileClass != PROJ_MELEE) {
+                if (proj->projectileClass != PROJ_BEAM) {
                     proj->deactivate();
                     hit = true;
                 }

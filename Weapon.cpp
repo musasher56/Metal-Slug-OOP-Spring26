@@ -214,7 +214,7 @@ void FlameShot::update() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 LaserGun::LaserGun()
-    : Weapon(WEAPON_LASER_GUN, 999, 5.f, 20)
+    : Weapon(WEAPON_LASER_GUN, 999, 0.5f, 20)
 {}
 
 LaserGun::~LaserGun() {}
@@ -222,8 +222,8 @@ LaserGun::~LaserGun() {}
 void LaserGun::fire(sf::Vector2f origin, int dir, float angle, ProjectileManager* pm) {
     if (!pm || !this->hasAmmo()) return;
 
-    // Fire-rate gate: 1/5 = 0.2-second cooldown between beams.
-    // Fast enough to spam, slow enough to see each flash.
+    // Fire-rate gate: 1/0.5 = 2-second cooldown between beams.
+    // Prevents chaining instant-kill beams — the long cooldown is intentional.
     if (this->fireTimer.getElapsedTime().asSeconds() < 1.f / this->fireRate) return;
 
     this->ammo--;
@@ -231,9 +231,8 @@ void LaserGun::fire(sf::Vector2f origin, int dir, float angle, ProjectileManager
     // Angle is ignored for the laser — the beam fires perfectly horizontal in
     // the aim direction.  Vertical-aim support can be added when real sprites
     // are ready (spawn a beam with a rotated bounding box or sweep vertically).
-    // angle was previously discarded with (void)angle — that's why the laser
-    // always fired horizontally regardless of mouse position.
-    pm->spawnLaser(origin, dir, angle, this->damage, false);
+    (void)angle;
+    pm->spawnLaser(origin, dir, this->damage, false);
 
     this->fireTimer.restart();
 }

@@ -84,10 +84,6 @@ const int PROJ_BALLISTIC = 1;
 const int PROJ_EXPLOSIVE = 2;
 const int PROJ_BEAM = 3;
 const int PROJ_FLAME = 5;   // FlameShot stream particle — short lifetime
-const int PROJ_MELEE  = 6;   // Melee slash — short-range instant hit
-
-
-const int WEAPON_MELEE = 5;  // Melee / knife attack
 
 
 const int GSTATE_MENU = 0;

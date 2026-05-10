@@ -98,8 +98,6 @@ void Soldier::takeDamage(int amount) {
 }
 
 void Soldier::meleeAttack() {
-    // Base Soldier meleeAttack just handles the cooldown timer.
-    // PlayerSoldier::meleeAttack() overrides to also spawn the slash projectile.
     if (this->meleeTimer.getElapsedTime().asSeconds() >= this->meleeCooldown) {
         this->meleeTimer.restart();
     }

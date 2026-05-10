@@ -43,11 +43,12 @@ public:
     virtual void update(float scroll, Level* lvl);
     virtual void draw(RenderWindow& window, float scrollX, float scrollY);
     virtual void takeDamage(int amount);
-    virtual void meleeAttack();
+    void meleeAttack();
     int getState() const;
     int getLives() const;
     int getCurrentHP() const;
     bool getIsInvincible() const { return this->isInvincible; }
+    void setInvincible(bool val)  { this->isInvincible = val; }
     void respawn();
     void setTransformationState(TransformationState* newState);
     TransformationState* getTransformationState() const;

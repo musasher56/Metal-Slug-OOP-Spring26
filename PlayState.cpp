@@ -1,7 +1,6 @@
 #include "PlayState.h"
 #include "GameStateManager.h"
 #include "GameOverState.h"
-#include "AudioManager.h"
 // LevelSelectState removed — level select is now in MainMenu
 #include "CharacterManager.h"
 #include "LevelManager.h"
@@ -35,7 +34,6 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
     , currentConfig(nullptr)
     , levelTransitioning(false)
     , levelTransitionTimer(0.f)
-    , hudVisible(true)
 {
     this->id = GSTATE_PLAY;
 
@@ -102,16 +100,6 @@ void PlayState::loadLevel(int levelIndex) {
     this->currentLevelIndex = levelIndex;
     this->currentConfig = ALL_LEVELS[levelIndex];
     const LevelConfig* cfg = this->currentConfig;
-
-    // ── Switch music track for the new level ──
-    // Track index = levelIndex + 1 (track 0 is the title theme).
-    // This handles both initial load and level-to-level transitions.
-    if (this->audManager != nullptr) {
-        int musicTrack = levelIndex + 1;
-        if (musicTrack >= 1 && musicTrack < AudioManager::NUM_MUSIC_TRACKS) {
-            this->audManager->playMusicTrack(musicTrack);
-        }
-    }
 
     // ── Reset scrolling ──
     this->scroll = 0.f;
@@ -565,11 +553,6 @@ void PlayState::update(float dt) {
 
     // ── Check level transition ──
     this->checkLevelTransition();
-
-    // ── Update HUD data (always, even when hidden, so data is fresh on unhide) ──
-    if (this->hud && this->characterManager) {
-        this->hud->update(this->characterManager, this->currentLevelIndex);
-    }
 }
 
 void PlayState::render(RenderWindow& window) {
@@ -670,7 +653,7 @@ void PlayState::render(RenderWindow& window) {
         window.draw(overlay);
     }
 
-    if (this->hudVisible && this->hud)   this->hud->draw(window);
+    if (this->hud)               this->hud->draw(window);
     this->renderBloodOverlay(window);
     if (this->showHitboxes)    this->renderHitboxes(window);
     if (this->debugMode)         this->renderDebug(window);
@@ -709,15 +692,11 @@ void PlayState::renderDebug(RenderWindow& window) {
         sprintf(line, "Player: NULL\n");
     }
     append(line);
-    if (player) {
-        sprintf(line, "Weapon: %s  |  ", player->getCurrentWeaponName());
-        append(line);
-    }
-    sprintf(line, "X=Shoot  V=Melee  C=Grenade  Arrows=Move  Space=Jump  Z=Switch  Q=CycleWeapon  H=Hitboxes  T=ToggleHUD");
+    sprintf(line, "X=Shoot  C=Grenade  Arrows=Move  Space=Jump  Z=Switch  H=Hitboxes");
     append(line);
 
     this->debugText.setString(buf);
-    RectangleShape bg(sf::Vector2f(620.f, 130.f));
+    RectangleShape bg(sf::Vector2f(480.f, 130.f));
     bg.setFillColor(Color(0, 0, 0, 170));
     bg.setPosition(5.f, 5.f);
     window.draw(bg);
@@ -806,16 +785,6 @@ void PlayState::handleEvent(Event& event) {
         this->showHitboxes = !this->showHitboxes;
     }
 
-    // T key toggles ALL on-screen overlays: HUD (score/hearts/weapon) AND
-    // the debug panel.  Previously only the HUD portion was hidden, leaving
-    // the debug text visible — players couldn't tell the toggle was working.
-    // Now T hides/shows everything at once for a clean screenshot mode.
-    if (event.type == Event::KeyPressed && event.key.code == Keyboard::T) {
-        this->hudVisible = !this->hudVisible;
-        this->debugMode  = !this->hudVisible;   // hide debug when HUD is hidden
-        this->showHitboxes = !this->hudVisible; // hide hitboxes too
-    }
-
     if (event.type == Event::KeyPressed && event.key.code == Keyboard::Z) {
         if (this->characterManager != nullptr) {
             this->characterManager->switchCharacter();
@@ -826,23 +795,8 @@ void PlayState::handleEvent(Event& event) {
         this->characterManager->handleInput(event);
 }
 
-void PlayState::onEnter() {
-    // Start level music when entering PlayState.
-    // Track index = currentLevelIndex + 1 (track 0 is the title theme).
-    if (this->audManager != nullptr) {
-        int musicTrack = this->currentLevelIndex + 1;
-        if (musicTrack >= 1 && musicTrack < AudioManager::NUM_MUSIC_TRACKS) {
-            this->audManager->playMusicTrack(musicTrack);
-        }
-    }
-}
-
-void PlayState::onExit() {
-    // Stop music when leaving PlayState (game over, returning to menu, etc.).
-    if (this->audManager != nullptr) {
-        this->audManager->stopMusic();
-    }
-}
+void PlayState::onEnter() {}
+void PlayState::onExit() {}
 
 // ── Legacy spawn functions (kept for compatibility, not used by loadLevel) ──
 

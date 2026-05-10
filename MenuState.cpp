@@ -51,14 +51,14 @@ void MenuState::handleEvent(Event& event) {
 }
 
 void MenuState::onEnter() {
-    // Start title screen music when this state becomes active.
+    // Start title screen music (Track 0 = title_theme.ogg) when entering menu.
     if (this->audManager != nullptr) {
-        this->audManager->playMusicTrack(0);  // Track 0 = title_theme.ogg
+        this->audManager->playMusicTrack(0);
     }
 }
 
 void MenuState::onExit() {
-    // Stop title music when leaving the menu (entering char select or exit).
+    // Stop title music when leaving the menu (entering game or exiting app).
     if (this->audManager != nullptr) {
         this->audManager->stopMusic();
     }
