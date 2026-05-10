@@ -40,7 +40,7 @@ int EnemyManager::findFreeSlot() {
 
 void EnemyManager::removeAt(int i) {
     if (this->slots[i] != nullptr) {
-        // If the removed enemy is the active boss, save its name and null the pointer
+        
         if (this->activeBoss != nullptr && this->slots[i] == this->activeBoss) {
             this->bossDiedName = this->activeBoss->getBossName();
             this->bossDied = true;
@@ -235,11 +235,11 @@ void EnemyManager::draw(RenderWindow& window, float scrollX, float scrollY) {
         float sx = e->position.x - scrollX;
         float sy = e->position.y - scrollY;
 
-        // Bosses have much larger patrol ranges (especially flying bosses),
-        // so use a wider culling margin to prevent them from popping out.
+        
+        
         float cullMargin = 200.f;
         if (dynamic_cast<Boss*>(e) != nullptr) {
-            cullMargin = 800.f;  // bosses need much more room
+            cullMargin = 800.f;  
         }
 
         if (sx < -cullMargin || sx > SCREEN_W + cullMargin ||
@@ -259,7 +259,7 @@ int EnemyManager::spawnIronokava(float x, float y) {
     boss->setProjectileManager(this->pm);
     boss->updateBoundingBox();
 
-    // Track as the active boss
+    
     this->activeBoss = boss;
 
     if (slot < this->activeCount) {
@@ -282,12 +282,12 @@ int EnemyManager::spawnHairbuster(float x, float y, float cx, float cy) {
 
     Hairbuster* boss = new Hairbuster(this->texMgr, this->audMgr);
     boss->position = sf::Vector2f(x, y);
-    boss->setFlyCenter(cx, cy);  // set the center of the circular flight path
+    boss->setFlyCenter(cx, cy);  
     boss->setPatrol(cx, 500.f);
     boss->setProjectileManager(this->pm);
     boss->updateBoundingBox();
 
-    // Track as the active boss
+    
     this->activeBoss = boss;
 
     if (slot < this->activeCount) {

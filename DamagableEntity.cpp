@@ -22,8 +22,8 @@ void DamagableEntity::takeDamage(int amount) {
 }
 
 void DamagableEntity::takeDamageFrom(int amount, int bulletDir) {
-    // Default: ignore bullet direction, just apply damage.
-    // ShieldedSoldier overrides this to block frontal bullets.
+    
+    
     (void)bulletDir;
     this->takeDamage(amount);
 }

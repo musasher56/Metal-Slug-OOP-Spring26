@@ -25,14 +25,14 @@ protected:
     Clock invincibilityClock;
     bool  isInvincible;
 
-    // Physical collision extent in TEXTURE PIXELS (before scale).
-    // handleCollision() multiplies these by the sprite's current scale to get
-    // the world-space collision box dimensions.  Every subclass constructor
-    // sets these to match its actual sprite frame size so collision height
-    // equals visual height — preventing float-above-ground when switching
-    // characters who use different scales.
-    //
-    // Default: 34 x 40 (matches the original hardcoded values for Marco).
+    
+    
+    
+    
+    
+    
+    
+    
     int physW;
     int physH;
 
@@ -64,10 +64,10 @@ public:
     void setDirectionAndVelocity(int dir);
     void decelerate();
 
-    // Copies world position, velocity, direction, and onGround flag from
-    // another Soldier. Used by CharacterManager on character switch so the
-    // incoming character seamlessly inherits the outgoing one's physics state
-    // instead of teleporting to its constructor-default (200, 300).
+    
+    
+    
+    
     void copyPhysicsFrom(Soldier* other);
 
 

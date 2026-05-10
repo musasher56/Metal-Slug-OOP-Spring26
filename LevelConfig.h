@@ -64,12 +64,6 @@ struct LevelConfig {
     // ── Platforms ──
     int platformCount;
     PlatformSpawnEntry platforms[10]; // max 10 platform groups per level
-
-    // ── Campaign / noise flag ──
-    // When true, PlayState skips BlockManager terrain building and instead
-    // relies on Level::Draw (which renders the Perlin noise grid directly).
-    // Also tells loadLevel() to create a Level(NoiseProfile*) instead of Level().
-    bool  isPerlinLevel;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -132,9 +126,7 @@ static const LevelConfig LEVEL_1 = {
         { 32.f * 48.f, 30.f * 48.f, 4 },
         { 42.f * 48.f, 30.f * 48.f, 10 },
         { 0.f, 0.f, 0 },  // unused
-    },
-
-    false  // isPerlinLevel
+    }
 };
 
 // Level 2: Desert — fewer enemies, earlier tara attacks
@@ -187,9 +179,7 @@ static const LevelConfig LEVEL_2 = {
         { 22.f * 48.f, 30.f * 48.f, 7 },
         { 42.f * 48.f, 30.f * 48.f, 10 },
         { 55.f * 48.f, 30.f * 48.f, 6 },
-    },
-
-    false  // isPerlinLevel
+    }
 };
 
 // Level 3: Plains — 11000px wide, flat, no water, invisible ground, tiled BG
@@ -261,9 +251,7 @@ static const LevelConfig LEVEL_3 = {
         { 6500.f, 30.f * 48.f, 6 },
         { 8500.f, 30.f * 48.f, 5 },
         {10000.f, 30.f * 48.f, 4 },
-    },
-
-    false  // isPerlinLevel
+    }
 };
 
 // Level 4: Boss Gauntlet Arena — same BG/width as level 3, no regular enemies.
@@ -285,9 +273,13 @@ static const LevelConfig LEVEL_4 = {
     ENEMY_BOSS_IRONOKAVA,  // first boss (Hairbuster spawned after defeat)
 
     // Water pool — in the right section of the arena
+    // Pool walls and stairs are built dynamically in PlayState::loadLevel()
+    // Grid: 40 rows, cell_size=48, surfaceRow=37, surfaceY=1776
+    // Pool: X=8350 to X=10125, 10 blocks deep (480px), indestructible blocks
+    // Water fills from 1 block below ground to pool bottom
     true,
-    8350.f, 1450.f,
-    10125.f, 2256.f,
+    8350.f, 1450.f,      // top-left  (waterX1, waterY1) — 1 block below ground
+    10125.f, 2256.f,     // bottom-right (waterX2, waterY2) — surfaceY + 10*48 = 2256
 
     // Submarine — none
     false,
@@ -299,63 +291,18 @@ static const LevelConfig LEVEL_4 = {
     0,
     { 0.f, 0.f, 0.f, 0.f },
 
-    // Enemies — none (boss level)
+    // Enemies — none (boss level, boss spawned separately)
     0,
     { },
 
-    // Platforms — none
+    // Platforms — none (open boss arena, pool + stairs built dynamically)
     0,
-    { },
-
-    false  // isPerlinLevel
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CAMPAIGN LEVEL — The Infinite World (Perlin Noise mode)
-//
-// Visual terrain is rendered entirely by Level::Draw() (noise-generated blocks).
-// BlockManager terrain building is SKIPPED when isPerlinLevel == true.
-// Background tiles horizontally as the player scrolls right.
-//
-// HOW TO USE:
-//   Put your background image at: resources/backgrounds/infinite.jpg
-//   PlayState::loadLevel() detects gameMode == MODE_CAMPAIGN and uses this config.
-// ─────────────────────────────────────────────────────────────────────────────
-static const LevelConfig LEVEL_CAMPAIGN = {
-    // Background: the apocalyptic city ruins image.
-    // Tiles horizontally as the player explores the infinite world.
-    "resources/backgrounds/infinite.jpg",
-
-    // Terrain — noise-generated; BlockManager terrain is skipped entirely
-    false,          // hasMountain  — Level::Draw handles all terrain visuals
-    false,          // visibleGround — no flat dirt rows from BlockManager
-    false,          // enableVerticalScroll — horizontal side-scroller, no Y scroll
-    true,           // tileBg — tile BG so the ruins repeat as player scrolls right
-    1000000.f,      // levelWidth — 1 million px so background tiles to the horizon
-                    // (the tiling code only draws ~2-3 visible tiles per frame regardless)
-
-    // Boss — none in campaign mode (endless survival-style)
-    false,
-    0,
-
-    // Water — handled by Level::Draw (noise biome water blocks)
-    false,
-    0.f, 0.f, 0.f, 0.f,
-
-    // Submarine, FlyingTara — none for now
-    false, 0.f, 0.f, DIR_LEFT, 0.f,
-    0, { 0.f, 0.f, 0.f, 0.f },
-
-    // Enemies — none predefined; campaign spawns dynamically based on biome
-    0, { },
-
-    // Platforms — none; terrain itself is the platforms
-    0, { },
-
-    true   // isPerlinLevel — KEY FLAG: tells loadLevel() to use Perlin noise Level
+    { }
 };
 
 // Array of all level configs — indexed by level number (0-based)
+// Level 4 is the boss gauntlet: Ironokava first, then Hairbuster after defeat.
+// Both bosses are spawned sequentially within the same level.
 static const LevelConfig* ALL_LEVELS[4] = {
     &LEVEL_1,
     &LEVEL_2,
