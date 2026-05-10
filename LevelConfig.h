@@ -254,25 +254,32 @@ static const LevelConfig LEVEL_3 = {
     }
 };
 
-// Level 4: Ironokava Boss Arena — same BG/width as level 3, no enemies, only the boss
+// Level 4: Boss Gauntlet Arena — same BG/width as level 3, no regular enemies.
+// Ironokava spawns first, then after defeat Hairbuster spawns further right.
+// Hairbuster flies in the open sky — no mountain platform.
+// A water pool with block walls and stairs is placed in the arena.
 static const LevelConfig LEVEL_4 = {
     "resources/Sprites/background3.png",
 
-    // Terrain — same as level 3: flat, no mountain, invisible ground, tiled BG
-    false,          // hasMountain
+    // Terrain — flat, no mountain, invisible ground, tiled BG, wider map for multi-boss gauntlet
+    false,          // hasMountain — no mountain, Hairbuster flies in open sky
     false,          // visibleGround
     false,          // enableVerticalScroll
     true,           // tileBg
-    11000.f,        // levelWidth — same width as level 3
+    11000.f,        // levelWidth — wide arena for multiple bosses
 
     // Boss
     true,           // isBossLevel
-    ENEMY_BOSS_IRONOKAVA,  // bossType
+    ENEMY_BOSS_IRONOKAVA,  // first boss (Hairbuster spawned after defeat)
 
-    // Water pool — none
-    false,
-    0.f, 0.f,
-    0.f, 0.f,
+    // Water pool — in the right section of the arena
+    // Pool walls and stairs are built dynamically in PlayState::loadLevel()
+    // Grid: 40 rows, cell_size=48, surfaceRow=37, surfaceY=1776
+    // Pool: X=8350 to X=10125, 10 blocks deep (480px), indestructible blocks
+    // Water fills from 1 block below ground to pool bottom
+    true,
+    8350.f, 1824.f,      // top-left  (waterX1, waterY1) — 1 block below ground
+    10125.f, 2256.f,     // bottom-right (waterX2, waterY2) — surfaceY + 10*48 = 2256
 
     // Submarine — none
     false,
@@ -288,12 +295,14 @@ static const LevelConfig LEVEL_4 = {
     0,
     { },
 
-    // Platforms — none (open boss arena)
+    // Platforms — none (open boss arena, pool + stairs built dynamically)
     0,
     { }
 };
 
 // Array of all level configs — indexed by level number (0-based)
+// Level 4 is the boss gauntlet: Ironokava first, then Hairbuster after defeat.
+// Both bosses are spawned sequentially within the same level.
 static const LevelConfig* ALL_LEVELS[4] = {
     &LEVEL_1,
     &LEVEL_2,

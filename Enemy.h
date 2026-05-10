@@ -192,3 +192,41 @@ public:
     virtual void performAttack(PlayerSoldier* player);
     virtual void draw(RenderWindow& window, float scrollX, float scrollY);
 };
+
+// ============================================================
+// Hairbuster — second boss.
+// A flying boss that circles around a mountain peak, swooping
+// and diving at the player. Uses sinusoidal flight patterns
+// and drops explosive projectiles from above.
+// Enters enraged phase at 40% HP (faster, wider circles, more bombs).
+// ============================================================
+class Hairbuster : public Boss {
+private:
+    float flyCenterX;        // X center of the circular flight path
+    float flyCenterY;        // Y center of the circular flight path
+    float flyRadiusX;        // horizontal radius of flight ellipse
+    float flyRadiusY;        // vertical radius of flight ellipse
+    float flyAngle;          // current angle on the ellipse (radians)
+    float flySpeed;          // angular speed (radians per tick)
+    float diveTargetX;       // X target when diving at player
+    float diveTargetY;       // Y target when diving at player
+    bool  isDiving;          // true during a dive attack
+    float diveSpeed;         // speed during a dive
+    float diveTimer;         // time elapsed during dive
+    float diveDuration;      // max time a dive lasts
+    float bombCooldown;      // seconds between bomb drops
+    Clock bombTimer;         // tracks time since last bomb
+
+protected:
+    virtual void applyGravity();  // flying boss — no gravity
+
+public:
+    Hairbuster(TextureManager* texMgr, AudioManager* audMgr);
+    virtual ~Hairbuster();
+    void  setFlyCenter(float cx, float cy);
+    virtual void updateAI(PlayerSoldier* player, Level* lvl);
+    virtual void performAttack(PlayerSoldier* player);
+    virtual void onDeath();
+    virtual void draw(RenderWindow& window, float scrollX, float scrollY);
+    virtual void handleCollision(Level* lvl);
+};

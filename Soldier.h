@@ -47,8 +47,9 @@ public:
     int getState() const;
     int getLives() const;
     int getCurrentHP() const;
+    int getMaxHealth() const { return this->maxHealth; }
     bool getIsInvincible() const { return this->isInvincible; }
-    void setInvincible(bool val)  { this->isInvincible = val; }
+    void setInvincible(bool val) { this->isInvincible = val; }
     void respawn();
     void setTransformationState(TransformationState* newState);
     TransformationState* getTransformationState() const;

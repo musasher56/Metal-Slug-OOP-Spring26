@@ -6,33 +6,24 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Layout constants
 //
-// Hearts are placed at the TOP-RIGHT corner so they are always visible
-// regardless of level scroll direction or platform geometry near the left edge.
-//
-// Panel structure (anchored to the right side):
-//   HEART_W       = width  reserved for the heart sprite image
-//   HEART_H       = height reserved for the heart sprite image
-//   RIGHT_MARGIN  = gap from the right screen edge to the panel's right boundary
-//   TOP_MARGIN    = gap from the top screen edge
-//
-// Score + weapon are rendered to the LEFT of the heart image inside the same panel.
+// Heart display is placed at the TOP-LEFT corner using a single sprite
+// selected from 4 PNGs based on current HP:
+//   heart1.png = 3 hearts filled (HP 3)
+//   heart2.png = 2 hearts filled (HP 2)
+//   heart3.png = 1 heart filled  (HP 1)
+//   heart4.png = 0 hearts filled (HP 0)
 // ─────────────────────────────────────────────────────────────────────────────
-static const float HEART_W = 130.f;
-static const float HEART_H = 50.f;
-static const float RIGHT_MARGIN = 8.f;
-static const float TOP_MARGIN = 8.f;
+static const float HEART_DRAW_SCALE = 0.2f;   // scale for the heart sprite
+static const float HEART_MARGIN_X = 10.f;
+static const float HEART_MARGIN_Y = 8.f;
 static const int   MAX_HP = 3;
-
-// Crop rect inside each 1024x576 heart image — just the three hearts region.
-static const sf::IntRect HEART_CROP(90, 40, 850, 380);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constructor
 // ─────────────────────────────────────────────────────────────────────────────
 HUD::HUD()
-    : score(0), hp(MAX_HP), maxHp(MAX_HP)
-    , redHueAlpha(0.f), weaponName("Pistol")
-    , characterName("MARCO"), heartsLoaded(false)
+    : hp(MAX_HP), maxHp(MAX_HP)
+    , redHueAlpha(0.f), heartsLoaded(false)
     , bossHealthFraction(0.f), bossHealthDisplayed(0.f), bossName(nullptr)
     , bossBarVisible(false), bossBarAppearTimer(0.f), bossBarAlpha(0.f)
     , felledVisible(false), felledPhase(0), felledTimer(0.f)
@@ -47,12 +38,12 @@ HUD::HUD()
     if (!fontLoaded) fontLoaded = this->font.loadFromFile("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf");
     if (!fontLoaded) fontLoaded = this->font.loadFromFile("resources/font.ttf");
 
-    // Attempt to load the four heart-state images.
-    // heart1.png = full health (3/3)
-    // heart2.png = 2/3 health
-    // heart3.png = 1/3 health
-    // heart4.png = empty (0/3)
-    static const char* PATHS[4] = {
+    // Load the 4 heart state textures:
+    // heart1.png = all 3 hearts (full HP)
+    // heart2.png = 2 hearts
+    // heart3.png = 1 heart
+    // heart4.png = 0 hearts (all empty)
+    static const char* HEART_PATHS[4] = {
         "resources/Sprites/heart1.png",
         "resources/Sprites/heart2.png",
         "resources/Sprites/heart3.png",
@@ -61,7 +52,14 @@ HUD::HUD()
 
     this->heartsLoaded = true;
     for (int i = 0; i < 4; i++) {
-        if (!this->heartTex[i].loadFromFile(PATHS[i])) {
+        sf::Image img;
+        if (!img.loadFromFile(HEART_PATHS[i])) {
+            this->heartsLoaded = false;
+            continue;
+        }
+        // Simple mask: make pure black pixels transparent
+        img.createMaskFromColor(sf::Color::Black);
+        if (!this->heartTex[i].loadFromImage(img)) {
             this->heartsLoaded = false;
         }
     }
@@ -76,124 +74,68 @@ void HUD::update(CharacterManager* cm, int levelNum) {
     (void)levelNum;
     if (cm == nullptr) return;
 
-    this->score = cm->getKills() * 50;
     this->hp = cm->getHealthPoints();
 
-    // Clamp hp so the heart image index never goes out of bounds [0,3]
-    if (this->hp < 0)      this->hp = 0;
-    if (this->hp > MAX_HP) this->hp = MAX_HP;
-
-    // Pull weapon name from the active player character
+    // Pull maxHp from the active player character
     PlayerSoldier* player = cm->getCurrentCharacter();
-    if (player != nullptr)
-        this->weaponName = player->getCurrentWeaponName();
+    if (player != nullptr) {
+        this->maxHp = player->getMaxHealth();
+        if (this->maxHp < 1) this->maxHp = 1;
+    }
 
-    // Map character slot index to a display name string
-    static const char* NAMES[4] = { "MARCO", "TARMA", "ERI", "FIO" };
-    int idx = cm->getCurrentCharacterIdx();
-    if (idx >= 0 && idx < 4)
-        this->characterName = NAMES[idx];
+    // Clamp hp so the heart index never goes out of bounds
+    if (this->hp < 0) this->hp = 0;
+    if (this->hp > this->maxHp) this->hp = this->maxHp;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// draw — render the HUD panel at the TOP-RIGHT of the screen
+// draw — render the HUD
 //
-// WHY right side?
-//   Many Metal Slug levels start the player near x=0 on the left side of the
-//   screen, and the ground terrain also has ledges and platforms there.
-//   A left-anchored HUD was getting hidden behind geometry and was unreadable.
-//   Right-anchoring solves this without any gameplay layout changes.
-//
-// WHY compute panelX each frame?
-//   window.getSize().x gives the actual render-target width, which may differ
-//   from the compile-time SCREEN_W constant if the window is resized.
-//   One float subtraction per frame is negligible cost for correct alignment.
+// Heart display: a single sprite at top-left, selected from 4 PNGs
+// based on current HP. Simple, clean, no individual pip drawing.
 // ─────────────────────────────────────────────────────────────────────────────
 void HUD::draw(RenderWindow& window) {
 
-    // Derive the heart panel's left edge from the live window width
-    float screenW = static_cast<float>(window.getSize().x);
-    float panelX = screenW - HEART_W - RIGHT_MARGIN;  // right-side anchor
-    float panelY = TOP_MARGIN;
-
-    // The text column (score / weapon / char name) sits to the LEFT of the hearts
-    float textColW = 145.f;
-    float textX = panelX - textColW;        // left edge of text column
-    float panelLeft = textX;                   // left edge of entire HUD panel
-
-    // ── Dark semi-transparent backing strip ───────────────────────────────
-    float totalW = textColW + HEART_W + 8.f;
-    sf::RectangleShape panel(sf::Vector2f(totalW, HEART_H + 36.f));
-    panel.setPosition(panelLeft - 4.f, panelY - 4.f);
-    panel.setFillColor(sf::Color(0, 0, 0, 140));
-    window.draw(panel);
-
-    // ── Heart image ───────────────────────────────────────────────────────
-    // Select which heart image to show based on current HP:
-    //   hp=3 → imgIdx=0  (heart1.png — full)
-    //   hp=2 → imgIdx=1  (heart2.png)
-    //   hp=1 → imgIdx=2  (heart3.png)
-    //   hp=0 → imgIdx=3  (heart4.png — empty)
-    int imgIdx = MAX_HP - this->hp;
-    if (imgIdx < 0) imgIdx = 0;
-    if (imgIdx > 3) imgIdx = 3;
-
+    // ── Heart display ────────────────────────────────────────────────────
+    // Select the correct heart PNG based on current HP:
+    //   HP 3 → heart1.png (index 0)
+    //   HP 2 → heart2.png (index 1)
+    //   HP 1 → heart3.png (index 2)
+    //   HP 0 → heart4.png (index 3)
     if (this->heartsLoaded) {
-        sf::Sprite heartSpr;
-        heartSpr.setTexture(this->heartTex[imgIdx]);
-        heartSpr.setTextureRect(HEART_CROP);
-        heartSpr.setScale(
-            HEART_W / static_cast<float>(HEART_CROP.width),
-            HEART_H / static_cast<float>(HEART_CROP.height)
-        );
-        heartSpr.setPosition(panelX, panelY);
-        window.draw(heartSpr);
+        int texIdx = this->maxHp - this->hp;  // 0=full, maxHp=empty
+        if (texIdx < 0) texIdx = 0;
+        if (texIdx > 3) texIdx = 3;
+
+        sf::Sprite heartSprite;
+        heartSprite.setTexture(this->heartTex[texIdx]);
+        sf::Vector2u texSize = this->heartTex[texIdx].getSize();
+        if (texSize.x > 0 && texSize.y > 0) {
+            heartSprite.setTextureRect(sf::IntRect(0, 0, (int)texSize.x, (int)texSize.y));
+        }
+        heartSprite.setScale(HEART_DRAW_SCALE, HEART_DRAW_SCALE);
+        heartSprite.setPosition(HEART_MARGIN_X, HEART_MARGIN_Y);
+        window.draw(heartSprite);
     }
     else {
-        // Fallback: simple coloured rectangles when PNG assets are missing
-        for (int i = 0; i < MAX_HP; i++) {
-            sf::RectangleShape pip(sf::Vector2f(30.f, HEART_H));
-            pip.setPosition(panelX + static_cast<float>(i) * 38.f, panelY);
-            pip.setFillColor(i < this->hp ? sf::Color(220, 30, 30) : sf::Color(60, 20, 20));
-            pip.setOutlineColor(sf::Color(120, 40, 40));
-            pip.setOutlineThickness(1.f);
+        // Fallback: simple colored rectangle when PNG assets are missing
+        sf::RectangleShape heartBox(sf::Vector2f(120.f, 30.f));
+        heartBox.setPosition(HEART_MARGIN_X, HEART_MARGIN_Y);
+        heartBox.setFillColor(sf::Color(40, 10, 10));
+        heartBox.setOutlineColor(sf::Color(120, 40, 40));
+        heartBox.setOutlineThickness(1.f);
+        window.draw(heartBox);
+
+        // Draw small filled rectangles for each HP
+        for (int i = 0; i < this->hp && i < this->maxHp; i++) {
+            sf::RectangleShape pip(sf::Vector2f(30.f, 22.f));
+            pip.setPosition(HEART_MARGIN_X + 5.f + (float)i * 38.f, HEART_MARGIN_Y + 4.f);
+            pip.setFillColor(sf::Color(220, 30, 30));
             window.draw(pip);
         }
     }
 
-    // ── Text column — score, weapon, character name ───────────────────────
-
-    // Score (formatted with leading zeros)
-    char scoreBuf[32];
-    std::sprintf(scoreBuf, "SCORE: %06d", this->score);
-    sf::Text scoreText(scoreBuf, this->font, 14);
-    scoreText.setFillColor(sf::Color(255, 215, 60));   // gold
-    scoreText.setPosition(textX, panelY + 2.f);
-    window.draw(scoreText);
-
-    // Current weapon
-    if (this->weaponName != nullptr) {
-        sf::Text wepText(this->weaponName, this->font, 12);
-        wepText.setFillColor(sf::Color(180, 210, 255));  // light blue
-        wepText.setPosition(textX, panelY + 22.f);
-        window.draw(wepText);
-    }
-
-    // Character name
-    sf::Text nameText(this->characterName, this->font, 11);
-    nameText.setFillColor(sf::Color(200, 200, 200));
-    nameText.setPosition(textX, panelY + 40.f);
-    window.draw(nameText);
-
     // ── Boss Health Bar (Souls-style) ──────────────────────────────────
-    // A dramatic, dark health bar at the bottom-center of the screen.
-    // Inspired by Dark Souls / Elden Ring boss health bars:
-    //   - Long horizontal bar spanning most of the screen width
-    //   - Boss name displayed above the bar in a serif-like style
-    //   - Health fill in dark red/orange that smoothly depletes
-    //   - Delayed yellow "damage" trail that catches up to real HP
-    //   - Thin ornamental border
-    //   - Fades in when boss appears
     if (this->bossBarVisible && this->bossName != nullptr) {
         // Animate appearance
         this->bossBarAppearTimer += 1.f / 60.f;
@@ -284,12 +226,9 @@ void HUD::draw(RenderWindow& window) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Misc setters / getters
+// Misc setters
 // ─────────────────────────────────────────────────────────────────────────────
-void HUD::setScore(int s) { this->score = s; }
-int  HUD::getScore()  const { return this->score; }
 void HUD::showDamageHue(float i) { this->redHueAlpha = i; }
-void HUD::setWeaponName(const char* n) { this->weaponName = n; }
 
 void HUD::setBossInfo(const char* name, float healthFrac) {
     this->bossName = name;

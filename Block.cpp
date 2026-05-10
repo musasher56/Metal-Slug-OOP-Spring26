@@ -10,6 +10,7 @@ Block::Block(TextureManager* texMgr, AudioManager* audMgr,
     float worldX, float worldY, Level* lvl)
     : DamagableEntity(texMgr, audMgr)
     , destroying(false)
+    , indestructible(false)
     , level(lvl)
 {
     int cellSize = 48;
@@ -62,6 +63,7 @@ Block::~Block() {
 
 void Block::takeDamage(int amount) {
     if (amount < 0) return;
+    if (this->indestructible) return;
     if (this->destroying) return;
     if (!this->status) return;
 

@@ -97,6 +97,32 @@ void BlockManager::spawnBlock(float worldX, float worldY) {
     }
 }
 
+void BlockManager::spawnIndestructibleBlock(float worldX, float worldY) {
+    if (this->blockCount >= MAX_BLOCKS) return;
+    if (this->level == nullptr) return;
+
+    int cellSize = this->level->getCellSize();
+
+    int col = static_cast<int>(worldX / cellSize);
+    int row = static_cast<int>(worldY / cellSize);
+
+    if (col < 0 || col >= this->level->getWidth()) return;
+    if (row < 0 || row >= this->level->getHeight()) return;
+
+    for (int i = 0; i < this->blockCount; i++) {
+        if (this->blocks[i] == nullptr || !this->blocks[i]->getStatus()) continue;
+        int existCol = static_cast<int>(this->blocks[i]->getPosition().x / cellSize);
+        int existRow = static_cast<int>(this->blocks[i]->getPosition().y / cellSize);
+        if (existCol == col && existRow == row) return;
+    }
+
+    Block* b = new Block(this->texMgr, this->audMgr, worldX, worldY, this->level);
+    if (b != nullptr) {
+        b->setIndestructible(true);
+        this->blocks[this->blockCount++] = b;
+    }
+}
+
 void BlockManager::spawnPlatform(float startX, float startY, int count) {
     if (this->level == nullptr) return;
     int cellSize = this->level->getCellSize();
@@ -134,12 +160,14 @@ void BlockManager::buildGroundTerrain(int surfaceRow, int depth) {
     }
 }
 
-void BlockManager::buildMountainTerrain(float baseX, float baseY) {
+void BlockManager::buildMountainTerrain(float baseX, float baseY, int maxColHeight) {
     int bsz = MountainBlock::BLOCK_SIZE;
     int cellSize = 48;
 
     for (int col = 0; col < MOUNTAIN_HEIGHTMAP_LEN && this->mountainBlockCount < MAX_MOUNTAIN_BLOCKS; col++) {
         int colHeight = heightmap[col];
+        // Cap column height for smaller mountains (e.g. boss level with no vertical scroll)
+        if (colHeight > maxColHeight) colHeight = maxColHeight;
         float wx = baseX + col * MOUNTAIN_COL_STEP;
 
         for (int row = 0; row < colHeight && this->mountainBlockCount < MAX_MOUNTAIN_BLOCKS; row++) {

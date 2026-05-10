@@ -76,6 +76,8 @@ private:
     float levelTransitionTimer;
     bool hudVisible;              // T key: toggles HUD + debug panel + hitboxes together
     bool bossFelledTriggered;     // true once the "GREAT ENEMY FELLED" message has been shown
+    int  bossesSpawned;           // how many bosses have been spawned in the current boss level
+    int  bossesDefeated;          // how many bosses have been defeated in the current boss level
 
 public:
     PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr, int startLvl = 0);

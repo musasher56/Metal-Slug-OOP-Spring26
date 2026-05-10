@@ -11,6 +11,7 @@ public:
 
 private:
     bool destroying;
+    bool indestructible;
     int gridRow;
     int gridCol;
     Level* level;
@@ -28,6 +29,8 @@ public:
     void updateBoundingBox();
 
     bool isDestroying() const { return this->destroying; }
+    void setIndestructible(bool val) { this->indestructible = val; }
+    bool isIndestructible() const { return this->indestructible; }
 };
 
 
@@ -43,7 +46,7 @@ private:
     float       worldY;
     bool        active;
 public:
-    static const int BLOCK_SIZE = 48;  
+    static const int BLOCK_SIZE = 48;
 
     MountainBlock(TextureManager* texMgr, float wx, float wy);
 

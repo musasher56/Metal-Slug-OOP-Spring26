@@ -71,6 +71,13 @@ void PlayerSoldier::cycleWeapon() {
     this->currentWeapon = this->devWeaponPool[this->devWeaponIdx];
 }
 
+void PlayerSoldier::healFullAndIncreaseHP(int extraHP) {
+    this->maxHealth += extraHP;
+    this->currentHP = this->maxHealth;
+    this->health = this->maxHealth;
+    this->enemyBulletHits = 0;
+}
+
 const char* PlayerSoldier::getCurrentWeaponName() const {
     static const char* names[5] = {
         "Pistol", "Heavy Machine Gun", "Rocket Launcher", "Flame Shot", "Laser Gun"

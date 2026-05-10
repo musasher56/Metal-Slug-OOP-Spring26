@@ -48,6 +48,7 @@ const int ENEMY_FLYING_TARA = 8;
 const int ENEMY_BRADLEY = 9;
 const int ENEMY_SUB = 10;
 const int ENEMY_BOSS_IRONOKAVA = 11;
+const int ENEMY_BOSS_HAIRBUSTER = 12;
 
 
 const int NOISE_AMPLIFIED = 0;

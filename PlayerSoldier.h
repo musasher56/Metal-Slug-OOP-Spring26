@@ -9,13 +9,13 @@
 
 class PlayerSoldier : public Soldier {
 protected:
-    Weapon*  currentWeapon;
-    Pistol*  pistol;
+    Weapon* currentWeapon;
+    Pistol* pistol;
     Grenade* currentGrenade;
     int      grenadeCount;
     bool     inVehicle;
     Vehicle* currentVehicle;
-    Weapon*  inventory[3];
+    Weapon* inventory[3];
     int      inventorySize;
     bool     isFat;
     float    fatGravRadius;
@@ -65,6 +65,9 @@ public:
     // Useful for HUD or debug overlay — no std::string: returns a string literal.
     const char* getCurrentWeaponName() const;
 
+    // Heal player to full HP and optionally increase max HP (used after boss defeat)
+    void healFullAndIncreaseHP(int extraHP = 1);
+
     void switchWeapon(Weapon* w);
     void throwGrenade();
     void shoot();
@@ -80,7 +83,7 @@ protected:
     void applyFannumTax(ProjectileManager* manager);
 
 public:
-    virtual void updateSprite()    = 0;
+    virtual void updateSprite() = 0;
     virtual void activatePowerUp() = 0;
     void onDeath();
     void updateBoundingBox();

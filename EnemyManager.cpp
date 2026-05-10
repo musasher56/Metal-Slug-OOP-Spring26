@@ -235,8 +235,15 @@ void EnemyManager::draw(RenderWindow& window, float scrollX, float scrollY) {
         float sx = e->position.x - scrollX;
         float sy = e->position.y - scrollY;
 
-        if (sx < -200.f || sx > SCREEN_W + 200.f ||
-            sy < -200.f || sy > SCREEN_H + 200.f) continue;
+        // Bosses have much larger patrol ranges (especially flying bosses),
+        // so use a wider culling margin to prevent them from popping out.
+        float cullMargin = 200.f;
+        if (dynamic_cast<Boss*>(e) != nullptr) {
+            cullMargin = 800.f;  // bosses need much more room
+        }
+
+        if (sx < -cullMargin || sx > SCREEN_W + cullMargin ||
+            sy < -cullMargin || sy > SCREEN_H + cullMargin) continue;
 
         e->draw(window, scrollX, scrollY);
     }
@@ -249,6 +256,34 @@ int EnemyManager::spawnIronokava(float x, float y) {
     Ironokava* boss = new Ironokava(this->texMgr, this->audMgr);
     boss->position = sf::Vector2f(x, y);
     boss->setPatrol(x, 300.f);
+    boss->setProjectileManager(this->pm);
+    boss->updateBoundingBox();
+
+    // Track as the active boss
+    this->activeBoss = boss;
+
+    if (slot < this->activeCount) {
+        if (this->slots[slot] != nullptr) {
+            delete this->slots[slot];
+        }
+    }
+    else {
+        this->activeCount = slot + 1;
+    }
+
+    this->slots[slot] = boss;
+    this->deSlots[slot] = boss;
+    return slot;
+}
+
+int EnemyManager::spawnHairbuster(float x, float y, float cx, float cy) {
+    int slot = this->findFreeSlot();
+    if (slot < 0) return -1;
+
+    Hairbuster* boss = new Hairbuster(this->texMgr, this->audMgr);
+    boss->position = sf::Vector2f(x, y);
+    boss->setFlyCenter(cx, cy);  // set the center of the circular flight path
+    boss->setPatrol(cx, 500.f);
     boss->setProjectileManager(this->pm);
     boss->updateBoundingBox();
 
@@ -304,6 +339,10 @@ const char* EnemyManager::getBossDiedName() const {
     return this->bossDiedName;
 }
 
+void EnemyManager::resetBossDied() {
+    this->bossDied = false;
+    this->bossDiedName = nullptr;
+}
 void EnemyManager::cleanup() {
     int i = 0;
     while (i < this->activeCount) {

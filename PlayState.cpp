@@ -35,6 +35,8 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
     , levelTransitioning(false)
     , levelTransitionTimer(0.f)
     , bossFelledTriggered(false)
+    , bossesSpawned(0)
+    , bossesDefeated(0)
 {
     this->id = GSTATE_PLAY;
 
@@ -113,6 +115,8 @@ void PlayState::loadLevel(int levelIndex) {
     this->levelTransitioning = false;
     this->levelTransitionTimer = 0.f;
     this->bossFelledTriggered = false;
+    this->bossesSpawned = 0;
+    this->bossesDefeated = 0;
 
     // ── Clear old enemies, vehicles, projectiles ──
     if (this->enemyManager) this->enemyManager->clearAll();
@@ -205,7 +209,9 @@ void PlayState::loadLevel(int levelIndex) {
                 this->spawnEnemiesFromConfig();
             }
 
-            // ── Spawn boss if this is a boss level ──
+            // ── Spawn first boss if this is a boss level ──
+            // Only the first boss (Ironokava) is spawned here.
+            // After it's defeated, PlayState::update() spawns the next boss.
             if (cfg->isBossLevel && this->enemyManager != nullptr) {
                 int cellSize = lvl->getCellSize();
                 int surfaceRow = lvl->getHeight() - 3;
@@ -213,9 +219,58 @@ void PlayState::loadLevel(int levelIndex) {
                 float bossFootOffset = 360.f;  // bosses are much taller
 
                 if (cfg->bossType == ENEMY_BOSS_IRONOKAVA) {
-                    // Spawn Ironokava close to the player start (1300px from spawn)
+                    // Spawn Ironokava close to the player start
                     float bossX = 1500.f;
                     this->enemyManager->spawnIronokava(bossX, surfaceY - bossFootOffset);
+                    this->bossesSpawned = 1;  // first boss spawned
+                }
+            }
+
+            // ── Build pool with INDESTRUCTIBLE dirt block walls and stairs for boss level ──
+            // Pool: X=8350 to X=10125, 10 blocks deep (480px)
+            // All pool blocks are indestructible — cannot be destroyed by weapons.
+            // Stairs on the left side allow the player to climb in/out.
+            if (cfg->isBossLevel && this->blockManager != nullptr && lvl != nullptr) {
+                int cs = lvl->getCellSize();  // cell size (48)
+                int surfaceRow = lvl->getHeight() - 3;
+                float surfaceY = (float)(surfaceRow * cs);
+
+                // Pool dimensions
+                float poolLeft = 8350.f;
+                float poolRight = 10125.f;
+                int poolDepthBlocks = 10;  // 10 blocks deep = 480px
+                float poolBottomY = surfaceY + (float)(poolDepthBlocks * cs);
+
+                // ── Left wall (full height from surface down) ──
+                float leftWallX = poolLeft - (float)cs;  // one block left of pool edge
+                for (int row = 0; row < poolDepthBlocks + 1; row++) {
+                    float wy = surfaceY + (float)(row * cs);
+                    this->blockManager->spawnIndestructibleBlock(leftWallX, wy);
+                }
+
+                // ── Right wall (full height from surface down) ──
+                float rightWallX = poolRight;
+                for (int row = 0; row < poolDepthBlocks + 1; row++) {
+                    float wy = surfaceY + (float)(row * cs);
+                    this->blockManager->spawnIndestructibleBlock(rightWallX, wy);
+                }
+
+                // ── Pool bottom (horizontal row of blocks) ──
+                int poolWidthBlocks = (int)((poolRight - poolLeft) / cs);
+                for (int col = 0; col <= poolWidthBlocks; col++) {
+                    float wx = poolLeft + (float)(col * cs);
+                    this->blockManager->spawnIndestructibleBlock(wx, poolBottomY);
+                }
+
+                // ── Stairs on the left side of the pool ──
+                // Diagonal stepping blocks going down into the pool from left edge.
+                // Each step is one block right and one block down from the previous.
+                // Starts at the top-left corner of the pool interior.
+                int stairSteps = poolDepthBlocks - 1;  // number of steps (stop 1 above bottom)
+                for (int step = 0; step < stairSteps; step++) {
+                    float stairX = poolLeft + (float)(step * cs);
+                    float stairY = surfaceY + (float)((step + 1) * cs);
+                    this->blockManager->spawnIndestructibleBlock(stairX, stairY);
                 }
             }
 
@@ -344,6 +399,14 @@ void PlayState::checkLevelTransition() {
     // Don't transition while the "GREAT ENEMY FELLED" message is still showing
     if (this->hud != nullptr && this->hud->isFelledShowing()) return;
 
+    // Don't transition out of a boss level while there are still bosses to fight
+    if (this->currentConfig != nullptr && this->currentConfig->isBossLevel) {
+        if (this->enemyManager != nullptr && this->enemyManager->hasActiveBoss()) return;
+        // Also block if we haven't spawned all bosses yet (sequential boss gauntlet)
+        // bossesSpawned < 2 means Hairbuster hasn't been spawned yet for the Level 4 gauntlet
+        if (this->bossesSpawned < 2) return;
+    }
+
     PlayerSoldier* player = this->characterManager
         ? this->characterManager->getCurrentCharacter() : nullptr;
     if (player == nullptr) return;
@@ -441,11 +504,54 @@ void PlayState::update(float dt) {
             // Boss was fully removed — trigger "GREAT ENEMY FELLED" once
             if (!this->bossFelledTriggered) {
                 this->bossFelledTriggered = true;
+                this->bossesDefeated++;
                 const char* fallenName = this->enemyManager->getBossDiedName();
                 if (fallenName == nullptr) fallenName = "UNKNOWN";
                 this->hud->showBossFelled(fallenName);
+
+                // ── Heal player to full HP after boss defeat ──
+                // Recover current HP to max (do NOT increase max HP)
+                if (this->characterManager != nullptr) {
+                    PlayerSoldier* currentPlayer = this->characterManager->getCurrentCharacter();
+                    if (currentPlayer != nullptr) {
+                        currentPlayer->healFullAndIncreaseHP(0);  // heal to full, no max HP increase
+                    }
+                }
+
+                // ── Spawn next boss after current boss is defeated ──
+                // After Ironokava (1st boss), spawn Hairbuster (2nd boss)
+                if (this->currentConfig != nullptr && this->currentConfig->isBossLevel
+                    && this->bossesDefeated == 1 && this->bossesSpawned == 1)
+                {
+                    // Spawn Hairbuster further right — no mountain, flies in open sky
+                    Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
+                    if (lvl != nullptr) {
+                        int cellSize = lvl->getCellSize();
+                        int surfaceRow = lvl->getHeight() - 3;
+                        float surfaceY = (float)(surfaceRow * cellSize);
+
+                        // Hairbuster flies in open sky above the arena (no mountain)
+                        // Fly center is at X=7000, Y is well above ground
+                        float flyCenterX = 7000.f;
+                        float flyCenterY = surfaceY - 400.f;  // 400px above ground
+                        float bossX = flyCenterX;
+                        float bossY = flyCenterY - 100.f;  // start above fly center
+                        this->enemyManager->spawnHairbuster(bossX, bossY, flyCenterX, flyCenterY);
+                        this->bossesSpawned = 2;  // second boss spawned
+                    }
+                }
             }
-            this->hud->clearBossInfo();
+            // Keep the boss health bar visible during the felled message
+            // (let it drain to zero gracefully), then clear after message ends
+            if (!this->hud->isFelledShowing()) {
+                this->hud->clearBossInfo();
+                // Reset boss death tracking so next boss can trigger felled message
+                if (this->enemyManager != nullptr) {
+                    this->enemyManager->resetBossDied();
+                }
+                // Allow the next boss defeat to trigger the felled message
+                this->bossFelledTriggered = false;
+            }
         }
     }
 
@@ -481,6 +587,12 @@ void PlayState::update(float dt) {
 
     if (this->projectileManager && player != nullptr) {
         this->projectileManager->checkEnemyBulletHitPlayer(player);
+    }
+
+    // ── Update HUD (HP, score, weapon) AFTER damage is applied ──
+    // This ensures hearts reflect the current HP immediately, not one frame late.
+    if (this->hud && this->characterManager) {
+        this->hud->update(this->characterManager, this->currentLevelIndex + 1);
     }
 
     if (this->projectileManager && lvl != nullptr)

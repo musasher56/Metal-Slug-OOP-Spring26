@@ -1432,8 +1432,380 @@ void Boss::draw(RenderWindow& window, float scrollX, float scrollY) {
 }
 
 // ============================================================
-// Ironokava — first boss
+// Hairbuster — second boss (flying)
 // ============================================================
+
+Hairbuster::Hairbuster(TextureManager* texMgr, AudioManager* audMgr)
+    : Boss(texMgr, audMgr)
+    , flyCenterX(1500.f)
+    , flyCenterY(400.f)
+    , flyRadiusX(400.f)
+    , flyRadiusY(180.f)
+    , flyAngle(0.f)
+    , flySpeed(0.02f)
+    , diveTargetX(0.f)
+    , diveTargetY(0.f)
+    , isDiving(false)
+    , diveSpeed(6.0f)
+    , diveTimer(0.f)
+    , diveDuration(1.0f)
+    , bombCooldown(2.5f)
+{
+    this->setEnemyType(ENEMY_BOSS_HAIRBUSTER);
+    this->bossName = "HAIRBUSTER";
+    this->maxHealth = 120;
+    this->currentHP = 120;
+    this->health = 120;
+    this->scoreValue = 8000;
+    this->detectionRange = 3000.f;
+    this->attackRange = 1200.f;
+    this->attackCooldown = 1.5f;
+    this->maxVelocity = 4.0f;
+    this->baseMaxVelocity = 4.0f;
+    this->deathDuration = 3.0f;
+    this->deathSpriteScale = 2.0f;
+
+    // Hairbuster is a flying boss — gravity is overridden to no-op
+    this->onGround = false;
+
+    // Frame dimensions from sprite sheet
+    // hairbuster.png: 12 frames, each ~179x121 pixels
+    this->frameW = 179;
+    this->frameH = 121;
+    this->baseFrameW = 179;
+    this->baseFrameH = 108;  // visual height (slightly less than frame)
+    this->walkFrames = 12;   // uses idle animation for "flying"
+    this->shootFrames = 12;  // same flying frames for attack pose
+    this->deathFrames = 3;   // hairbuster-death.png has 3 frames
+
+    this->specialCooldown = 4.0f;
+    this->chargeCooldown = 6.0f;
+    this->chargeSpeed = 7.0f;
+    this->chargeDuration = 1.5f;
+
+    this->phase2Threshold = 0.4f;  // enrages at 40% HP
+
+    // ── Idle/fly animation — hairbuster.png (12 frames) ──
+    Texture& flyTex = texMgr->getTexture("resources/Sprites/hairbuster.png");
+    this->walkAnim.setTexture(&flyTex);
+    this->walkAnim.setFrameCount(12);
+    this->walkAnim.setFrameDelay(6);
+    this->walkAnim.setFrameRect(0, 3, 2, 179, 121);
+    this->walkAnim.setFrameRect(1, 186, 16, 179, 108);
+    this->walkAnim.setFrameRect(2, 369, 18, 179, 105);
+    this->walkAnim.setFrameRect(3, 552, 18, 179, 104);
+    this->walkAnim.setFrameRect(4, 735, 15, 179, 108);
+    this->walkAnim.setFrameRect(5, 918, 19, 179, 105);
+    this->walkAnim.setFrameRect(6, 1101, 19, 179, 105);
+    this->walkAnim.setFrameRect(7, 1284, 14, 179, 108);
+    this->walkAnim.setFrameRect(8, 1467, 18, 179, 105);
+    this->walkAnim.setFrameRect(9, 1650, 20, 179, 104);
+    this->walkAnim.setFrameRect(10, 1833, 15, 179, 108);
+    this->walkAnim.setFrameRect(11, 2016, 17, 179, 105);
+    this->walkAnim.setLoop(true);
+
+    // ── Shoot animation — reuse fly frames at slower rate (attack pose) ──
+    this->shootAnim.setTexture(&flyTex);
+    this->shootAnim.setFrameCount(12);
+    this->shootAnim.setFrameDelay(4);
+    this->shootAnim.setFrameRect(0, 3, 2, 179, 121);
+    this->shootAnim.setFrameRect(1, 186, 16, 179, 108);
+    this->shootAnim.setFrameRect(2, 369, 18, 179, 105);
+    this->shootAnim.setFrameRect(3, 552, 18, 179, 104);
+    this->shootAnim.setFrameRect(4, 735, 15, 179, 108);
+    this->shootAnim.setFrameRect(5, 918, 19, 179, 105);
+    this->shootAnim.setFrameRect(6, 1101, 19, 179, 105);
+    this->shootAnim.setFrameRect(7, 1284, 14, 179, 108);
+    this->shootAnim.setFrameRect(8, 1467, 18, 179, 105);
+    this->shootAnim.setFrameRect(9, 1650, 20, 179, 104);
+    this->shootAnim.setFrameRect(10, 1833, 15, 179, 108);
+    this->shootAnim.setFrameRect(11, 2016, 17, 179, 105);
+    this->shootAnim.setLoop(false);
+
+    // ── Death animation — hairbuster-death.png (3 frames) ──
+    Texture& deathTex = texMgr->getTexture("resources/Sprites/hairbuster-death.png");
+    this->deathAnim.setTexture(&deathTex);
+    this->deathAnim.setFrameCount(3);
+    this->deathAnim.setFrameDelay(15);
+    this->deathAnim.setFrameRect(0, 8, 286, 470, 418);
+    this->deathAnim.setFrameRect(1, 487, 280, 496, 428);
+    this->deathAnim.setFrameRect(2, 993, 241, 526, 479);
+    this->deathAnim.setLoop(false);
+
+    // ── Idle animation — reuse fly frames at slow rate ──
+    this->idleAnim.setTexture(&flyTex);
+    this->idleAnim.setFrameCount(12);
+    this->idleAnim.setFrameDelay(10);
+    this->idleAnim.setFrameRect(0, 3, 2, 179, 121);
+    this->idleAnim.setFrameRect(1, 186, 16, 179, 108);
+    this->idleAnim.setFrameRect(2, 369, 18, 179, 105);
+    this->idleAnim.setFrameRect(3, 552, 18, 179, 104);
+    this->idleAnim.setFrameRect(4, 735, 15, 179, 108);
+    this->idleAnim.setFrameRect(5, 918, 19, 179, 105);
+    this->idleAnim.setFrameRect(6, 1101, 19, 179, 105);
+    this->idleAnim.setFrameRect(7, 1284, 14, 179, 108);
+    this->idleAnim.setFrameRect(8, 1467, 18, 179, 105);
+    this->idleAnim.setFrameRect(9, 1650, 20, 179, 104);
+    this->idleAnim.setFrameRect(10, 1833, 15, 179, 108);
+    this->idleAnim.setFrameRect(11, 2016, 17, 179, 105);
+    this->idleAnim.setLoop(true);
+
+    // ── Charge animation — reuse fly frames at fast rate (dive) ──
+    this->chargeAnim.setTexture(&flyTex);
+    this->chargeAnim.setFrameCount(12);
+    this->chargeAnim.setFrameDelay(3);
+    this->chargeAnim.setFrameRect(0, 3, 2, 179, 121);
+    this->chargeAnim.setFrameRect(1, 186, 16, 179, 108);
+    this->chargeAnim.setFrameRect(2, 369, 18, 179, 105);
+    this->chargeAnim.setFrameRect(3, 552, 18, 179, 104);
+    this->chargeAnim.setFrameRect(4, 735, 15, 179, 108);
+    this->chargeAnim.setFrameRect(5, 918, 19, 179, 105);
+    this->chargeAnim.setFrameRect(6, 1101, 19, 179, 105);
+    this->chargeAnim.setFrameRect(7, 1284, 14, 179, 108);
+    this->chargeAnim.setFrameRect(8, 1467, 18, 179, 105);
+    this->chargeAnim.setFrameRect(9, 1650, 20, 179, 104);
+    this->chargeAnim.setFrameRect(10, 1833, 15, 179, 108);
+    this->chargeAnim.setFrameRect(11, 2016, 17, 179, 105);
+    this->chargeAnim.setLoop(true);
+
+    // ── Special attack animation — reuse fly ──
+    this->specialAnim.setTexture(&flyTex);
+    this->specialAnim.setFrameCount(12);
+    this->specialAnim.setFrameDelay(4);
+    this->specialAnim.setFrameRect(0, 3, 2, 179, 121);
+    this->specialAnim.setFrameRect(1, 186, 16, 179, 108);
+    this->specialAnim.setFrameRect(2, 369, 18, 179, 105);
+    this->specialAnim.setFrameRect(3, 552, 18, 179, 104);
+    this->specialAnim.setFrameRect(4, 735, 15, 179, 108);
+    this->specialAnim.setFrameRect(5, 918, 19, 179, 105);
+    this->specialAnim.setFrameRect(6, 1101, 19, 179, 105);
+    this->specialAnim.setFrameRect(7, 1284, 14, 179, 108);
+    this->specialAnim.setFrameRect(8, 1467, 18, 179, 105);
+    this->specialAnim.setFrameRect(9, 1650, 20, 179, 104);
+    this->specialAnim.setFrameRect(10, 1833, 15, 179, 108);
+    this->specialAnim.setFrameRect(11, 2016, 17, 179, 105);
+    this->specialAnim.setLoop(false);
+
+    this->sprite.setTexture(flyTex);
+    this->sprite.setTextureRect(IntRect(3, 2, 179, 121));
+    this->sprite.setScale(2.5f, 2.5f);
+    this->switchAnim(&this->idleAnim);
+    this->updateBoundingBox();
+}
+
+Hairbuster::~Hairbuster() {}
+
+void Hairbuster::setFlyCenter(float cx, float cy) {
+    this->flyCenterX = cx;
+    this->flyCenterY = cy;
+}
+
+void Hairbuster::updateAI(PlayerSoldier* player, Level* lvl) {
+    if (this->dying) return;
+    if (player == nullptr) return;
+
+    // Entrance period: boss circles slowly for 2 seconds
+    if (!this->entranceDone) {
+        this->entranceTimer += 1.f / 60.f;
+        if (this->entranceTimer >= 2.0f) {
+            this->entranceDone = true;
+        }
+        // Slow circle during entrance
+        this->flyAngle += this->flySpeed * 0.5f;
+        this->position.x = this->flyCenterX + cosf(this->flyAngle) * this->flyRadiusX;
+        this->position.y = this->flyCenterY + sinf(this->flyAngle) * this->flyRadiusY;
+        this->faceRight = (sinf(this->flyAngle) < 0.f);  // face direction of movement
+        this->switchAnim(&this->idleAnim);
+        return;
+    }
+
+    // Check phase transition
+    if (this->bossPhase == 0 && this->getHealthFraction() <= this->phase2Threshold) {
+        this->bossPhase = 1;
+        this->flySpeed *= 1.6f;        // faster circling
+        this->flyRadiusX *= 1.3f;      // wider circles
+        this->flyRadiusY *= 1.2f;
+        this->attackCooldown *= 0.6f;
+        this->bombCooldown *= 0.5f;
+        this->specialCooldown *= 0.6f;
+    }
+
+    // Face the player for direction-based rendering
+    float px = player->getPosition().x;
+    this->faceRight = (px > this->position.x);
+
+    // ── Diving attack ──
+    if (this->isDiving) {
+        this->diveTimer += 1.f / 60.f;
+        if (this->diveTimer >= this->diveDuration) {
+            // End dive — return to circular flight
+            this->isDiving = false;
+            this->diveTimer = 0.f;
+            // Recalculate angle from current position to resume circle
+            float dx = this->position.x - this->flyCenterX;
+            float dy = this->position.y - this->flyCenterY;
+            this->flyAngle = atan2f(dy, dx);
+        }
+        else {
+            // Move toward the dive target
+            float dx = this->diveTargetX - this->position.x;
+            float dy = this->diveTargetY - this->position.y;
+            float dist = sqrtf(dx * dx + dy * dy);
+            if (dist > 10.f) {
+                this->position.x += (dx / dist) * this->diveSpeed;
+                this->position.y += (dy / dist) * this->diveSpeed;
+            }
+            this->faceRight = (dx > 0.f);
+        }
+        this->switchAnim(&this->chargeAnim);
+        return;
+    }
+
+    // ── Circular flight path ──
+    this->flyAngle += this->flySpeed;
+    this->position.x = this->flyCenterX + cosf(this->flyAngle) * this->flyRadiusX;
+    this->position.y = this->flyCenterY + sinf(this->flyAngle) * this->flyRadiusY;
+
+    float dist = this->distanceTo(player);
+
+    // ── Decide action ──
+    bool doSpecial = this->specialTimer.getElapsedTime().asSeconds() >= this->specialCooldown;
+    bool doDive = !doSpecial && this->chargeTimer.getElapsedTime().asSeconds() >= this->chargeCooldown;
+
+    if (doDive) {
+        // Dive attack: swoop toward the player's position
+        this->isDiving = true;
+        this->diveTimer = 0.f;
+        this->diveTargetX = player->getPosition().x;
+        this->diveTargetY = player->getPosition().y - 50.f;  // aim slightly above player
+        this->chargeTimer.restart();
+        this->switchAnim(&this->chargeAnim);
+    }
+    else if (doSpecial) {
+        // Special: drop a cluster of bombs
+        this->aiState = AI_BOSS_SPECIAL;
+        this->performAttack(player);
+        this->aiState = AI_BOSS_IDLE;
+        this->specialTimer.restart();
+        this->switchAnim(&this->specialAnim);
+    }
+    else if (this->attackTimer.getElapsedTime().asSeconds() >= this->attackCooldown &&
+        this->bombTimer.getElapsedTime().asSeconds() >= this->bombCooldown) {
+        // Normal: drop a bomb from current position
+        this->performAttack(player);
+        this->attackTimer.restart();
+        this->bombTimer.restart();
+        this->switchAnim(&this->shootAnim);
+    }
+    else {
+        this->switchAnim(&this->idleAnim);
+    }
+}
+
+void Hairbuster::performAttack(PlayerSoldier* player) {
+    if (this->pm == nullptr || player == nullptr) return;
+
+    float scaleX = std::abs(this->sprite.getScale().x);
+    sf::Vector2f origin = this->position;
+    origin.y += (float)(this->frameH) * scaleX * 0.4f;  // bomb drops from bottom
+
+    int dir = this->faceRight ? DIR_RIGHT : DIR_LEFT;
+
+    if (this->aiState == AI_BOSS_SPECIAL) {
+        // Special: cluster of 3 bombs in a spread pattern
+        float angle = 70.f;  // steep downward arc
+        this->pm->spawnExplosive(origin, dir, angle - 15.f, 5, 4, true);
+        this->pm->spawnExplosive(origin, dir, angle, 5, 4, true);
+        this->pm->spawnExplosive(origin, dir, angle + 15.f, 5, 4, true);
+
+        // Phase 2: add 2 more bombs
+        if (this->bossPhase >= 1) {
+            this->pm->spawnExplosive(origin, dir, angle - 30.f, 4, 3, true);
+            this->pm->spawnExplosive(origin, dir, angle + 30.f, 4, 3, true);
+        }
+    }
+    else {
+        // Normal attack: single bomb dropped from above
+        float angle = 65.f;  // steep arc downward
+        this->pm->spawnExplosive(origin, dir, angle, 4, 3, true);
+
+        // Phase 2: add a straight shot too
+        if (this->bossPhase >= 1) {
+            float shotAngle = 0.f;
+            float dy = player->getPosition().y - this->position.y;
+            float dx = player->getPosition().x - this->position.x;
+            if (dx != 0.f || dy != 0.f) {
+                shotAngle = atan2f(-dy, fabsf(dx)) * 180.f / 3.14159f;
+                if (shotAngle < -15.f) shotAngle = -15.f;
+                if (shotAngle > 45.f) shotAngle = 45.f;
+            }
+            this->pm->spawnStraight(origin, dir, shotAngle, 3, true);
+        }
+    }
+}
+
+void Hairbuster::onDeath() {
+    if (this->dying) return;
+    this->dying = true;
+    this->deathTimer.restart();
+    this->velocityX = 0.f;
+    this->velocityY = 0.f;
+    this->isCharging = false;
+    this->isDiving = false;
+    this->switchAnim(&this->deathAnim);
+}
+
+void Hairbuster::draw(RenderWindow& window, float scrollX, float scrollY) {
+    if (!this->status) return;
+
+    if (this->dying) {
+        if (this->deathTimer.getElapsedTime().asSeconds() >= this->deathDuration) {
+            this->status = false;
+            return;
+        }
+    }
+
+    if (this->currentAnim != nullptr) {
+        this->currentAnim->update();
+        this->currentAnim->applyToSprite(this->sprite);
+    }
+
+    // Hairbuster idle frames are ~179x121, death frames are ~470-526 wide, ~418-479 tall
+    float scale = 2.5f;
+    if (this->dying) {
+        // Death frames are much larger; scale down to keep consistent size
+        IntRect texRect = this->sprite.getTextureRect();
+        if (texRect.width > 200) {
+            scale = 0.9f;  // death frames are 470-526 wide
+        }
+    }
+    else if (this->isDiving || this->isCharging) {
+        scale = 2.8f;  // slightly bigger during dive for visual emphasis
+    }
+
+    if (this->faceRight) {
+        this->sprite.setScale(-scale, scale);
+    }
+    else {
+        this->sprite.setScale(scale, scale);
+    }
+
+    float drawY = this->position.y - scrollY;
+    // No offset needed for flying boss — it floats in the air
+
+    this->sprite.setPosition(this->position.x - scrollX, drawY);
+    window.draw(this->sprite);
+}
+
+void Hairbuster::handleCollision(Level* lvl) {
+    // Flying boss — skip all level collision
+    this->onGround = false;
+}
+
+void Hairbuster::applyGravity() {
+    // Flying boss — never apply gravity
+    this->velocityY = 0.f;
+}
 
 Ironokava::Ironokava(TextureManager* texMgr, AudioManager* audMgr)
     : Boss(texMgr, audMgr)
