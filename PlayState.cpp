@@ -37,6 +37,7 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
     , bossesSpawned(0)
     , bossesDefeated(0)
     , fractalNoise(nullptr)
+    , campaignProfile(nullptr)
     , campaignSeed(42)
     , campaignProfileType(NOISE_NORMAL)
 {
@@ -92,6 +93,7 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
 }
 
 PlayState::~PlayState() {
+    if (this->campaignProfile) { delete this->campaignProfile; this->campaignProfile = nullptr; }
     if (this->fractalNoise) { delete this->fractalNoise; this->fractalNoise = nullptr; }
     if (this->enemyVehicleManager) { delete this->enemyVehicleManager; this->enemyVehicleManager = nullptr; }
     if (this->enemyManager) { delete this->enemyManager; this->enemyManager = nullptr; }
@@ -162,8 +164,13 @@ void PlayState::loadCampaignLevel() {
     }
 
     // ── Create Perlin noise profile ──
-    NoiseProfile* profile = NoiseProfile::create(this->campaignProfileType);
-    profile->setSeed(this->campaignSeed);
+    // Store it as a member so we can generate new columns for infinite scrolling.
+    if (this->campaignProfile != nullptr) {
+        delete this->campaignProfile;
+        this->campaignProfile = nullptr;
+    }
+    this->campaignProfile = NoiseProfile::create(this->campaignProfileType);
+    this->campaignProfile->setSeed(this->campaignSeed);
 
     // ── Create campaign Level via LevelManager ──
     // This replaces the survival Level with a 50x420 Perlin campaign Level.
@@ -171,7 +178,7 @@ void PlayState::loadCampaignLevel() {
     // Perlin noise — ground, bedrock, water, biomes — all done internally.
     // We no longer need to build terrain via BlockManager at all.
     if (this->levelManager != nullptr) {
-        this->levelManager->createCampaignLevel(profile);
+        this->levelManager->createCampaignLevel(this->campaignProfile);
     }
 
     Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
@@ -190,7 +197,6 @@ void PlayState::loadCampaignLevel() {
     }
 
     if (lvl == nullptr) {
-        delete profile;
         return;
     }
 
@@ -207,9 +213,6 @@ void PlayState::loadCampaignLevel() {
     // Terrain collision = Level::isSolid(), terrain rendering = Level::Draw().
     // BlockManager exists for future use (enemy-placed blocks, etc.)
     this->blockManager = new BlockManager(this->texManager, this->audManager, lvl);
-
-    // Clean up the profile — Level already used it during construction
-    delete profile;
 
     // ── Spawn player ON TOP of the Perlin terrain ──
     // getSurfaceRow() scans from top to find the first solid row.
@@ -497,6 +500,9 @@ void PlayState::spawnPlatformsFromConfig() {
 }
 
 void PlayState::checkLevelTransition() {
+    // Campaign mode is infinite — no level transitions
+    if (this->gameMode == MODE_CAMPAIGN) return;
+
     if (this->hud != nullptr && this->hud->isFelledShowing()) return;
 
     if (this->currentConfig != nullptr && this->currentConfig->isBossLevel) {
@@ -685,15 +691,44 @@ void PlayState::update(float dt) {
         this->blockManager->cleanup();
     }
 
+    // ── INFINITE WORLD: advance the grid when the player approaches the right edge ──
+    // In campaign mode, the Level grid is a sliding window over infinite Perlin terrain.
+    // When the player gets near the right side, we shift the grid left and generate
+    // new columns on the right. This makes the world scroll forever.
+    if (this->gameMode == MODE_CAMPAIGN && player != nullptr && lvl != nullptr &&
+        lvl->getCampaign() && this->campaignProfile != nullptr)
+    {
+        int cellSize = lvl->getCellSize();
+        int worldOffX = lvl->getWorldOffX();
+        float playerX = player->getPosition().x;
+
+        // Right edge of the grid in world coordinates
+        float gridRightWorldX = static_cast<float>((worldOffX + lvl->getWidth()) * cellSize);
+
+        // Advance when player is within 15 columns of the right edge
+        float advanceThreshold = static_cast<float>(15 * cellSize);
+        if (playerX > gridRightWorldX - advanceThreshold) {
+            // Advance by 20 columns at a time for efficiency
+            lvl->advanceWorld(20, this->campaignProfile);
+        }
+    }
+
     if (player != nullptr && lvl != nullptr) {
         float playerX = player->getPosition().x;
         float levelWidth = 0.f;
-        if (this->currentConfig != nullptr && this->currentConfig->levelWidth > 0.f) {
+
+        if (this->gameMode == MODE_CAMPAIGN && lvl->getCampaign()) {
+            // Campaign is infinite — no right edge clamp
+            // Use a very large effective width so scroll follows the player freely
+            levelWidth = playerX + (float)SCREEN_W;  // always enough room ahead
+        }
+        else if (this->currentConfig != nullptr && this->currentConfig->levelWidth > 0.f) {
             levelWidth = this->currentConfig->levelWidth;
         }
         else {
             levelWidth = (float)(lvl->getWidth() * lvl->getCellSize());
         }
+
         this->scroll = playerX - (float)SCREEN_W / 2.f;
         if (this->scroll < 0.f) this->scroll = 0.f;
         float maxScroll = levelWidth - (float)SCREEN_W;
@@ -729,6 +764,22 @@ void PlayState::update(float dt) {
             py >= this->currentConfig->waterY1 &&
             py <= this->currentConfig->waterY2);
         player->setInWater(inWaterNow);
+    }
+    else if (player != nullptr && lvl != nullptr && lvl->getCampaign()) {
+        // Campaign mode: check if the player's grid cell is water ('w')
+        int cellSize = lvl->getCellSize();
+        int worldOffX = lvl->getWorldOffX();
+        float px = player->getPosition().x;
+        float py = player->getPosition().y;
+        int col = static_cast<int>(px) / cellSize - worldOffX;
+        int row = static_cast<int>(py) / cellSize;
+        if (col >= 0 && col < lvl->getWidth() && row >= 0 && row < lvl->getHeight()) {
+            char cell = lvl->getLvl()[row][col];
+            player->setInWater(cell == 'w');
+        }
+        else {
+            player->setInWater(false);
+        }
     }
     else if (player != nullptr) {
         player->setInWater(false);

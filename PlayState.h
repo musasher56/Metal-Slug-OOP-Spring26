@@ -15,6 +15,7 @@ class LevelManager;
 class ScoreManager;
 class HUD;
 class FractalNoise;
+class NoiseProfile;
 
 class PlayState : public GameState {
 private:
@@ -80,6 +81,7 @@ private:
 
     // ── Campaign mode: procedural terrain ──
     FractalNoise* fractalNoise;       // owned by PlayState (composition)
+    NoiseProfile* campaignProfile;    // kept alive for infinite world generation
     int  campaignSeed;                 // seed for this campaign run
     int  campaignProfileType;          // NOISE_AMPLIFIED / FLAT / NORMAL
 
