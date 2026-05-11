@@ -1,24 +1,15 @@
 #pragma once
 #include "Constants.h"
 
-
 class AimController {
 private:
     float currentAngle;
-    int   facingDirection;
+    int facingDirection;
+    float clampAngle(float raw) const;
 
 public:
     AimController();
-
     void  update(sf::Vector2f mousePos, sf::Vector2f charCenter, int dir);
-
     float getAngle() const;
-
-    void drawAimLine(RenderWindow& window,
-                     sf::Vector2f charCenter,
-                     float scroll,
-                     float lineLength = 80.f) const;
-
-private:
-    float clampAngle(float raw) const;
+    void drawAimLine(RenderWindow& window,sf::Vector2f charCenter,float scroll,float lineLength = 80.f) const;
 };

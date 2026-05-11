@@ -1,20 +1,7 @@
 #include "Animation.h"
 
-Animation::Animation()
-    : texture(nullptr)
-    , frameCount(1)
-    , currentFrame(0)
-    , frameDelay(5)
-    , loop(true)
-    , useExplicitFrames(false)
-    , srcOffsetX(0)
-    , srcOffsetY(0)
-    , cropLeft(0)
-    , cropTop(0)
-    , displayWidth(0)
-    , displayHeight(0)
-    , frameSizeW(0)
-    , frameSizeH(0)
+Animation::Animation(): texture(nullptr),frameCount(1),currentFrame(0),frameDelay(5),loop(true),useExplicitFrames(false)
+,srcOffsetX(0), srcOffsetY(0), cropLeft(0),cropTop(0),displayWidth(0),displayHeight(0),frameSizeW(0),frameSizeH(0)
 {
     for (int i = 0; i < MAX_ANIM_FRAMES; i++) {
         this->frames[i] = IntRect(0, 0, 0, 0);
@@ -43,7 +30,6 @@ void Animation::update() {
 void Animation::applyToSprite(Sprite& sprite) {
     if (this->texture == nullptr) return;
     sprite.setTexture(*this->texture);
-
     if (this->useExplicitFrames) {
         if (this->currentFrame >= 0 && this->currentFrame < this->frameCount) {
             sprite.setTextureRect(this->frames[this->currentFrame]);
@@ -53,12 +39,10 @@ void Animation::applyToSprite(Sprite& sprite) {
 
     int frameWidth = this->frameSizeW;
     int frameHeight = this->frameSizeH;
-
     if (frameWidth <= 0 || frameHeight <= 0) {
         if (this->frameCount > 1 && this->texture->getSize().x > 0) {
             frameWidth = (int)this->texture->getSize().x / this->frameCount;
             frameHeight = (int)this->texture->getSize().y;
-
             if (this->srcOffsetX != 0 || this->srcOffsetY != 0) {
                 frameWidth = ((int)this->texture->getSize().x - this->srcOffsetX) / this->frameCount;
                 frameHeight = (int)this->texture->getSize().y - this->srcOffsetY;
@@ -73,7 +57,6 @@ void Animation::applyToSprite(Sprite& sprite) {
     int rectY = this->srcOffsetY + this->cropTop;
     int rectW = (this->displayWidth > 0) ? this->displayWidth : (frameWidth - this->cropLeft);
     int rectH = (this->displayHeight > 0) ? this->displayHeight : (frameHeight - this->cropTop);
-
     sprite.setTextureRect(IntRect(rectX, rectY, rectW, rectH));
 }
 
@@ -82,10 +65,19 @@ void Animation::reset() {
     this->clock.restart();
 }
 
-void Animation::setLoop(bool shouldLoop) { this->loop = shouldLoop; }
-void Animation::setFrameCount(int count) { this->frameCount = count; }
-void Animation::setFrameDelay(int delay) { this->frameDelay = delay; }
-void Animation::setTexture(Texture* tex) { this->texture = tex; }
+void Animation::setLoop(bool shouldLoop) {
+    this->loop = shouldLoop;
+}
+void Animation::setFrameCount(int count) {
+    this->frameCount = count;
+}
+
+void Animation::setFrameDelay(int delay) {
+this->frameDelay = delay; }
+
+void Animation::setTexture(Texture* tex) {
+    this->texture = tex;
+}
 
 void Animation::setFrameRect(int index, int x, int y, int w, int h) {
     if (index >= 0 && index < MAX_ANIM_FRAMES) {

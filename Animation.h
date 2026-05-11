@@ -1,12 +1,10 @@
 #pragma once
 #include "Constants.h"
 
-
-
 class Animation {
 public:
+    //AFFAN yeh tune implement krna hai
     static const int MAX_ANIM_FRAMES = 32;
-
     Texture* texture;
     int frameCount;
     int currentFrame;
@@ -23,12 +21,12 @@ public:
     int displayHeight;
     int frameSizeW;
     int frameSizeH;
-
     Clock clock;
 
     Animation();
     ~Animation();
 
+    //Hamare Functions
     void update();
     void applyToSprite(Sprite& sprite);
     void reset();
