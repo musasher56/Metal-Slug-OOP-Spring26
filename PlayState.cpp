@@ -68,37 +68,59 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
         -(float)SCREEN_H * 0.05f
     );
 
-    // Load the starting level
-    // Campaign mode uses procedural terrain; Survival uses predefined levels
     if (this->gameMode == MODE_CAMPAIGN) {
         this->loadCampaignLevel();
     }
     else {
-        if (this->startLevel < 0) this->startLevel = 0;
-        if (this->startLevel >= TOTAL_LEVELS) this->startLevel = TOTAL_LEVELS - 1;
+        if (this->startLevel < 0) 
+            this->startLevel = 0;
+        if (this->startLevel >= TOTAL_LEVELS)
+            this->startLevel = TOTAL_LEVELS - 1;
         this->loadLevel(this->startLevel);
     }
 }
 
 PlayState::~PlayState() {
-    if (this->campaignProfile) { delete this->campaignProfile; this->campaignProfile = nullptr; }
-    if (this->fractalNoise) { delete this->fractalNoise; this->fractalNoise = nullptr; }
-    if (this->enemyVehicleManager) { delete this->enemyVehicleManager; this->enemyVehicleManager = nullptr; }
-    if (this->enemyManager) { delete this->enemyManager; this->enemyManager = nullptr; }
-    if (this->blockManager) { delete this->blockManager;      this->blockManager = nullptr; }
-    if (this->projectileManager) { delete this->projectileManager; this->projectileManager = nullptr; }
-    if (this->levelManager) { delete this->levelManager;      this->levelManager = nullptr; }
-    if (this->characterManager) { delete this->characterManager;  this->characterManager = nullptr; }
-    if (this->scoreManager) { delete this->scoreManager;      this->scoreManager = nullptr; }
-    if (this->hud) { delete this->hud;               this->hud = nullptr; }
+    if (this->campaignProfile) { 
+        delete this->campaignProfile;
+        this->campaignProfile = nullptr; 
+    }
+    if (this->fractalNoise) {
+        delete this->fractalNoise; 
+        this->fractalNoise = nullptr;
+    }
+    if (this->enemyVehicleManager) {
+        delete this->enemyVehicleManager; 
+        this->enemyVehicleManager = nullptr;
+    }
+    if (this->enemyManager) {
+        delete this->enemyManager;
+        this->enemyManager = nullptr;
+    }
+    if (this->blockManager) { 
+        delete this->blockManager;  
+        this->blockManager = nullptr;
+    }
+    if (this->projectileManager) { 
+        delete this->projectileManager; 
+        this->projectileManager = nullptr;
+    }
+    if (this->levelManager) { 
+        delete this->levelManager;   
+        this->levelManager = nullptr;
+    }
+    if (this->characterManager) { 
+        delete this->characterManager;
+        this->characterManager = nullptr;
+    }
+    if (this->scoreManager) {
+        delete this->scoreManager; 
+        this->scoreManager = nullptr; }
+    if (this->hud) { 
+        delete this->hud;            
+        this->hud = nullptr; }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// setCampaignProfile — set the noise profile type BEFORE the level loads
-//
-// Call this after creating PlayState but before the game loop starts.
-// profileType must be one of: NOISE_AMPLIFIED, NOISE_FLAT, NOISE_NORMAL
-// ─────────────────────────────────────────────────────────────────────────────
 
 void PlayState::setCampaignProfile(int profileType) {
     if (profileType >= 0 && profileType < 3) {
@@ -106,29 +128,11 @@ void PlayState::setCampaignProfile(int profileType) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// loadCampaignLevel — generate procedural terrain for Campaign Mode
-//
-// THIS IS THE SIMPLE VERSION. Here's how it works:
-//
-//   1. Create PerlinNoise with a seed (same seed = same terrain every time)
-//   2. Create FractalNoise wrapping that PerlinNoise
-//   3. Create a NoiseProfile (Amplified/Flat/Normal) via Factory pattern
-//   4. Apply the profile to FractalNoise (sets amplitude, frequency, etc.)
-//   5. Generate a heightmap array (one int per column = block height)
-//   6. Build terrain from that heightmap using buildProceduralTerrain()
-//   7. Clean up noise objects (they're temporary — only needed for generation)
-//
-// The terrain uses your EXISTING MountainBlock (dirt.png) system.
-// No new rendering code. No new block types. Just a generated heightmap
-// instead of a hardcoded one.
-// ─────────────────────────────────────────────────────────────────────────────
 
 void PlayState::loadCampaignLevel() {
     this->currentLevelIndex = 0;
-    this->currentConfig = &CAMPAIGN_LEVEL;  // dedicated Perlin campaign config (infinite.png bg)
+    this->currentConfig = &CAMPAIGN_LEVEL;  
 
-    // ── Reset scrolling and state ──
     this->scroll = 0.f;
     this->scrollY = 0.f;
     this->flyingTaraPhase = 0;
@@ -140,19 +144,17 @@ void PlayState::loadCampaignLevel() {
     this->bossesSpawned = 0;
     this->bossesDefeated = 0;
 
-    // ── Clear old enemies, vehicles, projectiles ──
-    if (this->enemyManager) this->enemyManager->clearAll();
-    if (this->enemyVehicleManager) this->enemyVehicleManager->clearAll();
-    if (this->projectileManager) this->projectileManager->clearAll();
-
-    // ── Delete old BlockManager ──
+    if (this->enemyManager)
+        this->enemyManager->clearAll();
+    if (this->enemyVehicleManager)
+        this->enemyVehicleManager->clearAll();
+    if (this->projectileManager) 
+        this->projectileManager->clearAll();
     if (this->blockManager) {
         delete this->blockManager;
         this->blockManager = nullptr;
     }
 
-    // ── Create Perlin noise profile ──
-    // Store it as a member so we can generate new columns for infinite scrolling.
     if (this->campaignProfile != nullptr) {
         delete this->campaignProfile;
         this->campaignProfile = nullptr;
@@ -160,25 +162,17 @@ void PlayState::loadCampaignLevel() {
     this->campaignProfile = NoiseProfile::create(this->campaignProfileType);
     this->campaignProfile->setSeed(this->campaignSeed);
 
-    // ── Create campaign Level via LevelManager ──
-    // This replaces the survival Level with a 50x420 Perlin campaign Level.
-    // The Level(NoiseProfile*) constructor generates the ENTIRE grid from
-    // Perlin noise — ground, bedrock, water, biomes — all done internally.
-    // We no longer need to build terrain via BlockManager at all.
     if (this->levelManager != nullptr) {
         this->levelManager->createCampaignLevel(this->campaignProfile);
     }
 
     Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
 
-    // ── Load background ──
-    // Campaign uses infinite.png — tiled horizontally for infinite scrolling feel
     if (this->currentConfig != nullptr) {
         this->bgTex.loadFromFile(this->currentConfig->bgPath);
         this->bgSprite.setTexture(this->bgTex);
         float texH = static_cast<float>(this->bgTex.getSize().y);
         if (texH > 0.f) {
-            // Scale to fill screen height, tile horizontally via render()
             this->bgScaleY = (float)SCREEN_H / texH;
             this->bgSprite.setScale(this->bgScaleY, this->bgScaleY);
         }
@@ -188,32 +182,22 @@ void PlayState::loadCampaignLevel() {
         return;
     }
 
-    // ── Load dirt texture and pass to Level for campaign rendering ──
-    // Level::Draw() uses the dirt texture to render terrain blocks with
-    // viewport culling. No MountainBlocks needed — avoids double-rendering
-    // and collision corruption issues.
     this->texManager->loadTexture("dirt", "resources/Sprites/dirt.png");
     sf::Texture* dirtTex = &this->texManager->getTexture("dirt");
     lvl->setDirtTexture(dirtTex);
 
-    // ── Create BlockManager (needed for destructible Block objects only) ──
-    // For campaign mode, BlockManager is created but NOT used for terrain.
-    // Terrain collision = Level::isSolid(), terrain rendering = Level::Draw().
-    // BlockManager exists for future use (enemy-placed blocks, etc.)
     this->blockManager = new BlockManager(this->texManager, this->audManager, lvl);
 
-    // ── Spawn player ON TOP of the Perlin terrain ──
-    // getSurfaceRow() scans from top to find the first solid row.
-    // Player Y = surface row * cellSize - offset (above the ground).
     if (this->characterManager != nullptr) {
         int cellSize = lvl->getCellSize();
         int worldOffX = lvl->getWorldOffX();
         float spawnWorldX = 200.f;
 
-        // Convert world X to grid column: col = (worldX / cellSize) - worldOffX
         int spawnCol = static_cast<int>(spawnWorldX) / cellSize - worldOffX;
-        if (spawnCol < 0) spawnCol = 0;
-        if (spawnCol >= lvl->getWidth()) spawnCol = lvl->getWidth() - 1;
+        if (spawnCol < 0)
+            spawnCol = 0;
+        if (spawnCol >= lvl->getWidth())
+            spawnCol = lvl->getWidth() - 1;
 
         int actualSurfaceRow = lvl->getSurfaceRow(spawnCol);
         float actualSurfaceY = (float)(actualSurfaceRow * cellSize);
@@ -221,29 +205,21 @@ void PlayState::loadCampaignLevel() {
         sf::Vector2f spawnPos(spawnWorldX, actualSurfaceY - 140.f);
         this->characterManager->initAllPositions(spawnPos);
     }
-
-    // ── Set scrollY for this level ──
-    // Campaign levels have vertical scroll enabled
     this->scrollY = 0.f;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// loadLevel — initializes (or re-initializes) everything for a given level
-// (SURVIVAL MODE — uses predefined levels from LevelConfig)
-// ─────────────────────────────────────────────────────────────────────────────
 
 void PlayState::loadLevel(int levelIndex) {
-    if (levelIndex < 0 || levelIndex >= TOTAL_LEVELS) return;
+    if (levelIndex < 0 || levelIndex >= TOTAL_LEVELS)
+        return;
 
     this->currentLevelIndex = levelIndex;
     this->currentConfig = ALL_LEVELS[levelIndex];
     const LevelConfig* cfg = this->currentConfig;
 
-    // ── Reset scrolling ──
     this->scroll = 0.f;
     this->scrollY = 0.f;
 
-    // ── Reset vehicle/animation state ──
     this->flyingTaraPhase = 0;
     this->submarineSpawned = false;
     this->flyingTaraClock.restart();
@@ -253,18 +229,15 @@ void PlayState::loadLevel(int levelIndex) {
     this->bossesSpawned = 0;
     this->bossesDefeated = 0;
 
-    // ── Clear old enemies, vehicles, projectiles ──
     if (this->enemyManager) this->enemyManager->clearAll();
     if (this->enemyVehicleManager) this->enemyVehicleManager->clearAll();
     if (this->projectileManager) this->projectileManager->clearAll();
 
-    // ── Delete old BlockManager ──
     if (this->blockManager) {
         delete this->blockManager;
         this->blockManager = nullptr;
     }
 
-    // ── Reset the Level grid ──
     if (this->levelManager) {
         Level* lvl = this->levelManager->getLevel();
         if (lvl != nullptr) {
@@ -275,8 +248,6 @@ void PlayState::loadLevel(int levelIndex) {
             }
         }
     }
-
-    // ── Load background ──
     this->bgTex.loadFromFile(cfg->bgPath);
     this->bgSprite.setTexture(this->bgTex);
     float texH = static_cast<float>(this->bgTex.getSize().y);
@@ -294,7 +265,6 @@ void PlayState::loadLevel(int levelIndex) {
         this->bgScaleY = 1.f;
     }
 
-    // ── Rebuild terrain ──
     if (this->levelManager != nullptr) {
         Level* lvl = this->levelManager->getLevel();
         if (lvl != nullptr) {
@@ -313,7 +283,8 @@ void PlayState::loadLevel(int levelIndex) {
             else {
                 for (int rowOff = 0; rowOff < 3; rowOff++) {
                     int row = surfaceRow + rowOff;
-                    if (row >= lvl->getHeight()) break;
+                    if (row >= lvl->getHeight())
+                        break;
                     for (int col = 0; col < lvl->getWidth(); col++) {
                         lvl->setSolid(row, col, true);
                     }
@@ -324,7 +295,6 @@ void PlayState::loadLevel(int levelIndex) {
                 this->blockManager->buildMountainTerrain(4000.f, surfaceY);
             }
 
-            // ── Reset player position ──
             if (this->characterManager != nullptr) {
                 sf::Vector2f spawnPos(200.f, surfaceY - 140.f);
                 this->characterManager->initAllPositions(spawnPos);
@@ -411,11 +381,14 @@ void PlayState::loadLevel(int levelIndex) {
 }
 
 void PlayState::spawnEnemiesFromConfig() {
-    if (this->enemyManager == nullptr) return;
-    if (this->currentConfig == nullptr) return;
+    if (this->enemyManager == nullptr) 
+        return;
+    if (this->currentConfig == nullptr)
+        return;
 
     Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
-    if (lvl == nullptr) return;
+    if (lvl == nullptr)
+        return;
 
     int cellSize = lvl->getCellSize();
     int surfaceRow = lvl->getHeight() - 3;
@@ -440,10 +413,21 @@ void PlayState::spawnEnemiesFromConfig() {
 
         if (ex == 0.f) {
             if (cfg->hasMountain) {
-                if (i % 4 == 0) { ex = mtBaseX + 30.f * 48.f; ey = mtTop30 - rebelFootOffset; }
-                else if (i % 4 == 1) { ex = mtBaseX + 90.f * 48.f; ey = mtTop90 - rebelFootOffset; }
-                else if (i % 4 == 2) { ex = mtBaseX + 65.f * 48.f; ey = mtTop65 - rebelFootOffset; }
-                else { ex = mtBaseX + 80.f * 48.f; ey = mtTop90 - rebelFootOffset; }
+                if (i % 4 == 0) {
+                    ex = mtBaseX + 30.f * 48.f;
+                    ey = mtTop30 - rebelFootOffset;
+                }
+                else if (i % 4 == 1) {
+                    ex = mtBaseX + 90.f * 48.f;
+                    ey = mtTop90 - rebelFootOffset;
+                }
+                else if (i % 4 == 2) { 
+                    ex = mtBaseX + 65.f * 48.f;
+                    ey = mtTop65 - rebelFootOffset; 
+                }
+                else {
+                    ex = mtBaseX + 80.f * 48.f;
+                    ey = mtTop90 - rebelFootOffset; }
             }
             else {
                 ex = (float)(15 + i * 8) * 48.f;
@@ -475,8 +459,10 @@ void PlayState::spawnEnemiesFromConfig() {
 }
 
 void PlayState::spawnPlatformsFromConfig() {
-    if (this->blockManager == nullptr) return;
-    if (this->currentConfig == nullptr) return;
+    if (this->blockManager == nullptr) 
+        return;
+    if (this->currentConfig == nullptr)
+        return;
 
     const LevelConfig* cfg = this->currentConfig;
     for (int i = 0; i < cfg->platformCount && i < 10; i++) {
@@ -488,19 +474,24 @@ void PlayState::spawnPlatformsFromConfig() {
 }
 
 void PlayState::checkLevelTransition() {
-    // Campaign mode is infinite — no level transitions
-    if (this->gameMode == MODE_CAMPAIGN) return;
+ 
+    if (this->gameMode == MODE_CAMPAIGN)
+        return;
 
-    if (this->hud != nullptr && this->hud->isFelledShowing()) return;
+    if (this->hud != nullptr && this->hud->isFelledShowing())
+        return;
 
     if (this->currentConfig != nullptr && this->currentConfig->isBossLevel) {
-        if (this->enemyManager != nullptr && this->enemyManager->hasActiveBoss()) return;
-        if (this->bossesSpawned < 2) return;
+        if (this->enemyManager != nullptr && this->enemyManager->hasActiveBoss())
+            return;
+        if (this->bossesSpawned < 2)
+            return;
     }
 
     PlayerSoldier* player = this->characterManager
         ? this->characterManager->getCurrentCharacter() : nullptr;
-    if (player == nullptr) return;
+    if (player == nullptr)
+        return;
 
     float levelWidth = 0.f;
     if (this->currentConfig != nullptr && this->currentConfig->levelWidth > 0.f) {
@@ -508,7 +499,8 @@ void PlayState::checkLevelTransition() {
     }
     else {
         Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
-        if (lvl == nullptr) return;
+        if (lvl == nullptr)
+            return;
         levelWidth = (float)(lvl->getWidth() * lvl->getCellSize());
     }
 
@@ -662,7 +654,6 @@ void PlayState::update(float dt) {
         this->projectileManager->checkEnemyBulletHitPlayer(player);
     }
 
-    // ── Update HUD (HP, score, weapon) AFTER damage is applied ──
     if (this->hud && this->characterManager) {
         this->hud->update(this->characterManager, this->currentLevelIndex + 1);
         if (this->scoreManager != nullptr) {
@@ -684,24 +675,16 @@ void PlayState::update(float dt) {
         this->blockManager->cleanup();
     }
 
-    // ── INFINITE WORLD: advance the grid when the player approaches the right edge ──
-    // In campaign mode, the Level grid is a sliding window over infinite Perlin terrain.
-    // When the player gets near the right side, we shift the grid left and generate
-    // new columns on the right. This makes the world scroll forever.
     if (this->gameMode == MODE_CAMPAIGN && player != nullptr && lvl != nullptr &&
         lvl->getCampaign() && this->campaignProfile != nullptr)
     {
         int cellSize = lvl->getCellSize();
         int worldOffX = lvl->getWorldOffX();
         float playerX = player->getPosition().x;
-
-        // Right edge of the grid in world coordinates
         float gridRightWorldX = static_cast<float>((worldOffX + lvl->getWidth()) * cellSize);
 
-        // Advance when player is within 15 columns of the right edge
         float advanceThreshold = static_cast<float>(15 * cellSize);
         if (playerX > gridRightWorldX - advanceThreshold) {
-            // Advance by 20 columns at a time for efficiency
             lvl->advanceWorld(20, this->campaignProfile);
         }
     }
@@ -711,9 +694,8 @@ void PlayState::update(float dt) {
         float levelWidth = 0.f;
 
         if (this->gameMode == MODE_CAMPAIGN && lvl->getCampaign()) {
-            // Campaign is infinite — no right edge clamp
-            // Use a very large effective width so scroll follows the player freely
-            levelWidth = playerX + (float)SCREEN_W;  // always enough room ahead
+  
+            levelWidth = playerX + (float)SCREEN_W;  
         }
         else if (this->currentConfig != nullptr && this->currentConfig->levelWidth > 0.f) {
             levelWidth = this->currentConfig->levelWidth;
@@ -745,7 +727,8 @@ void PlayState::update(float dt) {
             int surfaceRow = lvl->getHeight() - 3;
             float surfaceY = (float)(surfaceRow * lvl->getCellSize());
             this->scrollY = surfaceY - (float)SCREEN_H * 0.85f;
-            if (this->scrollY < 0.f) this->scrollY = 0.f;
+            if (this->scrollY < 0.f)
+                this->scrollY = 0.f;
         }
     }
 
@@ -759,7 +742,6 @@ void PlayState::update(float dt) {
         player->setInWater(inWaterNow);
     }
     else if (player != nullptr && lvl != nullptr && lvl->getCampaign()) {
-        // Campaign mode: check if the player's grid cell is water ('w')
         int cellSize = lvl->getCellSize();
         int worldOffX = lvl->getWorldOffX();
         float px = player->getPosition().x;
@@ -844,7 +826,8 @@ void PlayState::render(RenderWindow& window) {
         float groundLineInSprite = bgHeight * BG_GROUND_RATIO;
         bgY = groundY - groundLineInSprite - this->scrollY;
 
-        float maxBgY = bgHeight - (float)SCREEN_H; if (maxBgY < 0.f) maxBgY = 0.f;
+        float maxBgY = bgHeight - (float)SCREEN_H;
+        if (maxBgY < 0.f) maxBgY = 0.f;
         if (bgY > 0.f) bgY = 0.f;
         if (bgY < -maxBgY) bgY = -maxBgY;
     }
@@ -875,19 +858,27 @@ void PlayState::render(RenderWindow& window) {
         }
     }
     else {
-        float maxBgX = bgWidth - (float)SCREEN_W; if (maxBgX < 0.f) maxBgX = 0.f;
+        float maxBgX = bgWidth - (float)SCREEN_W;
+        if (maxBgX < 0.f) maxBgX = 0.f;
         if (bgX < -maxBgX) bgX = -maxBgX;
 
         this->bgSprite.setPosition(bgX, bgY);
         window.draw(this->bgSprite);
     }
 
-    if (this->levelManager)      this->levelManager->draw(window, this->scroll, this->scrollY);
-    if (this->blockManager)      this->blockManager->draw(window, this->scroll, this->scrollY);
-    if (this->enemyManager)      this->enemyManager->draw(window, this->scroll, this->scrollY);
-    if (this->enemyVehicleManager) this->enemyVehicleManager->draw(window, this->scroll, this->scrollY);
-    if (this->characterManager)  this->characterManager->draw(window, this->scroll, this->scrollY);
-    if (this->projectileManager) this->projectileManager->draw(window, this->scroll, this->scrollY);
+    if (this->levelManager)     
+        this->levelManager->draw(window, this->scroll, this->scrollY);
+    if (this->blockManager)   
+        this->blockManager->draw(window, this->scroll, this->scrollY);
+    if (this->enemyManager)   
+        
+        this->enemyManager->draw(window, this->scroll, this->scrollY);
+    if (this->enemyVehicleManager)
+        this->enemyVehicleManager->draw(window, this->scroll, this->scrollY);
+    if (this->characterManager) 
+        this->characterManager->draw(window, this->scroll, this->scrollY);
+    if (this->projectileManager)
+        this->projectileManager->draw(window, this->scroll, this->scrollY);
 
     if (this->currentConfig != nullptr && this->currentConfig->hasWater) {
         sf::ConvexShape drawWater = this->waterShape;
@@ -909,7 +900,8 @@ void PlayState::render(RenderWindow& window) {
         window.draw(overlay);
     }
 
-    if (this->hud)               this->hud->draw(window);
+    if (this->hud)            
+        this->hud->draw(window);
     this->renderBloodOverlay(window);
 }
 

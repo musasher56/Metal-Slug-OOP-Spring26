@@ -305,15 +305,11 @@ LaserBeam::LaserBeam(TextureManager* texMgr, AudioManager* audMgr,
 {
     this->projectileClass = PROJ_BEAM;
     this->isExplosive = false;
-    // Velocity stays at (0,0) — the beam occupies its extent from the spawn frame.
 }
 
 LaserBeam::~LaserBeam() {}
 
 IntRect LaserBeam::getBoundingBox() const {
-    // The beam extends SCREEN_W pixels from the barrel tip in beamDir.
-    // Height of 8 gives a forgiving hit window without feeling unfair.
-    // Vertically centred on the barrel: subtract 4 from Y for symmetry.
     if (this->beamDir == DIR_RIGHT) {
         return IntRect(
             static_cast<int>(this->position.x),
@@ -331,30 +327,23 @@ IntRect LaserBeam::getBoundingBox() const {
 }
 
 void LaserBeam::update(float scroll, Level* /*lvl*/) {
-    // lvl is intentionally discarded — laser raycasts through solid tiles.
-    // We still need the move() call for the lifetime countdown,
-    // and bounds check to cull a beam that was somehow spawned off-screen.
     if (!this->status) return;
 
     this->move(scroll);
     if (this->status) {
-        // Use a very large margin so an on-screen beam is never culled early.
         this->checkBounds(scroll, 0.f);
     }
 }
 
 void LaserBeam::move(float /*scroll*/) {
-    // No spatial displacement — pure lifetime countdown.
     if (--this->lifetime <= 0) {
         this->deactivate();
     }
 }
 
 void LaserBeam::draw(RenderWindow& window, float scrollX, float scrollY) {
-    if (!this->status) return;
-
-    // Flicker intensity drops as the beam expires.
-    // lifetime starts at 5, so ratio goes 1.0 → 0.2 → 0 (then deactivated).
+    if (!this->status) 
+        return;
     float ratio = (float)this->lifetime / 5.f;
     if (ratio > 1.f) ratio = 1.f;
 
@@ -363,27 +352,23 @@ void LaserBeam::draw(RenderWindow& window, float scrollX, float scrollY) {
 
     float beamLen = static_cast<float>(SCREEN_W);
 
-    // Start X in screen space
     float startX = (this->beamDir == DIR_RIGHT)
         ? (this->position.x - scrollX)
         : (this->position.x - scrollX - beamLen);
     float y = this->position.y - scrollY;
 
-    // ── Outer glow: wide, semi-transparent cyan ───────────────────────────────
     sf::RectangleShape glow(sf::Vector2f(beamLen, 8.f));
     glow.setFillColor(sf::Color(0, 220, 255, alpha));
     glow.setOrigin(0.f, 4.f);
     glow.setPosition(startX, y);
     window.draw(glow);
 
-    // ── Inner core: narrow, nearly opaque, near-white ─────────────────────────
     sf::RectangleShape core(sf::Vector2f(beamLen, 3.f));
     core.setFillColor(sf::Color(180, 255, 255, coreAlpha));
     core.setOrigin(0.f, 1.5f);
     core.setPosition(startX, y);
     window.draw(core);
 
-    // ── Muzzle flash: small circle at barrel end ───────────────────────────────
     float flashX = (this->beamDir == DIR_RIGHT)
         ? this->position.x - scrollX
         : this->position.x - scrollX;

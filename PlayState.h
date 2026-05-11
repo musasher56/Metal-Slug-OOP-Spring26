@@ -55,11 +55,9 @@ private:
     int   flyingTaraPhase;
     bool  submarineSpawned;
 
-    // Water pool overlay
     sf::ConvexShape waterShape;
     float waterBaseY;
 
-    // Level management
     int startLevel;
     int currentLevelIndex;
     const LevelConfig* currentConfig;
@@ -70,11 +68,10 @@ private:
     int  bossesSpawned;
     int  bossesDefeated;
 
-    // ── Campaign mode: procedural terrain ──
-    FractalNoise* fractalNoise;       // owned by PlayState (composition)
-    NoiseProfile* campaignProfile;    // kept alive for infinite world generation
-    int  campaignSeed;                 // seed for this campaign run
-    int  campaignProfileType;          // NOISE_AMPLIFIED / FLAT / NORMAL
+    FractalNoise* fractalNoise;       
+    NoiseProfile* campaignProfile;  
+    int  campaignSeed;               
+    int  campaignProfileType;        
 
 public:
     PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr, int startLvl = 0);
@@ -86,13 +83,12 @@ public:
     virtual void onEnter();
     virtual void onExit();
 
-    // Set the noise profile for campaign mode (call before onEnter)
     void setCampaignProfile(int profileType);
 
 private:
     void renderBloodOverlay(RenderWindow& window);
     void loadLevel(int levelIndex);
-    void loadCampaignLevel();            // generate procedural terrain for campaign
+    void loadCampaignLevel();        
     void checkLevelTransition();
     void spawnEnemiesFromConfig();
     void spawnPlatformsFromConfig();

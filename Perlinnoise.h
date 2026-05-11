@@ -141,85 +141,76 @@ public:
     void setProfile(NoiseProfile* profile);
 
     // ── Parameter setters (used by NoiseProfile::applyProfile) ──
-    void setAmplitude(float a) { this->amplitude = a; }
-    void setFrequency(float f) { this->frequency = f; }
-    void setPersistence(float p) { this->persistence = p; }
-    void setLacunarity(float l) { this->lacunarity = l; }
-    void setOctaves(float o) { this->octaves = o; }
+    void setAmplitude(float a) { 
+        this->amplitude = a; }
+    void setFrequency(float f) {
+        this->frequency = f; }
+    void setPersistence(float p) {
+        
+       this->persistence = p; }
+    void setLacunarity(float l) {
+        
+        this->lacunarity = l; }
+    void setOctaves(float o) {
+        this->octaves = o; }
 
-    // ── Parameter getters (for inspection) ──
-    float getAmplitude()   const { return this->amplitude; }
-    float getFrequency()   const { return this->frequency; }
-    float getPersistence() const { return this->persistence; }
-    float getLacunarity()  const { return this->lacunarity; }
-    float getOctaves()     const { return this->octaves; }
+    float getAmplitude()   const {
+        return this->amplitude; }
+    float getFrequency()   const {
+        return this->frequency; }
+    float getPersistence() const {
+        return this->persistence; }
+    float getLacunarity()  const { 
+        return this->lacunarity; }
+    float getOctaves()     const {
+        return this->octaves; }
 };
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// NoiseProfile — Abstract base + Factory for terrain profiles
-//
-// UML: NoiseProfile (A) with amplitude, frequency, persistence, lacunarity,
-//      octaves, type, seed. Methods: applyProfile(), getType(), static create()
-//
-// Three concrete profiles:
-//   AmplifiedProfile — big dramatic mountains (tall peaks, deep valleys)
-//   FlatProfile      — gentle rolling terrain (barely any elevation change)
-//   NormalProfile    — medium hills (balanced, playable)
-//
-// Factory Pattern: NoiseProfile::create(type) uses function pointer array
-//   (NO switch statement — avoids P5 penalty)
-// ─────────────────────────────────────────────────────────────────────────────
 
 class NoiseProfile {
 protected:
-    float amplitude;      // max terrain height in blocks
-    float frequency;      // hill width (lower = wider hills)
-    float persistence;    // how much each octave adds (0.3-0.6 typical)
-    float lacunarity;     // frequency multiplier per octave (2.0 standard)
-    float octaves;        // number of noise layers (1-3 for simplicity)
-    int type;             // NOISE_AMPLIFIED, NOISE_FLAT, or NOISE_NORMAL
-    int seed;             // noise seed — same seed = same terrain every time
+    float amplitude;     
+    float frequency;     
+    float persistence;  
+    float lacunarity;   
+    float octaves;      
+    int type;           
+    int seed;            
 
 public:
     NoiseProfile();
     virtual ~NoiseProfile();
 
-    // Apply this profile's parameters to a FractalNoise instance
     virtual void applyProfile(FractalNoise* noise) = 0;
 
-    // Return the type constant (NOISE_AMPLIFIED / NOISE_FLAT / NOISE_NORMAL)
     virtual int getType() = 0;
 
-    // ── Factory: create a profile by type constant ──
-    // Uses function pointer array (NO switch statement — avoids P5 penalty)
     static NoiseProfile* create(int type);
 
-    // ── Getters (used by Level::generateColumn via PerlinNoise::fractal) ──
-    float getAmplitude()   const { return this->amplitude; }
-    float getFrequency()   const { return this->frequency; }
-    float getPersistence() const { return this->persistence; }
-    float getLacunarity()  const { return this->lacunarity; }
-    float getOctaves()     const { return this->octaves; }
+    float getAmplitude()   const {
+        return this->amplitude; }
+    float getFrequency()   const {
+        return this->frequency; }
+    float getPersistence() const {
+        return this->persistence; }
+    float getLacunarity()  const {
+        return this->lacunarity; }
+    float getOctaves()     const {
+        return this->octaves; }
 
-    // getHarmonics — alias for getOctaves (same concept, different name)
-    // Used by Level::generateColumn when calling PerlinNoise::fractal()
-    int   getHarmonics()   const { return static_cast<int>(this->octaves); }
+    int   getHarmonics()   const {
+        return static_cast<int>(this->octaves); }
 
-    int   getSeed()        const { return this->seed; }
-    int   getTypeValue()   const { return this->type; }
+    int   getSeed()        const { 
+        return this->seed; }
+    int   getTypeValue()   const {
+        return this->type; }
 
-    // ── Setters ──
     void  setSeed(int s) { this->seed = s; }
 };
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// AmplifiedProfile — big dramatic terrain
-//
-// Tall mountains, deep valleys. Like the Amplified world type in Minecraft.
-// amplitude = 25 blocks, frequency = 0.015 (very wide hills)
-// ─────────────────────────────────────────────────────────────────────────────
 
 class AmplifiedProfile : public NoiseProfile {
 public:
@@ -229,13 +220,6 @@ public:
 };
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FlatProfile — minimal terrain variation
-//
-// Almost flat with gentle undulation. Good for vehicle sections.
-// amplitude = 3 blocks, frequency = 0.05 (tight subtle bumps)
-// ─────────────────────────────────────────────────────────────────────────────
-
 class FlatProfile : public NoiseProfile {
 public:
     FlatProfile();
@@ -243,13 +227,6 @@ public:
     virtual int getType();
 };
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// NormalProfile — balanced playable terrain
-//
-// Medium hills, good for standard gameplay on foot.
-// amplitude = 15 blocks, frequency = 0.02 (medium rolling hills)
-// ─────────────────────────────────────────────────────────────────────────────
 
 class NormalProfile : public NoiseProfile {
 public:

@@ -25,8 +25,10 @@ PlayerSoldier::PlayerSoldier(TextureManager* texMgr, AudioManager* audMgr)
     , devWeaponIdx(0)
     , qWasPressed(false)
 {
-    for (int i = 0; i < 3; ++i) this->inventory[i] = nullptr;
-    for (int i = 0; i < 5; ++i) this->devWeaponPool[i] = nullptr;
+    for (int i = 0; i < 3; ++i) 
+        this->inventory[i] = nullptr;
+    for (int i = 0; i < 5; ++i) 
+        this->devWeaponPool[i] = nullptr;
 
     this->pistol = new Pistol();
     this->devWeaponPool[0] = this->pistol;
@@ -111,7 +113,8 @@ void PlayerSoldier::switchWeapon(Weapon* w) {
 
     bool isPoolWeapon = false;
     for (int i = 0; i < 5; ++i) {
-        if (this->currentWeapon == this->devWeaponPool[i]) { isPoolWeapon = true; break; }
+        if (this->currentWeapon == this->devWeaponPool[i]) { isPoolWeapon = true;
+        break; }
     }
     if (!isPoolWeapon && this->currentWeapon != nullptr && this->inventorySize < 3)
         this->inventory[this->inventorySize++] = this->currentWeapon;
@@ -120,14 +123,16 @@ void PlayerSoldier::switchWeapon(Weapon* w) {
 }
 
 void PlayerSoldier::enterVehicle(Vehicle* v) {
-    if (v == nullptr || this->inVehicle) return;
+    if (v == nullptr || this->inVehicle)
+        return;
     this->currentVehicle = v;
     this->inVehicle = true;
     v->setDriver(this);
 }
 
 void PlayerSoldier::exitVehicle() {
-    if (!this->inVehicle || this->currentVehicle == nullptr) return;
+    if (!this->inVehicle || this->currentVehicle == nullptr)
+        return;
     this->currentVehicle->ejectDriver();
     this->currentVehicle = nullptr;
     this->inVehicle = false;
@@ -209,10 +214,6 @@ void PlayerSoldier::draw(RenderWindow& window, float scrollX, float scrollY) {
 }
 
 
-
-
-
-
 Marco::Marco(TextureManager* texMgr, AudioManager* audMgr)
     : PlayerSoldier(texMgr, audMgr)
     , fireRateMultiplier(1.25f)
@@ -233,15 +234,20 @@ Marco::Marco(TextureManager* texMgr, AudioManager* audMgr)
 }
 
 Marco::~Marco() {}
-void Marco::updateSprite() { this->sprite.setTextureRect(IntRect(0, 0, 36, 41)); }
-void Marco::activatePowerUp() { this->dualFireActive = true; this->dualFireTimer.restart(); }
+void Marco::updateSprite() {
+    this->sprite.setTextureRect(IntRect(0, 0, 36, 41)); 
+}
+void Marco::activatePowerUp() {
+    this->dualFireActive = true; this->dualFireTimer.restart();
+}
 
 void Marco::handleInput() {
     bool qNow = Keyboard::isKeyPressed(Keyboard::Q);
     if (qNow && !this->qWasPressed) this->cycleWeapon();
     this->qWasPressed = qNow;
 
-    if (Keyboard::isKeyPressed(Keyboard::X)) this->shoot();
+    if (Keyboard::isKeyPressed(Keyboard::X))
+        this->shoot();
 
     if (this->dualFireActive && Keyboard::isKeyPressed(Keyboard::X)) {
         if (this->pm && this->currentWeapon) {
@@ -254,26 +260,12 @@ void Marco::handleInput() {
             this->dualFireActive = false;
     }
 
-    if (Keyboard::isKeyPressed(Keyboard::C)) this->throwGrenade();
+    if (Keyboard::isKeyPressed(Keyboard::C))
+        this->throwGrenade();
 }
 
-void Marco::meleeAttack() { Soldier::meleeAttack(); }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+void Marco::meleeAttack() {
+    Soldier::meleeAttack(); }
 
 Tarma::Tarma(TextureManager* texMgr, AudioManager* audMgr)
     : PlayerSoldier(texMgr, audMgr)
@@ -310,9 +302,16 @@ Tarma::Tarma(TextureManager* texMgr, AudioManager* audMgr)
 
 Tarma::~Tarma() {}
 void Tarma::updateSprite() {}
-void Tarma::activatePowerUp() { this->immunityActive = true; this->immunityTimer.restart(); }
-bool Tarma::hasVehicleSurvival() const { return true; }
-void Tarma::onVehicleDestroyed() { this->exitVehicle(); }
+void Tarma::activatePowerUp() { 
+    this->immunityActive = true;
+    this->immunityTimer.restart();
+}
+bool Tarma::hasVehicleSurvival() const { 
+    return true; 
+}
+void Tarma::onVehicleDestroyed() { 
+    this->exitVehicle();
+}
 
 void Tarma::handleInput() {
     bool qNow = Keyboard::isKeyPressed(Keyboard::Q);
@@ -322,15 +321,6 @@ void Tarma::handleInput() {
     if (Keyboard::isKeyPressed(Keyboard::X)) this->shoot();
     if (Keyboard::isKeyPressed(Keyboard::C)) this->throwGrenade();
 }
-
-
-
-
-
-
-
-
-
 
 Eri::Eri(TextureManager* texMgr, AudioManager* audMgr)
     : PlayerSoldier(texMgr, audMgr)
@@ -366,16 +356,21 @@ void Eri::meleeAttack() { Soldier::meleeAttack(); }
 
 void Eri::handleInput() {
     bool qNow = Keyboard::isKeyPressed(Keyboard::Q);
-    if (qNow && !this->qWasPressed) this->cycleWeapon();
+    if (qNow && !this->qWasPressed)
+        this->cycleWeapon();
     this->qWasPressed = qNow;
 
-    if (Keyboard::isKeyPressed(Keyboard::X)) this->shoot();
-    if (Keyboard::isKeyPressed(Keyboard::C)) this->throwGrenade();
+    if (Keyboard::isKeyPressed(Keyboard::X))
+        this->shoot();
+    if (Keyboard::isKeyPressed(Keyboard::C))
+        this->throwGrenade();
 }
 
 void Eri::throwGrenade() {
-    if (this->pm == nullptr)     return;
-    if (this->grenadeCount <= 0) return;
+    if (this->pm == nullptr) 
+        return;
+    if (this->grenadeCount <= 0) 
+        return;
     this->grenadeCount--;
 
     sf::Vector2f origin = ProjectileManager::calcBarrelTip(
@@ -389,14 +384,6 @@ void Eri::throwGrenade() {
             this->doubleGrenadeActive = false;
     }
 }
-
-
-
-
-
-
-
-
 
 
 Fio::Fio(TextureManager* texMgr, AudioManager* audMgr)
@@ -429,7 +416,10 @@ Fio::Fio(TextureManager* texMgr, AudioManager* audMgr)
 
 Fio::~Fio() {}
 void Fio::updateSprite() {}
-void Fio::activatePowerUp() { this->superchargedActive = true; this->superchargedTimer.restart(); }
+void Fio::activatePowerUp() {
+    this->superchargedActive = true; 
+    this->superchargedTimer.restart();
+}
 
 void Fio::switchWeapon(Weapon* w) {
     PlayerSoldier::switchWeapon(w);
@@ -444,14 +434,11 @@ void Fio::handleInput() {
     if (Keyboard::isKeyPressed(Keyboard::C)) this->throwGrenade();
 }
 
-
-
-
-
-
 void PlayerSoldier::throwGrenade() {
-    if (this->pm == nullptr)     return;
-    if (this->grenadeCount <= 0) return;
+    if (this->pm == nullptr)  
+        return;
+    if (this->grenadeCount <= 0)
+        return;
     this->grenadeCount--;
 
     sf::Vector2f origin = ProjectileManager::calcBarrelTip(

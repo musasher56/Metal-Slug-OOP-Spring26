@@ -24,22 +24,6 @@ protected:
     int      enemyBulletHits;
 
     ProjectileManager* pm;
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     
     Weapon* devWeaponPool[5];
     int     devWeaponIdx;   
