@@ -25,14 +25,19 @@ TextureManager::~TextureManager() {}
 
 int TextureManager::findSlot(const char* key) const {
     for (int i = 0; i < textureCount; i++) {
-        if (!loaded[i]) continue;
+        if (!loaded[i]) 
+            continue;
         int j = 0;
         bool match = true;
         while (names[i][j] != '\0' && key[j] != '\0') {
-            if (names[i][j] != key[j]) { match = false; break; }
+            if (names[i][j] != key[j]) {
+                match = false;
+                break;
+            }
             j++;
         }
-        if (match && names[i][j] == '\0' && key[j] == '\0') return i;
+        if (match && names[i][j] == '\0' && key[j] == '\0')
+            return i;
     }
     return -1;
 }
@@ -56,11 +61,12 @@ static void registerKey(char names[][MAX_NAME_LEN], bool* loaded,
 
 
 bool TextureManager::loadTexture(const char* filename) {
-    if (findSlot(filename) != -1)  return true;
-    if (textureCount >= MAX_TEXTURES) return false;
+    if (findSlot(filename) != -1) 
+        return true;
+    if (textureCount >= MAX_TEXTURES) 
+        return false;
 
     if (!textures[textureCount].loadFromFile(filename)) {
-        printf("[WARN] Texture not found: %s\n", filename);
         return false;
     }
     registerKey(names, loaded, textureCount, filename);
@@ -69,11 +75,12 @@ bool TextureManager::loadTexture(const char* filename) {
 }
 
 bool TextureManager::loadTexture(const char* key, const char* filepath) {
-    if (findSlot(key) != -1) return true;
-    if (textureCount >= MAX_TEXTURES) return false;
+    if (findSlot(key) != -1)
+        return true;
+    if (textureCount >= MAX_TEXTURES) 
+        return false;
 
     if (!textures[textureCount].loadFromFile(filepath)) {
-        printf("[WARN] Texture not found: %s (key: %s)\n", filepath, key);
         return false;
     }
     registerKey(names, loaded, textureCount, key);
@@ -83,10 +90,12 @@ bool TextureManager::loadTexture(const char* key, const char* filepath) {
 
 Texture& TextureManager::getTexture(const char* key) {
     int idx = findSlot(key);
-    if (idx != -1) return textures[idx];
+    if (idx != -1)
+        return textures[idx];
 
     
-    if (loadTexture(key)) return textures[textureCount - 1];
+    if (loadTexture(key)) 
+        return textures[textureCount - 1];
     return fallback;
 }
 

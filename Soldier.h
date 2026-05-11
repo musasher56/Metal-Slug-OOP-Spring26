@@ -24,15 +24,6 @@ protected:
     TransformationState* transformState;
     Clock invincibilityClock;
     bool  isInvincible;
-
-    
-    
-    
-    
-    
-    
-    
-    
     int physW;
     int physH;
 
@@ -47,18 +38,33 @@ public:
     int getState() const;
     int getLives() const;
     int getCurrentHP() const;
-    int getMaxHealth() const { return this->maxHealth; }
-    bool getIsInvincible() const { return this->isInvincible; }
-    void setInvincible(bool val) { this->isInvincible = val; }
+    int getMaxHealth() const {
+        return this->maxHealth;
+    }
+    bool getIsInvincible() const { 
+        return this->isInvincible;
+    }
+    void setInvincible(bool val) {
+        this->isInvincible = val;
+    }
     void respawn();
     void setTransformationState(TransformationState* newState);
     TransformationState* getTransformationState() const;
 
 
-    float getBaseMaxVelocity() const { return this->baseMaxVelocity; }
-    void setBaseMaxVelocity(float val) { this->baseMaxVelocity = val; }
-    float getMaxVelocity() const { return this->maxVelocity; }
-    void setMaxVelocity(float val) { this->maxVelocity = val; }
+    float getBaseMaxVelocity() const { 
+        return this->baseMaxVelocity;
+    }
+    void setBaseMaxVelocity(float val) { 
+        this->baseMaxVelocity = val;
+    }
+    float getMaxVelocity() const {
+        
+        return this->maxVelocity; 
+    }
+    void setMaxVelocity(float val) {
+        this->maxVelocity = val; 
+    }
 
 
     void setDirectionAndVelocity(int dir);

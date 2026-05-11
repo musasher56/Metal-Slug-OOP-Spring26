@@ -2,20 +2,28 @@
 #include "ProjectileManager.h"
 
 
-
-
-
 Weapon::Weapon(int weaponType, int dmg, float rate, int amm)
     : ammo(amm), fireRate(rate), damage(dmg), type(weaponType)
 {}
 
 Weapon::~Weapon() {}
 
-bool  Weapon::hasAmmo()     const { return this->ammo > 0 || this->ammo == -1; }
-int   Weapon::getAmmo()     const { return this->ammo;     }
-int   Weapon::getDamage()   const { return this->damage;   }
-float Weapon::getFireRate() const { return this->fireRate; }
-int   Weapon::getType()     const { return this->type;     }
+bool  Weapon::hasAmmo()     const {
+    return this->ammo > 0 || this->ammo == -1;
+}
+int   Weapon::getAmmo()     const {
+    return this->ammo;    
+}
+int   Weapon::getDamage()   const { 
+    
+    return this->damage;  
+}
+float Weapon::getFireRate() const {
+    return this->fireRate;
+}
+int   Weapon::getType()     const { 
+    return this->type;   
+}
 
 void Weapon::addAmmo(int amount) {
     if (amount < 0) return;

@@ -9,25 +9,11 @@ public:
     Texture& getTexture(const char* key);
     bool     loadTexture(const char* filepath);
     bool     loadTexture(const char* key, const char* filepath);
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     
     Texture& loadTextureWithMask(const char* key,
         const char* filepath,
         sf::Color   maskColor = sf::Color::Black,
         sf::Uint8   tolerance = 50);
-
-    
-    
     bool makeColorTexture(const char* key, sf::Color color);
 
 private:

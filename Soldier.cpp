@@ -17,8 +17,8 @@ Soldier::Soldier(TextureManager* texMgr, AudioManager* audMgr)
     , meleeCooldown(0.5f)
     , transformState(nullptr), isInvincible(false)
     , inWater(false)
-    , physW(34)   // matches original hardcoded value; subclasses override
-    , physH(40)   // matches original hardcoded value; subclasses override
+    , physW(34)  
+    , physH(40)   
 {
 }
 
@@ -37,7 +37,6 @@ void Soldier::update(float scroll, Level* lvl) {
     this->handleStateTimers();
     if (this->inWater) {
         this->applyWaterPhysics();
-        // ── Swimming controls (checked every frame) ──
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
             this->velocityY -= 0.8f;
             if (this->velocityY < -4.f) this->velocityY = -4.f;
@@ -69,10 +68,6 @@ void Soldier::draw(RenderWindow& window, float scrollX, float scrollY) {
 
 void Soldier::takeDamage(int amount) {
 
-
-
-
-
     if (amount < 0) return;
 
     if (this->transformState != nullptr) {
@@ -80,7 +75,8 @@ void Soldier::takeDamage(int amount) {
     }
 
     this->currentHP -= amount;
-    if (this->currentHP < 0) this->currentHP = 0;
+    if (this->currentHP < 0) 
+        this->currentHP = 0;
 
     if (this->currentHP == 0) {
         this->onDeath();
@@ -91,8 +87,6 @@ void Soldier::takeDamage(int amount) {
     else if (this->currentHP == 2) {
 
     }
-
-
 
     this->health = this->currentHP;
 }
@@ -126,7 +120,6 @@ void Soldier::respawn() {
     this->direction = DIR_RIGHT;
     this->onGround = false;
     this->status = true;
-    // Grant 2 seconds of invincibility after respawn to prevent death loops
     this->isInvincible = true;
     this->invincibilityClock.restart();
 }
@@ -173,31 +166,18 @@ void Soldier::applyGravity() {
 }
 
 void Soldier::applyWaterPhysics() {
-    // Neutral buoyancy: no gravity in water
-    // Moderate drag so player can actually move but still slows down
     this->velocityX *= 0.96f;
     this->velocityY *= 0.96f;
-
-    // Snap tiny velocities to zero so player actually stops
     if (this->velocityX > -0.2f && this->velocityX < 0.2f) this->velocityX = 0.f;
     if (this->velocityY > -0.2f && this->velocityY < 0.2f) this->velocityY = 0.f;
 }
 
 void Soldier::handleCollision(Level* lvl) {
-    if (lvl == nullptr) return;
+    if (lvl == nullptr)
+        return;
 
     float scaleX = std::abs(this->sprite.getScale().x);
     float scaleY = std::abs(this->sprite.getScale().y);
-
-    // ── CRITICAL: use physW/physH, NOT hardcoded values ──────────────────
-    // physW and physH are set per-character in each subclass constructor to
-    // match that character's actual sprite frame size.  Multiplying by the
-    // sprite's current scale gives the exact on-screen collision extent.
-    //
-    // Old code used: 34.f * scaleX, 40.f * scaleY
-    // That was fine for Marco (physW=34, physH=40, scale=3.5) but broke
-    // Fio (physH=18 at scale 8.0 → old formula gave 40*8=320px box height
-    // vs the 18*8=144px visual sprite → collision pushed Fio 176px up → float).
     float colW = static_cast<float>(this->physW) * scaleX;
     float colH = static_cast<float>(this->physH) * scaleY;
 
@@ -207,13 +187,9 @@ void Soldier::handleCollision(Level* lvl) {
     float playerBottom = this->position.y + colH;
 
     int cellSize = lvl->getCellSize();
-    int worldOffX = lvl->getWorldOffX();   // campaign: -30; survival: 0
+    int worldOffX = lvl->getWorldOffX();  
     this->onGround = false;
 
-    // ── WORLD-TO-GRID CONVERSION ──────────────────────────────────────────
-    // Grid column c corresponds to world X = (worldOffX + c) * cellSize.
-    // So to convert world X to grid column: col = (worldX / cellSize) - worldOffX.
-    // In survival mode worldOffX = 0, so this reduces to the old formula.
     int startCol = static_cast<int>(playerLeft) / cellSize - worldOffX - 1;
     int endCol = static_cast<int>(playerRight) / cellSize - worldOffX + 1;
     int startRow = static_cast<int>(playerTop) / cellSize - 1;
@@ -222,8 +198,6 @@ void Soldier::handleCollision(Level* lvl) {
     for (int row = startRow; row <= endRow; ++row) {
         for (int col = startCol; col <= endCol; ++col) {
             if (!lvl->isSolid(row, col)) continue;
-
-            // Grid-to-world: world X = (worldOffX + col) * cellSize
             float blockLeft = static_cast<float>((worldOffX + col) * cellSize);
             float blockRight = blockLeft + static_cast<float>(cellSize);
             float blockTop = static_cast<float>(row * cellSize);
@@ -261,8 +235,6 @@ void Soldier::handleCollision(Level* lvl) {
                     this->position.y += minOverlap;
                     this->velocityY = 0.f;
                 }
-
-                // Recompute after resolution so the next block uses the new position
                 playerLeft = this->position.x;
                 playerRight = this->position.x + colW;
                 playerTop = this->position.y;
@@ -271,8 +243,6 @@ void Soldier::handleCollision(Level* lvl) {
         }
     }
 
-    // Ground probe: check one pixel below the collision box for a solid tile.
-    // Keeps onGround = true even when standing perfectly flush (no overlap).
     if (!this->onGround) {
         float probeY = playerBottom + 1.0f;
         int probeRow = static_cast<int>(probeY) / cellSize;
@@ -286,15 +256,12 @@ void Soldier::handleCollision(Level* lvl) {
         }
     }
 
-    // Left-edge world clamp
-    // The leftmost valid world X is worldOffX * cellSize (grid column 0).
     float minWorldX = static_cast<float>(worldOffX) * static_cast<float>(cellSize);
     if (this->position.x < minWorldX) {
         this->position.x = minWorldX;
         this->velocityX = 0.f;
     }
 
-    // Right-edge world clamp (also uses physW so every character is clamped correctly)
     float maxPlayerX = static_cast<float>(worldOffX + lvl->getWidth()) * static_cast<float>(lvl->getCellSize()) - colW;
     if (this->position.x > maxPlayerX) {
         this->position.x = maxPlayerX;
@@ -356,16 +323,8 @@ void Soldier::decelerate() {
 }
 
 void Soldier::copyPhysicsFrom(Soldier* other) {
-    // Transfers the complete physics snapshot from 'other' to this soldier.
-    // Called by CharacterManager::switchCharacter() so the incoming character
-    // appears exactly where the outgoing one was — same tile, same momentum,
-    // same facing direction — rather than teleporting to its constructor default.
-    //
-    // position is public on Entity so we assign it directly.
-    // velocityX/Y, onGround, direction are protected on Soldier, so this
-    // method lives here to legally access both sides without breaking
-    // encapsulation or requiring friend declarations.
-    if (other == nullptr) return;
+    if (other == nullptr)
+        return;
 
     this->position = other->position;
     this->velocityX = other->velocityX;
@@ -375,7 +334,8 @@ void Soldier::copyPhysicsFrom(Soldier* other) {
 }
 
 void Soldier::resolveBlockCollisions(DamagableEntity** blocks, int count) {
-    if (blocks == nullptr || count == 0) return;
+    if (blocks == nullptr || count == 0)
+        return;
 
     IntRect pb = this->getBoundingBox();
     float playerLeft = static_cast<float>(pb.left);
@@ -384,8 +344,10 @@ void Soldier::resolveBlockCollisions(DamagableEntity** blocks, int count) {
     float playerBottom = static_cast<float>(pb.top + pb.height);
 
     for (int i = 0; i < count; i++) {
-        if (blocks[i] == nullptr) continue;
-        if (!blocks[i]->isAlive() || !blocks[i]->getStatus()) continue;
+        if (blocks[i] == nullptr)
+            continue;
+        if (!blocks[i]->isAlive() || !blocks[i]->getStatus())
+            continue;
 
         IntRect b = blocks[i]->getBoundingBox();
 
@@ -395,7 +357,8 @@ void Soldier::resolveBlockCollisions(DamagableEntity** blocks, int count) {
         float blockBottom = static_cast<float>(b.top + b.height);
 
         if (playerRight <= blockLeft || playerLeft >= blockRight ||
-            playerBottom <= blockTop || playerTop >= blockBottom) continue;
+            playerBottom <= blockTop || playerTop >= blockBottom)
+            continue;
 
         float overlapLeft = playerRight - blockLeft;
         float overlapRight = blockRight - playerLeft;
@@ -409,14 +372,22 @@ void Soldier::resolveBlockCollisions(DamagableEntity** blocks, int count) {
         float minOverlap = overlapLeft;
         int   resolveDir = 1;
 
-        if (overlapRight < minOverlap) { minOverlap = overlapRight;  resolveDir = 2; }
-        if (overlapTop < minOverlap) { minOverlap = overlapTop;    resolveDir = 3; }
-        if (overlapBottom < minOverlap) { minOverlap = overlapBottom; resolveDir = 4; }
+        if (overlapRight < minOverlap) {
+            minOverlap = overlapRight;  resolveDir = 2; 
+        }
+        if (overlapTop < minOverlap) { 
+            minOverlap = overlapTop;    resolveDir = 3;
+        }
+        if (overlapBottom < minOverlap) {
+            minOverlap = overlapBottom; resolveDir = 4; 
+        }
 
         if (movingHoriz && !movingDown) {
             float sideOverlap = overlapLeft;
             int   sideDir = 1;
-            if (overlapRight < sideOverlap) { sideOverlap = overlapRight; sideDir = 2; }
+            if (overlapRight < sideOverlap) {
+                sideOverlap = overlapRight; sideDir = 2;
+            }
             if (sideOverlap < overlapTop * 2.f) {
                 minOverlap = sideOverlap;
                 resolveDir = sideDir;
@@ -438,7 +409,8 @@ void Soldier::resolveBlockCollisions(DamagableEntity** blocks, int count) {
         }
         else if (resolveDir == 4) {
             this->position.y += minOverlap;
-            if (this->velocityY < 0.f) this->velocityY = 0.f;
+            if (this->velocityY < 0.f) 
+                this->velocityY = 0.f;
         }
 
         pb = this->getBoundingBox();
