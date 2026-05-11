@@ -5,9 +5,6 @@
 #include <cmath>
 #include <cstdlib>
 
-// ============================================================
-// EnemyVehicle — base class
-// ============================================================
 
 EnemyVehicle::EnemyVehicle(TextureManager* texMgr, AudioManager* audMgr)
     : DamagableEntity(texMgr, audMgr)
@@ -57,9 +54,6 @@ void EnemyVehicle::updateBoundingBox() {
     this->boundingBox = IntRect(boxX, boxY, boxW, boxH);
 }
 
-// ============================================================
-// FlyingTara
-// ============================================================
 
 FlyingTara::FlyingTara(TextureManager* texMgr, AudioManager* audMgr)
     : EnemyVehicle(texMgr, audMgr)
@@ -75,7 +69,6 @@ FlyingTara::FlyingTara(TextureManager* texMgr, AudioManager* audMgr)
     this->scoreValue = 300;
     this->biome = BIOME_AERIAL;
 
-    // Fly animation — flying-tara.png (4 frames)
     Texture& flyTex = texMgr->getTexture("resources/Sprites/flying-tara.png");
     this->flyAnim.setTexture(&flyTex);
     this->flyAnim.setFrameCount(4);
@@ -86,7 +79,6 @@ FlyingTara::FlyingTara(TextureManager* texMgr, AudioManager* audMgr)
     this->flyAnim.setFrameRect(3, 996, 12, 320, 164);
     this->flyAnim.setLoop(true);
 
-    // Base anim also uses the fly texture (for bounding box reference)
     this->anim.setTexture(&flyTex);
     this->anim.setFrameCount(4);
     this->anim.setFrameDelay(6);
@@ -125,7 +117,7 @@ void FlyingTara::update(PlayerSoldier* player, ProjectileManager* projMgr,
     }
 
     if (this->taraState == 0) {
-        // ── FLYING: move horizontally, drop bomb when over player ──
+   
         this->position.x += this->velocityX;
         this->position.y += this->velocityY;
 
@@ -142,7 +134,7 @@ void FlyingTara::update(PlayerSoldier* player, ProjectileManager* projMgr,
                     sf::Vector2f(bombX, bombY),
                     dir, 85.f, 3, 3, true);
 
-                this->bombDropped = true;   // <-- THIS must be set BEFORE any other logic
+                this->bombDropped = true;
             }
         }
 
@@ -154,7 +146,7 @@ void FlyingTara::update(PlayerSoldier* player, ProjectileManager* projMgr,
         this->currentAnim = &this->flyAnim;
     }
     else {
-        // ── CRASHING: arc down at angle until ground impact ──
+       
         this->crashVY += 0.2f;
         this->velocityX = this->crashVX;
         this->velocityY = this->crashVY;
@@ -243,9 +235,6 @@ void FlyingTara::draw(RenderWindow& window, float scrollX, float scrollY) {
     window.draw(this->sprite);
 }
 
-// ============================================================
-// Submarine
-// ============================================================
 
 Submarine::Submarine(TextureManager* texMgr, AudioManager* audMgr)
     : EnemyVehicle(texMgr, audMgr)
@@ -262,7 +251,6 @@ Submarine::Submarine(TextureManager* texMgr, AudioManager* audMgr)
     this->scoreValue = 500;
     this->biome = BIOME_AQUATIC;
 
-    // Swim animation — submarine.png (7 frames)
     Texture& subTex = texMgr->getTexture("resources/Sprites/submarine.png");
     this->swimAnim.setTexture(&subTex);
     this->swimAnim.setFrameCount(7);
@@ -276,7 +264,6 @@ Submarine::Submarine(TextureManager* texMgr, AudioManager* audMgr)
     this->swimAnim.setFrameRect(6, 2428, 12, 372, 184);
     this->swimAnim.setLoop(true);
 
-    // Base anim uses the same texture for bounding box reference
     this->anim.setTexture(&subTex);
     this->anim.setFrameCount(7);
     this->anim.setFrameDelay(8);
@@ -325,12 +312,11 @@ void Submarine::update(PlayerSoldier* player, ProjectileManager* projMgr,
     }
 
     if (this->subState == 0) {
-        // ── SWIMMING: patrol back and forth in water, fire bomb at player ──
+   
         this->position.x += this->velocityX;
 
-        // Clamp to water rectangle: (10242,574) to (115919,1776)
-        float subW = 372.f * 0.8f;  // sprite width * scale
-        float subH = 196.f * 0.8f;  // sprite height * scale
+        float subW = 372.f * 0.8f;  
+        float subH = 196.f * 0.8f;  
         if (this->position.x < 10242.f) {
             this->position.x = 10242.f;
             this->setSwimDirection(DIR_RIGHT);
@@ -342,7 +328,6 @@ void Submarine::update(PlayerSoldier* player, ProjectileManager* projMgr,
         if (this->position.y < 574.f) this->position.y = 574.f;
         if (this->position.y + subH > 1776.f) this->position.y = 1776.f - subH;
 
-        // Reverse direction at patrol boundaries
         if (this->position.x <= this->patrolLeftX) {
             this->setSwimDirection(DIR_RIGHT);
         }
@@ -350,20 +335,17 @@ void Submarine::update(PlayerSoldier* player, ProjectileManager* projMgr,
             this->setSwimDirection(DIR_LEFT);
         }
 
-        // Fire bomb at player — rough aim with spread, not perfect tracking
         if (!this->bombFired && player != nullptr && projMgr != nullptr) {
             float dx = player->getPosition().x - this->position.x;
             float dy = player->getPosition().y - this->position.y;
             float dist = sqrtf(dx * dx + dy * dy);
 
-            // Only fire if player is within ~600px range
             if (dist < 600.f && dist > 50.f) {
-                // Calculate angle toward player with random spread (+/- 15 degrees)
+            
                 float angle = atan2f(-dy, dx) * 180.f / 3.14159f;
-                float spread = ((rand() % 30) - 15);  // -15 to +15 degrees
+                float spread = ((rand() % 30) - 15); 
                 angle += spread;
 
-                // Determine direction based on which side player is on
                 int bombDir = (dx >= 0.f) ? DIR_RIGHT : DIR_LEFT;
 
                 float scaleX = std::abs(this->sprite.getScale().x);
@@ -379,7 +361,6 @@ void Submarine::update(PlayerSoldier* player, ProjectileManager* projMgr,
             }
         }
 
-        // Reset bomb after cooldown (2.5 seconds)
         if (this->bombFired && this->bombCooldown.getElapsedTime().asSeconds() >= 2.5f) {
             this->bombFired = false;
         }
@@ -387,11 +368,9 @@ void Submarine::update(PlayerSoldier* player, ProjectileManager* projMgr,
         this->currentAnim = &this->swimAnim;
     }
     else {
-        // ── SINKING: slowly drift down ──
         this->sinkVY += 0.05f;
         this->position.y += this->sinkVY;
 
-        // Safety timeout
         if (this->deathClock.getElapsedTime().asSeconds() >= this->deathDuration) {
             this->status = false;
         }
@@ -438,7 +417,6 @@ void Submarine::draw(RenderWindow& window, float scrollX, float scrollY) {
         this->sprite.setScale(scale, scale);
     }
 
-    // When sinking, slight tilt
     if (this->subState == 1) {
         float angle = this->faceRight ? 15.f : -15.f;
         this->sprite.setRotation(angle);

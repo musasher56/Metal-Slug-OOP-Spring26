@@ -16,11 +16,9 @@ private:
     Texture      heartTex[4];
     bool         heartsLoaded;
 
-    // ── Score tracking ──
     int          currentScore;
     int          highScore;
 
-    // ── Ammo / weapon tracking ──
     int          ammo;
     bool         infiniteAmmo;
     const char*  weaponName;

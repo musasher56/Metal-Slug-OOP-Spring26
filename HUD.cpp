@@ -100,7 +100,6 @@ void HUD::setHighScore(int hs) { this->highScore = hs; }
 
 void HUD::draw(RenderWindow& window) {
 
-    // ── Top-Left: Score / Ammo / Weapon info ──
     sf::Text infoText;
     infoText.setFont(this->font);
     infoText.setCharacterSize(14);
@@ -109,20 +108,17 @@ void HUD::draw(RenderWindow& window) {
     float infoX = 10.f;
     float infoY = HEART_MARGIN_Y;
 
-    // High score
     infoText.setFillColor(sf::Color(255, 255, 100));
     infoText.setString("HI SCORE " + std::to_string(this->highScore));
     infoText.setPosition(infoX, infoY);
     window.draw(infoText);
 
-    // Current score
     infoY += 18.f;
     infoText.setFillColor(sf::Color(255, 255, 255));
     infoText.setString("SCORE " + std::to_string(this->currentScore));
     infoText.setPosition(infoX, infoY);
     window.draw(infoText);
 
-    // Weapon name
     infoY += 18.f;
     if (this->weaponName != nullptr) {
         infoText.setFillColor(sf::Color(200, 200, 200));
@@ -131,7 +127,6 @@ void HUD::draw(RenderWindow& window) {
         window.draw(infoText);
     }
 
-    // Ammo count
     infoY += 18.f;
     infoText.setFillColor(sf::Color(255, 200, 80));
     if (this->infiniteAmmo) {
@@ -142,7 +137,6 @@ void HUD::draw(RenderWindow& window) {
     infoText.setPosition(infoX, infoY);
     window.draw(infoText);
 
-    // Grenade count
     if (this->grenadeCount > 0) {
         infoY += 18.f;
         infoText.setFillColor(sf::Color(150, 220, 255));
@@ -151,7 +145,6 @@ void HUD::draw(RenderWindow& window) {
         window.draw(infoText);
     }
 
-    // ── Top-Right: Hearts (HP) ──
     if (this->heartsLoaded) {
         int texIdx = this->maxHp - this->hp;  
         if (texIdx < 0) texIdx = 0;
@@ -169,7 +162,6 @@ void HUD::draw(RenderWindow& window) {
         window.draw(heartSprite);
     }
     else {
-        // Fallback: rectangle pips on the right
         float boxW = 120.f;
         sf::RectangleShape heartBox(sf::Vector2f(boxW, 30.f));
         heartBox.setPosition((float)SCREEN_W - boxW - HEART_MARGIN_X, HEART_MARGIN_Y);

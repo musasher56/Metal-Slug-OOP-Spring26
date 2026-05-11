@@ -51,12 +51,6 @@ void Game::handleEvents() {
             if (current == nullptr) continue;
 
             
-            
-            
-            
-            
-
-            
             if (current->getShouldExit()) {
                 this->running = false;
                 this->window.close();
@@ -102,7 +96,13 @@ void Game::render() {
 }
 
 void Game::cleanup() {
-    if (this->stateManager) { delete this->stateManager; this->stateManager = nullptr; }
-    if (this->audManager) { delete this->audManager;   this->audManager = nullptr; }
-    if (this->texManager) { delete this->texManager;   this->texManager = nullptr; }
+    if (this->stateManager) {
+        delete this->stateManager;
+        this->stateManager = nullptr; }
+    if (this->audManager) {
+        delete this->audManager; 
+        this->audManager = nullptr; }
+    if (this->texManager) {
+        delete this->texManager;
+        this->texManager = nullptr; }
 }

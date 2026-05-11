@@ -34,7 +34,6 @@ MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
         this->options[i][j] = '\0';
     }
 
-    // Load a native font that works on Windows and Mac without external files
     this->fontLoaded = this->font.loadFromFile("C:/Windows/Fonts/arial.ttf");
     if (!this->fontLoaded)
         this->fontLoaded = this->font.loadFromFile("/System/Library/Fonts/Helvetica.ttc");
@@ -43,11 +42,9 @@ MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
     if (!this->fontLoaded)
         this->fontLoaded = this->font.loadFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
 
-    // Selector bar for mode select
     this->selector.setSize(Vector2f(500.f, 50.f));
     this->selector.setFillColor(Color(220, 80, 0, 180));
 
-    // Load title screen PNG for mode select background
     if (this->titleScreenTex.loadFromFile("resources/Sprites/Titlescreen.png")) {
         this->titleScreenSprite.setTexture(this->titleScreenTex);
         Vector2u sz = this->titleScreenTex.getSize();
@@ -56,8 +53,6 @@ MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
         this->titleScreenSprite.setScale(sx, sy);
         this->titleScreenLoaded = true;
     }
-
-    // Load level select background PNG
     if (this->levelSelectBgTex.loadFromFile("resources/Sprites/LevelSelect.png")) {
         this->levelSelectBgSprite.setTexture(this->levelSelectBgTex);
         Vector2u sz = this->levelSelectBgTex.getSize();
@@ -67,8 +62,6 @@ MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
         this->levelSelectBgSprite.setPosition(0.f, 0.f);
         this->levelSelectBgLoaded = true;
     }
-
-    // Level select highlight box (yellow, like character select)
     this->levelHighlightBox.setSize(Vector2f(280.f, 400.f));
     this->levelHighlightBox.setFillColor(Color(255, 255, 0, 50));
     this->levelHighlightBox.setOutlineColor(Color(255, 215, 0));
@@ -86,7 +79,6 @@ bool MainMenu::isReady() const {
 }
 
 void MainMenu::buildLevelSlotPositions() {
-    // 4 level slots arranged horizontally like character select
     const float panelW = 280.f;
     const float panelH = 400.f;
     const float gapX = 30.f;
@@ -156,13 +148,11 @@ void MainMenu::updateVideo(float dt) {
 int MainMenu::handleEvent(Event& event) {
     if (event.type != Event::KeyPressed) return -1;
 
-    // ── Splash screen ── any key advances to mode select
     if (this->menuState == 0) {
         this->menuState = 1;
         return -1;
     }
 
-    // ── Mode select screen ──
     if (this->menuState == 1) {
         if (event.key.code == Keyboard::Up)
             this->selectedOption = (this->selectedOption - 1 + 4) % 4;
@@ -186,8 +176,6 @@ int MainMenu::handleEvent(Event& event) {
         }
         return -1;
     }
-
-    // ── Level select screen ── (only reached for SURVIVAL / SELF-PLAY)
     if (this->menuState == 2) {
         if (event.key.code == Keyboard::Left) {
             this->hoveredLevel = (this->hoveredLevel + 3) % 4;
@@ -225,9 +213,12 @@ int MainMenu::handleEvent(Event& event) {
 }
 
 void MainMenu::draw(RenderWindow& window) {
-    if (this->menuState == 0) this->drawSplash(window);
-    else if (this->menuState == 1) this->drawMain(window);
-    else if (this->menuState == 2) this->drawLevelSelect(window);
+    if (this->menuState == 0)
+        this->drawSplash(window);
+    else if (this->menuState == 1)
+        this->drawMain(window);
+    else if (this->menuState == 2)
+        this->drawLevelSelect(window);
 }
 
 void MainMenu::drawSplash(RenderWindow& window) {
@@ -236,7 +227,7 @@ void MainMenu::drawSplash(RenderWindow& window) {
 }
 
 void MainMenu::drawMain(RenderWindow& window) {
-    // Draw title screen PNG as background
+
     if (this->titleScreenLoaded) {
         window.draw(this->titleScreenSprite);
     }
@@ -244,9 +235,9 @@ void MainMenu::drawMain(RenderWindow& window) {
         window.draw(this->videoSprite);
     }
 
-    if (!this->fontLoaded) return;
+    if (!this->fontLoaded)
+        return;
 
-    // Menu options — same as before, no overlay on top of title screen
     const float startY = 280.f;
     const float stepY = 85.f;
     const float centerX = SCREEN_W / 2.f;
@@ -273,7 +264,7 @@ void MainMenu::drawMain(RenderWindow& window) {
 }
 
 void MainMenu::drawLevelSelect(RenderWindow& window) {
-    // Draw level select background PNG
+
     if (this->levelSelectBgLoaded) {
         window.draw(this->levelSelectBgSprite);
     }
@@ -281,7 +272,7 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
         window.draw(this->videoSprite);
     }
     else {
-        // Fallback: dark background
+      
         RectangleShape bg(Vector2f((float)SCREEN_W, (float)SCREEN_H));
         bg.setFillColor(Color(20, 20, 20));
         window.draw(bg);

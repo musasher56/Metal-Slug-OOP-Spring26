@@ -1,19 +1,6 @@
 #include "Grenade.h"
 #include <cmath>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 Grenade::Grenade(int radius, int dmg)
     : position(0.f, 0.f)
     , blastRadius(radius)
@@ -65,10 +52,15 @@ void Grenade::draw(RenderWindow& window, float scrollX, float scrollY) {
     window.draw(pin);
 }
 
-bool         Grenade::isActive()      const { return this->active;       }
-sf::Vector2f Grenade::getPosition()   const { return this->position;     }
-int          Grenade::getBlastRadius()const { return this->blastRadius;  }
-int          Grenade::getDamage()     const { return this->damage;       }
+bool         Grenade::isActive()      const {
+    return this->active;       }
+sf::Vector2f Grenade::getPosition()   const {
+    
+    return this->position;     }
+int          Grenade::getBlastRadius()const {
+    return this->blastRadius;  }
+int          Grenade::getDamage()     const { 
+    return this->damage;       }
 
 
 

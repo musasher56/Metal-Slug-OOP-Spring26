@@ -122,13 +122,15 @@ void EnemyVehicleManager::update(float scroll, float scrollY, Level* lvl,
 void EnemyVehicleManager::draw(RenderWindow& window, float scrollX, float scrollY) {
     for (int i = 0; i < this->activeCount; i++) {
         EnemyVehicle* v = this->slots[i];
-        if (v == nullptr || !v->getStatus()) continue;
+        if (v == nullptr || !v->getStatus())
+            continue;
 
         float sx = v->position.x - scrollX;
         float sy = v->position.y - scrollY;
 
         if (sx < -500.f || sx >(float)SCREEN_W + 500.f ||
-            sy < -500.f || sy >(float)SCREEN_H + 500.f) continue;
+            sy < -500.f || sy >(float)SCREEN_H + 500.f)
+            continue;
 
         v->draw(window, scrollX, scrollY);
     }

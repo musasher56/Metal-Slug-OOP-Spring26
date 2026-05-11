@@ -3,21 +3,10 @@
 #include "Constants.h"
 #include <SFML/Graphics.hpp>
 
-// =============================================================================
-// Sea level row (as a fraction of level height).
-// In aquatic biomes (low noise output), the terrain surface is below this row.
-// Water blocks fill from the surface up to this sea level so the ocean has
-// visible depth rather than just stopping at the top of the ground.
-// =============================================================================
 static const float SEA_LEVEL_FRACTION = 0.60f;
 
-// Grass strip height in pixels drawn on top of surface ground blocks
 static const float GRASS_STRIP_HEIGHT = 5.0f;
 
-
-// =============================================================================
-// Survival Mode Constructor
-// =============================================================================
 Level::Level()
     : lvl(nullptr)
     , height(SURVIVAL_HEIGHT)
@@ -29,27 +18,20 @@ Level::Level()
     , dirtTexture(nullptr)
     , dirtReady(false)
 {
-    // Allocate the grid using raw arrays — no STL vectors (hard constraint)
     lvl = new char* [height];
     for (int r = 0; r < height; r++) {
-        lvl[r] = new char[width]();  // value-initialize to '\0' (empty air)
+        lvl[r] = new char[width](); 
     }
 
-    // Bottom row: indestructible bedrock as per spec
     for (int c = 0; c < width; c++) {
         lvl[height - 1][c] = 'i';
     }
 
-    // Second-from-bottom row: solid walkable ground
     for (int c = 0; c < width; c++) {
         lvl[height - 2][c] = 'g';
     }
 }
 
-
-// =============================================================================
-// Campaign Mode Constructor
-// =============================================================================
 Level::Level(NoiseProfile* profile)
     : lvl(nullptr)
     , height(CAMPAIGN_HEIGHT)
@@ -61,16 +43,13 @@ Level::Level(NoiseProfile* profile)
     , dirtTexture(nullptr)
     , dirtReady(false)
 {
-    // Allocate grid
     lvl = new char* [height];
     for (int r = 0; r < height; r++) {
         lvl[r] = new char[width]();
     }
 
-    // Allocate heightMap — one float per column
     heightMap = new float[width]();
 
-    // Generate all columns in the initial window.
     if (profile != nullptr) {
         for (int c = 0; c < width; c++) {
             generateColumn(c, worldOffsetX + c, profile);
@@ -78,10 +57,6 @@ Level::Level(NoiseProfile* profile)
     }
 }
 
-
-// =============================================================================
-// Destructor
-// =============================================================================
 Level::~Level() {
     if (lvl != nullptr) {
         for (int r = 0; r < height; r++) {
@@ -98,10 +73,6 @@ Level::~Level() {
     }
 }
 
-
-// =============================================================================
-// setDirtTexture — set the dirt texture for campaign terrain rendering
-// =============================================================================
 void Level::setDirtTexture(sf::Texture* tex) {
     this->dirtTexture = tex;
     if (tex != nullptr) {
@@ -120,9 +91,6 @@ void Level::setDirtTexture(sf::Texture* tex) {
 }
 
 
-// =============================================================================
-// clearColumn: Zeroes one grid column before regenerating it.
-// =============================================================================
 void Level::clearColumn(int col) {
     for (int r = 0; r < height; r++) {
         lvl[r][col] = '\0';
@@ -130,9 +98,6 @@ void Level::clearColumn(int col) {
 }
 
 
-// =============================================================================
-// generateColumn
-// =============================================================================
 void Level::generateColumn(int col, int worldX, NoiseProfile* profile) {
     clearColumn(col);
 
@@ -169,10 +134,6 @@ void Level::generateColumn(int col, int worldX, NoiseProfile* profile) {
     }
 }
 
-
-// =============================================================================
-// advanceWorld
-// =============================================================================
 void Level::advanceWorld(int steps, NoiseProfile* profile) {
     if (!isCampaign || profile == nullptr) return;
     if (steps <= 0 || steps >= width)     return;
@@ -197,10 +158,6 @@ void Level::advanceWorld(int steps, NoiseProfile* profile) {
     worldOffsetX += steps;
 }
 
-
-// =============================================================================
-// retreatWorld
-// =============================================================================
 void Level::retreatWorld(int steps, NoiseProfile* profile) {
     if (!isCampaign || profile == nullptr) return;
     if (steps <= 0 || steps >= width)     return;
@@ -223,10 +180,6 @@ void Level::retreatWorld(int steps, NoiseProfile* profile) {
     }
 }
 
-
-// =============================================================================
-// getBiomeAt
-// =============================================================================
 int Level::getBiomeAt(int col) const {
     if (heightMap == nullptr) return BIOME_PLAINS;
     if (col < 0 || col >= width) return BIOME_PLAINS;
@@ -239,9 +192,6 @@ int Level::getBiomeAt(int col) const {
 }
 
 
-// =============================================================================
-// getSurfaceRow — finds the topmost solid cell in a column
-// =============================================================================
 int Level::getSurfaceRow(int col) const {
     if (col < 0 || col >= width) return height - 1;
 
@@ -255,23 +205,11 @@ int Level::getSurfaceRow(int col) const {
     return height - 1;
 }
 
-
-// =============================================================================
-// Draw — renders only the visible portion of the level (viewport culling)
-//
-// Campaign mode: renders DIRT TEXTURE blocks (not colored rectangles).
-//   - 'g' cells get the dirt sprite with biome-specific tinting
-//   - 'i' cells get a darkened dirt sprite
-//   - 'w' cells get a semi-transparent blue overlay
-//   - Surface 'g' blocks get a green grass strip on top
-//
-// Survival mode: does nothing (BlockManager draws dirt sprites instead).
-// =============================================================================
 void Level::Draw(sf::RenderWindow& window, float scrollX, float scrollY) {
-    // Survival mode: Level::Draw does nothing — BlockManager draws instead
-    if (!isCampaign) return;
+ 
+    if (!isCampaign)
+        return;
 
-    // --- Determine visible range (viewport culling) ---
     int colStart = static_cast<int>(scrollX) / cellSize - worldOffsetX - 1;
     int colEnd = colStart + (SCREEN_W / cellSize) + 3;
     int rowStart = static_cast<int>(scrollY) / cellSize - 1;
@@ -282,13 +220,11 @@ void Level::Draw(sf::RenderWindow& window, float scrollX, float scrollY) {
     if (rowStart < 0)      rowStart = 0;
     if (rowEnd > height) rowEnd = height;
 
-    // Reusable water rectangle (only needed for 'w' cells)
     sf::RectangleShape waterBlock(sf::Vector2f(
         static_cast<float>(cellSize),
         static_cast<float>(cellSize)
     ));
 
-    // Grass strip drawn on top surfaces
     sf::RectangleShape grassStrip(sf::Vector2f(
         static_cast<float>(cellSize),
         GRASS_STRIP_HEIGHT
@@ -298,47 +234,42 @@ void Level::Draw(sf::RenderWindow& window, float scrollX, float scrollY) {
         for (int c = colStart; c < colEnd; c++) {
             char cell = lvl[r][c];
 
-            // Air — nothing to draw
             if (cell == '\0') continue;
 
-            // World x = (worldOffsetX + c) * cellSize; screen x = worldX - camera
             float screenX = static_cast<float>((worldOffsetX + c) * cellSize) - scrollX;
             float screenY = static_cast<float>(r * cellSize) - scrollY;
 
             if (cell == 'w') {
-                // Water: semi-transparent blue overlay
+          
                 waterBlock.setFillColor(sf::Color(20, 90, 200, 160));
                 waterBlock.setPosition(screenX, screenY);
                 window.draw(waterBlock);
 
             }
             else if (cell == 'i') {
-                // Indestructible bedrock: darkened dirt sprite
+         
                 if (dirtReady) {
-                    dirtSprite.setColor(sf::Color(80, 80, 90));  // dark tint
+                    dirtSprite.setColor(sf::Color(80, 80, 90)); 
                     dirtSprite.setPosition(screenX, screenY);
                     window.draw(dirtSprite);
                 }
 
             }
             else {
-                // Solid ground ('g'): dirt sprite with biome tint
                 bool topSurface = (r > 0 && lvl[r - 1][c] == '\0');
 
                 if (dirtReady) {
                     int biome = getBiomeAt(c);
 
-                    // Biome tinting: varies the dirt color per biome
                     if (biome == BIOME_AERIAL) {
-                        // Grey rocky tint
+                     
                         dirtSprite.setColor(sf::Color(180, 175, 180));
                     }
                     else if (biome == BIOME_AQUATIC) {
-                        // Dark muddy tint
+                     
                         dirtSprite.setColor(sf::Color(140, 120, 100));
                     }
                     else {
-                        // Plains: standard dirt color (no tint)
                         dirtSprite.setColor(sf::Color::White);
                     }
 
@@ -346,7 +277,6 @@ void Level::Draw(sf::RenderWindow& window, float scrollX, float scrollY) {
                     window.draw(dirtSprite);
                 }
 
-                // Grass strip on top-surface blocks
                 if (topSurface) {
                     int biome = getBiomeAt(c);
                     if (biome == BIOME_AERIAL) {

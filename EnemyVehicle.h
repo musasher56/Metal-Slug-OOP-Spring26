@@ -7,10 +7,6 @@ class ProjectileManager;
 class Level;
 
 
-
-
-
-
 class EnemyVehicle : public DamagableEntity {
 protected:
     int biome;
@@ -39,10 +35,6 @@ public:
 
 
 
-
-
-
-
 class FlyingTara : public EnemyVehicle {
 private:
     int taraState;       
@@ -67,11 +59,6 @@ public:
     virtual void updateBoundingBox();
     virtual void draw(RenderWindow& window, float scrollX, float scrollY);
 };
-
-
-
-
-
 
 
 

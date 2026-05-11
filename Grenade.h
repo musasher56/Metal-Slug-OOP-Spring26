@@ -6,22 +6,6 @@ class EnemyManager;
 class CharacterManager;
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class Grenade {
 protected:
     sf::Vector2f position;

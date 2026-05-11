@@ -321,7 +321,8 @@ Boss* EnemyManager::getActiveBoss() const {
 }
 
 bool EnemyManager::hasActiveBoss() const {
-    if (this->activeBoss == nullptr) return false;
+    if (this->activeBoss == nullptr)
+        return false;
     return this->activeBoss->isAlive() || this->activeBoss->isDying();
 }
 
