@@ -706,7 +706,7 @@ void GrenadeSoldier::performAttack(PlayerSoldier* player) {
 
     float dy = player->getPosition().y - this->position.y;
     float dx = fabsf(player->getPosition().x - this->position.x);
-    float angle = 45.f;  // default grenade arc
+    float angle = 45.f;
     if (dx > 0.f || dy != 0.f) {
         angle = atan2f(-dy, dx) * 180.f / 3.14159f;
         if (angle < 20.f) angle = 20.f;
@@ -994,7 +994,7 @@ void Paratrooper::updateAI(PlayerSoldier* player, Level* lvl) {
             }
         }
         if (this->startDescent && this->landY > 0.f && this->position.y >= this->landY) {
-            this->paraState = 1;   // transition to grounded
+            this->paraState = 1;
             this->position.y = this->landY;
             this->velocityY = 0.f;
             this->velocityX = 0.f;
@@ -1395,7 +1395,7 @@ void Hairbuster::updateAI(PlayerSoldier* player, Level* lvl) {
         this->flyAngle += this->flySpeed * 0.5f;
         this->position.x = this->flyCenterX + cosf(this->flyAngle) * this->flyRadiusX;
         this->position.y = this->flyCenterY + sinf(this->flyAngle) * this->flyRadiusY;
-        this->faceRight = (sinf(this->flyAngle) < 0.f);  // face direction of movement
+        this->faceRight = (sinf(this->flyAngle) < 0.f);
         this->switchAnim(&this->idleAnim);
         return;
     }
