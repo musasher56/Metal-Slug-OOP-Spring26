@@ -34,8 +34,7 @@ Level* LevelManager::getLevel() {
 }
 
 void LevelManager::createCampaignLevel(NoiseProfile* profile) {
-    // Delete the old survival Level and replace with a campaign Level
-    // that uses Perlin noise for procedural terrain generation.
+  
     if (this->level != nullptr) {
         delete this->level;
         this->level = nullptr;

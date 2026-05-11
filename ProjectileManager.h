@@ -6,18 +6,6 @@ class Level;
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 class ProjectileManager {
 public:
     static const int MAX_PROJ   = 64;   
@@ -43,12 +31,6 @@ private:
 public:
     ProjectileManager(TextureManager* t, AudioManager* a);
     ~ProjectileManager();
-
-    
-    
-    
-    
-    
 
     
     void spawnStraight(sf::Vector2f origin, int dir, float angle,
@@ -102,9 +84,6 @@ private:
     
     void removeAt(int i);
 
-    
-    
-    
     static void angleToVelocity(float angle, int dir, float speed,
                                  float& outVX, float& outVY);
 };

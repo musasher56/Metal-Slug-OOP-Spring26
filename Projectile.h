@@ -8,19 +8,6 @@ class ProjectileManager;
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 class Projectile : public Entity {
     
     
@@ -39,11 +26,8 @@ public:
     Projectile(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~Projectile();
 
-    
-    
     virtual void update(float scroll, Level* lvl);
 
-    
     
     virtual void draw(RenderWindow& window, float scrollX, float scrollY);
 
@@ -66,11 +50,6 @@ protected:
 };
 
 
-
-
-
-
-
 class StraightProjectile : public Projectile {
 private:
     float angle;    
@@ -84,12 +63,6 @@ public:
 protected:
     virtual void move(float scroll);
 };
-
-
-
-
-
-
 
 
 
@@ -107,22 +80,11 @@ protected:
 };
 
 
-
-
-
-
-
-
-
-
 class ExplosiveProjectile : public BallisticProjectile {
 public:
     ExplosiveProjectile(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~ExplosiveProjectile();
 
-    
-    
-    
     virtual void draw(RenderWindow& window, float scrollX, float scrollY);
 
     virtual void onImpact(EnemyManager* em, CharacterManager* cm);

@@ -14,19 +14,11 @@ ProjectileManager::ProjectileManager(TextureManager* t, AudioManager* a)
 {
     for (int i = 0; i < MAX_PROJ; i++) this->slots[i] = nullptr;
 
-    
-    
-    
-    
     this->texMgr->loadTexture("bullet", "resources/Sprites/bullet.png");
     this->texMgr->loadTexture("bullet_draw", "resources/Sprites/bullet.png");
     this->texMgr->loadTexture("grenade_draw", "resources/Sprites/grenade.png");
     this->texMgr->loadTexture("bomb_draw", "resources/Sprites/bomb.png");
 
-    
-    
-    
-    
     
     if (!this->texMgr->loadTexture("blast", "resources/Sprites/blast.png")) {
         this->texMgr->makeColorTexture("blast", sf::Color(255, 140, 0));  
@@ -95,7 +87,8 @@ void ProjectileManager::angleToVelocity(float angle, int dir, float speed,
 void ProjectileManager::spawnStraight(sf::Vector2f origin, int dir,
     float angle, int dmg, bool fromEnemy)
 {
-    if (this->activeCount >= MAX_PROJ) return;
+    if (this->activeCount >= MAX_PROJ)
+        return;
 
     StraightProjectile* p = new StraightProjectile(this->texMgr, this->audMgr, angle);
     p->position = origin;
@@ -113,7 +106,8 @@ void ProjectileManager::spawnExplosive(sf::Vector2f origin, int dir,
     float angle, int dmg,
     int blastRadius, bool fromEnemy)
 {
-    if (this->activeCount >= MAX_PROJ) return;
+    if (this->activeCount >= MAX_PROJ) 
+        return;
 
     ExplosiveProjectile* p = new ExplosiveProjectile(this->texMgr, this->audMgr);
     p->position = origin;
@@ -133,7 +127,8 @@ void ProjectileManager::spawnBomb(sf::Vector2f origin, int dir,
     float angle, int dmg, int blastRadius,
     bool fromEnemy, float speed)
 {
-    if (this->activeCount >= MAX_PROJ) return;
+    if (this->activeCount >= MAX_PROJ) 
+        return;
 
     ExplosiveProjectile* p = new ExplosiveProjectile(this->texMgr, this->audMgr);
     p->position = origin;

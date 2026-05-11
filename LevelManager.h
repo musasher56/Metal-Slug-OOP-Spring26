@@ -20,9 +20,6 @@ public:
     void update(float dt);
     void draw(RenderWindow& window, float scrollX, float scrollY);
     Level* getLevel();
-
-    // Replace the current Level with a campaign-mode Level
-    // (procedural Perlin terrain). Call this before loadCampaignLevel().
     void createCampaignLevel(NoiseProfile* profile);
 
     void nextLevel(TextureManager* tex);
