@@ -59,7 +59,8 @@ set(SOURCES
         Charselectstate.h
         Perlinnoise.cpp
         Perlinnoise.h
-      
+        HUD.cpp
+
 )
 
 # NOTE: MountainBlock is inside Block.h/Block.cpp, MountainManager is inside

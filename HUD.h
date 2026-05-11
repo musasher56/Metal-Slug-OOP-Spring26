@@ -4,21 +4,7 @@
 using namespace sf;
 
 class CharacterManager;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+class ScoreManager;
 
 class HUD {
 private:
@@ -27,15 +13,19 @@ private:
     Font         font;
     float        redHueAlpha;
 
-    
-    
-    
-    
-    
     Texture      heartTex[4];
     bool         heartsLoaded;
 
-    
+    // ── Score tracking ──
+    int          currentScore;
+    int          highScore;
+
+    // ── Ammo / weapon tracking ──
+    int          ammo;
+    bool         infiniteAmmo;
+    const char*  weaponName;
+    int          grenadeCount;
+
     float        bossHealthFraction;      
     float        bossHealthDisplayed;     
     const char* bossName;               
@@ -43,7 +33,6 @@ private:
     float        bossBarAppearTimer;      
     float        bossBarAlpha;            
 
-    
     bool         felledVisible;           
     int          felledPhase;             
     float        felledTimer;             
@@ -58,11 +47,12 @@ public:
     void draw(RenderWindow& window);
     void showDamageHue(float intensity);
 
-    
+    void setScore(int score);
+    void setHighScore(int hs);
+
     void setBossInfo(const char* name, float healthFrac);
     void clearBossInfo();
 
-    
     void showBossFelled(const char* bossName);
     bool isFelledShowing() const;
 

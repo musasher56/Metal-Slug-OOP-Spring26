@@ -17,7 +17,10 @@ void AimController::update(sf::Vector2f mousePos, sf::Vector2f charCenter, int d
         dx = -dx;
     }
 
-    this->currentAngle = atan2f(-dy, dx) * 180.f / 3.14159f;
+    float rawAngle = atan2f(-dy, dx) * 180.f / 3.14159f;
+
+    // Clamp angle to 0 (horizontal) - 90 (vertical) based on facing direction
+    this->currentAngle = this->clampAngle(rawAngle);
 }
 
 float AimController::getAngle() const {

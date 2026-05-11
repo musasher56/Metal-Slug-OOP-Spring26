@@ -9,8 +9,11 @@ class PlayerSoldier;
 class ScoreManager {
 private:
     int score;
+    int highScore;
     float comboMultiplier;
     Clock lastKillTime;
+
+    void updateHighScore();
 
 public:
     ScoreManager();
@@ -21,5 +24,6 @@ public:
     void addBossKill(bool isUltimate);
     void addLevelClearBonus(int mode, bool flawless);
     int getScore() const;
+    int getHighScore() const;
     void reset();
 };

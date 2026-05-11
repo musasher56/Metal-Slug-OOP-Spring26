@@ -47,15 +47,6 @@ private:
     RenderWindow* gameWindow;
     sf::Vector2f   lastMouseWorld;
 
-    bool       debugMode;
-    bool       showHitboxes;
-    sf::Font   debugFont;
-    sf::Text   debugText;
-
-    // Developer / God Mode
-    bool       devModeActive;
-    sf::Clock  devKeyTimer;
-
     Texture    bloodOverlayTex;
     Sprite     bloodOverlaySprite;
     GameStateManager* stateManager;
@@ -99,11 +90,7 @@ public:
     void setCampaignProfile(int profileType);
 
 private:
-    void renderDebug(RenderWindow& window);
-    void renderHitboxes(RenderWindow& window);
     void renderBloodOverlay(RenderWindow& window);
-    void spawnTestBlocks();
-    void spawnTestEnemies();
     void loadLevel(int levelIndex);
     void loadCampaignLevel();            // generate procedural terrain for campaign
     void checkLevelTransition();

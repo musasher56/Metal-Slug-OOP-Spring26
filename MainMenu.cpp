@@ -8,13 +8,6 @@ static const char* LEVEL_NAMES[4] = {
     "Level 4 - Ironokava"
 };
 
-static const char* LEVEL_DESCS[4] = {
-    "Mountain + Water",
-    "Mountain + Water",
-    "Flat Plains - 11km",
-    "BOSS ARENA"
-};
-
 MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
     : selectedOption(0)
     , gameMode(MODE_SURVIVAL)
@@ -24,12 +17,14 @@ MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
     , audManager(aud)
     , fontLoaded(false)
     , hoveredLevel(0)
+    , titleScreenLoaded(false)
+    , levelSelectBgLoaded(false)
     , totalVideoFrames(0)
     , currentFrame(0)
     , splashDuration(3.0f)
     , videoLoaded(false)
 {
-    const char* opts[] = { "SURVIVAL MODE", "CAMPAIGN MODE", "SELF-PLAY (AI)", "EXIT" };
+    const char* opts[] = { "SURVIVAL MODE", "CAMPAIGN MODE", "SELF-PLAY MODE", "EXIT" };
     for (int i = 0; i < 4; i++) {
         int j = 0;
         while (opts[i][j] != '\0' && j < MAX_NAME_LEN - 1) {
@@ -39,43 +34,47 @@ MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
         this->options[i][j] = '\0';
     }
 
-    this->fontLoaded = this->font.loadFromFile("C:/Windows/Fonts/segoeui.ttf");
-    if (!this->fontLoaded)
-        this->fontLoaded = this->font.loadFromFile("C:/Windows/Fonts/arial.ttf");
+    // Load a native font that works on Windows and Mac without external files
+    this->fontLoaded = this->font.loadFromFile("C:/Windows/Fonts/arial.ttf");
     if (!this->fontLoaded)
         this->fontLoaded = this->font.loadFromFile("/System/Library/Fonts/Helvetica.ttc");
     if (!this->fontLoaded)
+        this->fontLoaded = this->font.loadFromFile("/Library/Fonts/Arial.ttf");
+    if (!this->fontLoaded)
         this->fontLoaded = this->font.loadFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
 
-    this->overlay.setSize(Vector2f((float)SCREEN_W, (float)SCREEN_H));
-    this->overlay.setFillColor(Color(0, 0, 0, 160));
-
+    // Selector bar for mode select
     this->selector.setSize(Vector2f(500.f, 50.f));
     this->selector.setFillColor(Color(220, 80, 0, 180));
 
-    // Level select boxes
-    float boxW = 250.f;
-    float boxH = 360.f;
-    float gap = 30.f;
-    float totalW = 4.f * boxW + 3.f * gap;
-    float startX = ((float)SCREEN_W - totalW) / 2.f;
-    float boxY = 200.f;
-
-    for (int i = 0; i < 4; i++) {
-        float x = startX + i * (boxW + gap);
-        this->levelBoxes[i].setSize(Vector2f(boxW, boxH));
-        this->levelBoxes[i].setPosition(x, boxY);
-        this->levelBoxes[i].setOutlineThickness(3.f);
-        // Boss level gets special styling
-        if (i == 3) {
-            this->levelBoxes[i].setFillColor(Color(50, 20, 20, 180));
-            this->levelBoxes[i].setOutlineColor(Color(150, 60, 60));
-        }
-        else {
-            this->levelBoxes[i].setFillColor(Color(20, 20, 50, 180));
-            this->levelBoxes[i].setOutlineColor(Color(80, 80, 120));
-        }
+    // Load title screen PNG for mode select background
+    if (this->titleScreenTex.loadFromFile("resources/Sprites/Titlescreen.png")) {
+        this->titleScreenSprite.setTexture(this->titleScreenTex);
+        Vector2u sz = this->titleScreenTex.getSize();
+        float sx = (float)SCREEN_W / (float)sz.x;
+        float sy = (float)SCREEN_H / (float)sz.y;
+        this->titleScreenSprite.setScale(sx, sy);
+        this->titleScreenLoaded = true;
     }
+
+    // Load level select background PNG
+    if (this->levelSelectBgTex.loadFromFile("resources/Sprites/LevelSelect.png")) {
+        this->levelSelectBgSprite.setTexture(this->levelSelectBgTex);
+        Vector2u sz = this->levelSelectBgTex.getSize();
+        float sx = (float)SCREEN_W / (float)sz.x;
+        float sy = (float)SCREEN_H / (float)sz.y;
+        this->levelSelectBgSprite.setScale(sx, sy);
+        this->levelSelectBgSprite.setPosition(0.f, 0.f);
+        this->levelSelectBgLoaded = true;
+    }
+
+    // Level select highlight box (yellow, like character select)
+    this->levelHighlightBox.setSize(Vector2f(280.f, 400.f));
+    this->levelHighlightBox.setFillColor(Color(255, 255, 0, 50));
+    this->levelHighlightBox.setOutlineColor(Color(255, 215, 0));
+    this->levelHighlightBox.setOutlineThickness(4.f);
+
+    this->buildLevelSlotPositions();
 
     this->loadVideoFrames();
 }
@@ -83,10 +82,22 @@ MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
 MainMenu::~MainMenu() {}
 
 bool MainMenu::isReady() const {
-    // Ready when a mode AND a level have both been selected.
-    // For CAMPAIGN mode, the level is auto-selected (0) — no level select needed.
-    // For SURVIVAL/SELF-PLAY, the user must pick a level from the 4 options.
     return (this->gameMode >= 0 && this->gameMode <= 2) && (this->selectedLevel >= 0 && this->selectedLevel <= 3);
+}
+
+void MainMenu::buildLevelSlotPositions() {
+    // 4 level slots arranged horizontally like character select
+    const float panelW = 280.f;
+    const float panelH = 400.f;
+    const float gapX = 30.f;
+    const float totalW = 4.f * panelW + 3.f * gapX;
+    const float startX = ((float)SCREEN_W - totalW) / 2.f;
+    const float startY = 180.f;
+
+    for (int i = 0; i < 4; i++) {
+        float x = startX + i * (panelW + gapX);
+        this->levelSlotRects[i] = FloatRect(x, startY, panelW, panelH);
+    }
 }
 
 void MainMenu::loadVideoFrames() {
@@ -162,14 +173,9 @@ int MainMenu::handleEvent(Event& event) {
             this->gameMode = this->selectedOption;
 
             if (this->gameMode == MODE_CAMPAIGN) {
-                // ── Campaign mode: only ONE Perlin level — auto-select it ──
-                // Skip the level select screen entirely since campaign has
-                // a single procedural Perlin terrain level (no predefined levels).
                 this->selectedLevel = 0;
-                // isReady() is now true → MenuState will transition to CharSelect
             }
             else {
-                // Survival / Self-Play: show level select with 4 predefined levels
                 this->menuState = 2;
                 this->selectedLevel = -1;
                 this->hoveredLevel = 0;
@@ -209,7 +215,6 @@ int MainMenu::handleEvent(Event& event) {
             this->selectedLevel = this->hoveredLevel;
         }
         else if (event.key.code == Keyboard::Escape) {
-            // Go back to mode select
             this->menuState = 1;
             this->selectedLevel = -1;
         }
@@ -231,24 +236,19 @@ void MainMenu::drawSplash(RenderWindow& window) {
 }
 
 void MainMenu::drawMain(RenderWindow& window) {
-    if (this->videoLoaded) window.draw(this->videoSprite);
-    window.draw(this->overlay);
+    // Draw title screen PNG as background
+    if (this->titleScreenLoaded) {
+        window.draw(this->titleScreenSprite);
+    }
+    else if (this->videoLoaded) {
+        window.draw(this->videoSprite);
+    }
 
     if (!this->fontLoaded) return;
 
-    Text title;
-    title.setFont(this->font);
-    title.setString("METAL SLUG");
-    title.setCharacterSize(64);
-    title.setFillColor(Color(255, 100, 0));
-    title.setStyle(Text::Bold);
-    FloatRect tb = title.getLocalBounds();
-    title.setOrigin(tb.width / 2.f, 0.f);
-    title.setPosition(SCREEN_W / 2.f, 50.f);
-    window.draw(title);
-
-    const float startY = 250.f;
-    const float stepY = 90.f;
+    // Menu options — same as before, no overlay on top of title screen
+    const float startY = 280.f;
+    const float stepY = 85.f;
     const float centerX = SCREEN_W / 2.f;
 
     for (int i = 0; i < 4; i++) {
@@ -270,162 +270,47 @@ void MainMenu::drawMain(RenderWindow& window) {
         opt.setPosition(centerX, y);
         window.draw(opt);
     }
-
-    Text hint;
-    hint.setFont(this->font);
-    hint.setString("[UP/DOWN] Navigate  [ENTER] Select  [ESC] Exit");
-    hint.setCharacterSize(20);
-    hint.setFillColor(Color(160, 160, 160));
-    FloatRect hb = hint.getLocalBounds();
-    hint.setOrigin(hb.width / 2.f, 0.f);
-    hint.setPosition(centerX, SCREEN_H - 50.f);
-    window.draw(hint);
 }
 
 void MainMenu::drawLevelSelect(RenderWindow& window) {
-    if (this->videoLoaded) window.draw(this->videoSprite);
-    window.draw(this->overlay);
+    // Draw level select background PNG
+    if (this->levelSelectBgLoaded) {
+        window.draw(this->levelSelectBgSprite);
+    }
+    else if (this->videoLoaded) {
+        window.draw(this->videoSprite);
+    }
+    else {
+        // Fallback: dark background
+        RectangleShape bg(Vector2f((float)SCREEN_W, (float)SCREEN_H));
+        bg.setFillColor(Color(20, 20, 20));
+        window.draw(bg);
+    }
 
     if (!this->fontLoaded) return;
 
-    // Title
-    Text title;
-    title.setFont(this->font);
-    title.setString("SELECT LEVEL");
-    title.setCharacterSize(52);
-    title.setFillColor(Color(255, 215, 0));
-    title.setStyle(Text::Bold);
-    FloatRect tb = title.getLocalBounds();
-    title.setOrigin(tb.width / 2.f, 0.f);
-    title.setPosition((float)SCREEN_W / 2.f, 30.f);
-    window.draw(title);
 
-    // Mode subtitle
-    const char* modeName = "SURVIVAL";
-    if (this->gameMode == MODE_SELF_PLAY) modeName = "SELF-PLAY";
-
-    Text modeText;
-    modeText.setFont(this->font);
-    modeText.setString(modeName);
-    modeText.setCharacterSize(24);
-    modeText.setFillColor(Color(180, 180, 200));
-    FloatRect mb = modeText.getLocalBounds();
-    modeText.setOrigin(mb.width / 2.f, 0.f);
-    modeText.setPosition((float)SCREEN_W / 2.f, 95.f);
-    window.draw(modeText);
-
-    // Level boxes (only survival/self-play reach this screen)
+    // Draw level number keys below each slot (like character select)
     for (int i = 0; i < 4; i++) {
-        // Update colors based on hover
-        if (i == this->hoveredLevel) {
-            if (i == 3) {
-                // Boss level hover: bright red highlight
-                this->levelBoxes[i].setFillColor(Color(80, 30, 30, 200));
-                this->levelBoxes[i].setOutlineColor(Color(255, 100, 50));
-            }
-            else {
-                this->levelBoxes[i].setFillColor(Color(40, 60, 120, 200));
-                this->levelBoxes[i].setOutlineColor(Color(255, 215, 0));
-            }
-        }
-        else {
-            if (i == 3) {
-                // Boss level default: dark red
-                this->levelBoxes[i].setFillColor(Color(50, 20, 20, 180));
-                this->levelBoxes[i].setOutlineColor(Color(150, 60, 60));
-            }
-            else {
-                this->levelBoxes[i].setFillColor(Color(20, 20, 50, 180));
-                this->levelBoxes[i].setOutlineColor(Color(80, 80, 120));
-            }
-        }
+        char numBuf[7];
+        numBuf[0] = 'Level1' + i;
+        numBuf[1] = '\0';
 
-        window.draw(this->levelBoxes[i]);
-
-        float bx = this->levelBoxes[i].getPosition().x;
-        float by = this->levelBoxes[i].getPosition().y;
-        float bw = this->levelBoxes[i].getSize().x;
-        float bh = this->levelBoxes[i].getSize().y;
-
-        // Big level number
         Text numText;
         numText.setFont(this->font);
-        char buf[4];
-        buf[0] = '1' + i;
-        buf[1] = '\0';
-        numText.setString(buf);
-        numText.setCharacterSize(80);
+        numText.setString(numBuf);
+        numText.setCharacterSize(28);
         numText.setFillColor(i == this->hoveredLevel
-            ? (i == 3 ? Color(255, 100, 50, 200) : Color(255, 215, 0, 200))
-            : (i == 3 ? Color(150, 60, 60, 120) : Color(100, 140, 200, 120)));
-        FloatRect nr = numText.getLocalBounds();
-        numText.setOrigin(nr.width / 2.f, 0.f);
-        numText.setPosition(bx + bw / 2.f, by + 30.f);
+            ? Color(255, 255, 0)
+            : Color(200, 200, 200));
+        numText.setStyle(Text::Bold);
+        FloatRect nb = numText.getLocalBounds();
+        numText.setOrigin(nb.width / 2.f, nb.height / 2.f);
+        numText.setPosition(
+            this->levelSlotRects[i].left + this->levelSlotRects[i].width / 2.f,
+            this->levelSlotRects[i].top + this->levelSlotRects[i].height + 20.f
+        );
         window.draw(numText);
-
-        // Level name
-        Text nameText;
-        nameText.setFont(this->font);
-        nameText.setString(LEVEL_NAMES[i]);
-        nameText.setCharacterSize(16);
-        nameText.setStyle(i == 3 ? Text::Bold : Text::Regular);
-        nameText.setFillColor(i == this->hoveredLevel
-            ? (i == 3 ? Color(255, 180, 130) : Color(255, 255, 255))
-            : (i == 3 ? Color(180, 100, 100) : Color(160, 160, 180)));
-        FloatRect nm = nameText.getLocalBounds();
-        nameText.setOrigin(nm.width / 2.f, 0.f);
-        nameText.setPosition(bx + bw / 2.f, by + 140.f);
-        window.draw(nameText);
-
-        // Level description
-        Text descText;
-        descText.setFont(this->font);
-        descText.setString(LEVEL_DESCS[i]);
-        descText.setCharacterSize(15);
-        descText.setFillColor(i == 3 ? Color(200, 120, 80) : Color(130, 130, 160));
-        FloatRect dr = descText.getLocalBounds();
-        descText.setOrigin(dr.width / 2.f, 0.f);
-        descText.setPosition(bx + bw / 2.f, by + 175.f);
-        window.draw(descText);
-
-        // Key hint
-        Text keyText;
-        keyText.setFont(this->font);
-        char keyBuf[8];
-        keyBuf[0] = '1' + i;
-        keyBuf[1] = '\0';
-        keyText.setString(keyBuf);
-        keyText.setCharacterSize(26);
-        keyText.setFillColor(Color(200, 200, 200, 150));
-        FloatRect kr = keyText.getLocalBounds();
-        keyText.setOrigin(kr.width / 2.f, 0.f);
-        keyText.setPosition(bx + bw / 2.f, by + bh - 50.f);
-        window.draw(keyText);
-
-        // Boss skull indicator for level 4
-        if (i == 3) {
-            Text skullText;
-            skullText.setFont(this->font);
-            skullText.setString("!! BOSS !!");
-            skullText.setCharacterSize(18);
-            skullText.setStyle(Text::Bold);
-            skullText.setFillColor(i == this->hoveredLevel
-                ? Color(255, 60, 30) : Color(180, 50, 30));
-            FloatRect sr = skullText.getLocalBounds();
-            skullText.setOrigin(sr.width / 2.f, 0.f);
-            skullText.setPosition(bx + bw / 2.f, by + 210.f);
-            window.draw(skullText);
-        }
     }
 
-    // Instructions
-    Text hint;
-    hint.setFont(this->font);
-    hint.setString("[LEFT/RIGHT] Browse   [1/2/3/4] Quick Select   [ENTER] Confirm   [ESC] Back");
-    hint.setCharacterSize(20);
-    hint.setFillColor(Color(150, 150, 150));
-    FloatRect hb = hint.getLocalBounds();
-    hint.setOrigin(hb.width / 2.f, 0.f);
-    hint.setPosition((float)SCREEN_W / 2.f, (float)SCREEN_H - 50.f);
-    window.draw(hint);
 }

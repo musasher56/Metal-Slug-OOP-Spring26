@@ -1,15 +1,8 @@
 ﻿#include "HUD.h"
 #include "CharacterManager.h"
 #include "PlayerSoldier.h"
+#include "Weapon.h"
 #include <cstdio>
-
-
-
-
-
-
-
-
 
 
 
@@ -19,11 +12,11 @@ static const float HEART_MARGIN_Y = 8.f;
 static const int   MAX_HP = 3;
 
 
-
-
 HUD::HUD()
     : hp(MAX_HP), maxHp(MAX_HP)
     , redHueAlpha(0.f), heartsLoaded(false)
+    , currentScore(0), highScore(0)
+    , ammo(0), infiniteAmmo(false), weaponName(""), grenadeCount(0)
     , bossHealthFraction(0.f), bossHealthDisplayed(0.f), bossName(nullptr)
     , bossBarVisible(false), bossBarAppearTimer(0.f), bossBarAlpha(0.f)
     , felledVisible(false), felledPhase(0), felledTimer(0.f)
@@ -38,10 +31,6 @@ HUD::HUD()
     if (!fontLoaded) fontLoaded = this->font.loadFromFile("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf");
     if (!fontLoaded) fontLoaded = this->font.loadFromFile("resources/font.ttf");
 
-    
-    
-    
-    
     
     static const char* HEART_PATHS[4] = {
         "resources/Sprites/heart1.png",
@@ -69,7 +58,6 @@ HUD::~HUD() {}
 
 
 
-
 void HUD::update(CharacterManager* cm, int levelNum) {
     (void)levelNum;
     if (cm == nullptr) return;
@@ -81,6 +69,21 @@ void HUD::update(CharacterManager* cm, int levelNum) {
     if (player != nullptr) {
         this->maxHp = player->getMaxHealth();
         if (this->maxHp < 1) this->maxHp = 1;
+
+        
+        Weapon* w = player->getCurrentWeapon();
+        if (w != nullptr) {
+            this->ammo = w->getAmmo();
+            this->infiniteAmmo = (this->ammo < 0);
+            if (this->infiniteAmmo) this->ammo = 999;
+        }
+        else {
+            this->ammo = 0;
+            this->infiniteAmmo = false;
+        }
+
+        this->weaponName = player->getCurrentWeaponName();
+        this->grenadeCount = player->getGrenadeCount();
     }
 
     
@@ -88,7 +91,8 @@ void HUD::update(CharacterManager* cm, int levelNum) {
     if (this->hp > this->maxHp) this->hp = this->maxHp;
 }
 
-
+void HUD::setScore(int s) { this->currentScore = s; }
+void HUD::setHighScore(int hs) { this->highScore = hs; }
 
 
 
@@ -96,12 +100,58 @@ void HUD::update(CharacterManager* cm, int levelNum) {
 
 void HUD::draw(RenderWindow& window) {
 
-    
-    
-    
-    
-    
-    
+    // ── Top-Left: Score / Ammo / Weapon info ──
+    sf::Text infoText;
+    infoText.setFont(this->font);
+    infoText.setCharacterSize(14);
+    infoText.setStyle(sf::Text::Bold);
+
+    float infoX = 10.f;
+    float infoY = HEART_MARGIN_Y;
+
+    // High score
+    infoText.setFillColor(sf::Color(255, 255, 100));
+    infoText.setString("HI SCORE " + std::to_string(this->highScore));
+    infoText.setPosition(infoX, infoY);
+    window.draw(infoText);
+
+    // Current score
+    infoY += 18.f;
+    infoText.setFillColor(sf::Color(255, 255, 255));
+    infoText.setString("SCORE " + std::to_string(this->currentScore));
+    infoText.setPosition(infoX, infoY);
+    window.draw(infoText);
+
+    // Weapon name
+    infoY += 18.f;
+    if (this->weaponName != nullptr) {
+        infoText.setFillColor(sf::Color(200, 200, 200));
+        infoText.setString(this->weaponName);
+        infoText.setPosition(infoX, infoY);
+        window.draw(infoText);
+    }
+
+    // Ammo count
+    infoY += 18.f;
+    infoText.setFillColor(sf::Color(255, 200, 80));
+    if (this->infiniteAmmo) {
+        infoText.setString("INFINITE");
+    } else {
+        infoText.setString("x" + std::to_string(this->ammo));
+    }
+    infoText.setPosition(infoX, infoY);
+    window.draw(infoText);
+
+    // Grenade count
+    if (this->grenadeCount > 0) {
+        infoY += 18.f;
+        infoText.setFillColor(sf::Color(150, 220, 255));
+        infoText.setString("G x" + std::to_string(this->grenadeCount));
+        infoText.setPosition(infoX, infoY);
+        window.draw(infoText);
+    }
+
+    // ── Top-Right: Hearts (HP) ──
     if (this->heartsLoaded) {
         int texIdx = this->maxHp - this->hp;  
         if (texIdx < 0) texIdx = 0;
@@ -114,22 +164,23 @@ void HUD::draw(RenderWindow& window) {
             heartSprite.setTextureRect(sf::IntRect(0, 0, (int)texSize.x, (int)texSize.y));
         }
         heartSprite.setScale(HEART_DRAW_SCALE, HEART_DRAW_SCALE);
-        heartSprite.setPosition(HEART_MARGIN_X, HEART_MARGIN_Y);
+        float heartW = (float)texSize.x * HEART_DRAW_SCALE;
+        heartSprite.setPosition((float)SCREEN_W - heartW - HEART_MARGIN_X, HEART_MARGIN_Y);
         window.draw(heartSprite);
     }
     else {
-        
-        sf::RectangleShape heartBox(sf::Vector2f(120.f, 30.f));
-        heartBox.setPosition(HEART_MARGIN_X, HEART_MARGIN_Y);
+        // Fallback: rectangle pips on the right
+        float boxW = 120.f;
+        sf::RectangleShape heartBox(sf::Vector2f(boxW, 30.f));
+        heartBox.setPosition((float)SCREEN_W - boxW - HEART_MARGIN_X, HEART_MARGIN_Y);
         heartBox.setFillColor(sf::Color(40, 10, 10));
         heartBox.setOutlineColor(sf::Color(120, 40, 40));
         heartBox.setOutlineThickness(1.f);
         window.draw(heartBox);
 
-        
         for (int i = 0; i < this->hp && i < this->maxHp; i++) {
             sf::RectangleShape pip(sf::Vector2f(30.f, 22.f));
-            pip.setPosition(HEART_MARGIN_X + 5.f + (float)i * 38.f, HEART_MARGIN_Y + 4.f);
+            pip.setPosition((float)SCREEN_W - boxW - HEART_MARGIN_X + 5.f + (float)i * 38.f, HEART_MARGIN_Y + 4.f);
             pip.setFillColor(sf::Color(220, 30, 30));
             window.draw(pip);
         }
@@ -144,7 +195,6 @@ void HUD::draw(RenderWindow& window) {
             if (this->bossBarAlpha > 255.f) this->bossBarAlpha = 255.f;
         }
 
-        
         
         if (this->bossHealthDisplayed > this->bossHealthFraction) {
             this->bossHealthDisplayed -= 0.004f;  
@@ -227,7 +277,6 @@ void HUD::draw(RenderWindow& window) {
 
 
 
-
 void HUD::showDamageHue(float i) { this->redHueAlpha = i; }
 
 void HUD::setBossInfo(const char* name, float healthFrac) {
@@ -248,9 +297,6 @@ void HUD::clearBossInfo() {
     this->bossHealthDisplayed = 0.f;
     this->bossBarAlpha = 0.f;
 }
-
-
-
 
 
 

@@ -33,7 +33,7 @@ CharSelectState::CharSelectState(TextureManager* texMgr, AudioManager* audMgr)
     if (!fontLoaded) fontLoaded = this->font.loadFromFile("C:\\Windows\\Fonts\\Arial.ttf");
     if (!fontLoaded) fontLoaded = this->font.loadFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
 
-    this->highlightBox.setSize(sf::Vector2f(290.f, 460.f));
+    this->highlightBox.setSize(sf::Vector2f(296.f, 455.f));
     this->highlightBox.setFillColor(sf::Color(255, 255, 0, 50));
     this->highlightBox.setOutlineColor(sf::Color(255, 215, 0));
     this->highlightBox.setOutlineThickness(4.f);

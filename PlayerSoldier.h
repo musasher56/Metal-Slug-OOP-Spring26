@@ -61,8 +61,9 @@ public:
     float getAimAngle()        const { return this->aimController.getAngle(); }
     int   getEnemyBulletHits() const { return this->enemyBulletHits; }
 
-    
-    
+    Weapon* getCurrentWeapon() const { return this->currentWeapon; }
+    int     getGrenadeCount() const { return this->grenadeCount; }
+
     const char* getCurrentWeaponName() const;
 
     

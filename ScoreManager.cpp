@@ -1,6 +1,6 @@
 #include "ScoreManager.h"
 
-ScoreManager::ScoreManager() : score(0), comboMultiplier(1.0f) {
+ScoreManager::ScoreManager() : score(0), highScore(0), comboMultiplier(1.0f) {
 }
 
 ScoreManager::~ScoreManager() {
@@ -58,11 +58,22 @@ void ScoreManager::addLevelClearBonus(int mode, bool flawless) {
     }
 }
 
+void ScoreManager::updateHighScore() {
+    if (this->score > this->highScore) {
+        this->highScore = this->score;
+    }
+}
+
 int ScoreManager::getScore() const {
     return this->score;
 }
 
+int ScoreManager::getHighScore() const {
+    return this->highScore;
+}
+
 void ScoreManager::reset() {
+    this->updateHighScore();
     this->score = 0;
     this->comboMultiplier = 1.0f;
 }

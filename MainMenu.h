@@ -32,9 +32,20 @@ private:
     RectangleShape overlay;
     RectangleShape selector;
 
-    // Level select boxes
-    RectangleShape levelBoxes[4];
+    // Level select highlight box (like character select)
+    RectangleShape levelHighlightBox;
+    FloatRect levelSlotRects[4];
     int hoveredLevel;
+
+    // Title screen background
+    Texture titleScreenTex;
+    Sprite  titleScreenSprite;
+    bool    titleScreenLoaded;
+
+    // Level select background
+    Texture levelSelectBgTex;
+    Sprite  levelSelectBgSprite;
+    bool    levelSelectBgLoaded;
 
     Clock splashTimer;
     Clock videoTimer;
@@ -51,4 +62,6 @@ private:
     void drawSplash(RenderWindow& window);
     void drawMain(RenderWindow& window);
     void drawLevelSelect(RenderWindow& window);
+
+    void buildLevelSlotPositions();
 };

@@ -7,8 +7,7 @@
 #include "HUD.h"
 #include "BlockManager.h"
 #include "DamagableEntity.h"
-#include "PerlinNoise.h"  // all noise classes in one file
-#include <cstdio>
+#include "PerlinNoise.h"
 #include <cmath>
 
 
@@ -23,8 +22,7 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
     movingLeft(false), movingRight(false),
     gameWindow(nullptr),
     lastMouseWorld(0.f, 0.f),
-    debugMode(true)
-    , showHitboxes(true), stateManager(nullptr)
+    stateManager(nullptr)
     , flyingTaraPhase(0)
     , submarineSpawned(false)
     , waterBaseY(574.f)
@@ -58,16 +56,6 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
     if (this->characterManager != nullptr) {
         this->characterManager->setProjectileManager(this->projectileManager);
     }
-
-    bool fontLoaded = this->debugFont.loadFromFile("/System/Library/Fonts/Helvetica.ttc");
-    if (!fontLoaded) fontLoaded = this->debugFont.loadFromFile("/Library/Fonts/Arial.ttf");
-    if (!fontLoaded) fontLoaded = this->debugFont.loadFromFile("C:\\Windows\\Fonts\\Arial.ttf");
-    if (!fontLoaded) fontLoaded = this->debugFont.loadFromFile("resources/font.ttf");
-
-    this->debugText.setFont(this->debugFont);
-    this->debugText.setCharacterSize(16);
-    this->debugText.setFillColor(Color(0, 255, 0));
-    this->debugText.setPosition(10.f, 10.f);
 
     this->bloodOverlayTex.loadFromFile("resources/Sprites/blood-overlay.png");
     this->bloodOverlaySprite.setTexture(this->bloodOverlayTex);
@@ -674,8 +662,13 @@ void PlayState::update(float dt) {
         this->projectileManager->checkEnemyBulletHitPlayer(player);
     }
 
+    // ── Update HUD (HP, score, weapon) AFTER damage is applied ──
     if (this->hud && this->characterManager) {
         this->hud->update(this->characterManager, this->currentLevelIndex + 1);
+        if (this->scoreManager != nullptr) {
+            this->hud->setScore(this->scoreManager->getScore());
+            this->hud->setHighScore(this->scoreManager->getHighScore());
+        }
     }
 
     if (this->projectileManager && lvl != nullptr)
@@ -918,129 +911,6 @@ void PlayState::render(RenderWindow& window) {
 
     if (this->hud)               this->hud->draw(window);
     this->renderBloodOverlay(window);
-    if (this->showHitboxes)    this->renderHitboxes(window);
-    if (this->debugMode)         this->renderDebug(window);
-}
-
-void PlayState::renderDebug(RenderWindow& window) {
-    PlayerSoldier* player = this->characterManager
-        ? this->characterManager->getCurrentCharacter() : nullptr;
-    char buf[512]; buf[0] = '\0';
-    char line[128];
-    int k = 0;
-    auto append = [&](const char* src) {
-        int j = 0; while (src[j]) buf[k++] = src[j++]; buf[k] = '\0';
-        };
-
-    const char* modeStr = (this->gameMode == MODE_CAMPAIGN) ? "Campaign" : "Survival";
-    // Campaign has 1 Perlin level; Survival has TOTAL_LEVELS predefined levels
-    int displayTotal = (this->gameMode == MODE_CAMPAIGN) ? 1 : TOTAL_LEVELS;
-    sprintf(line, "Mode: %s  Level: %d/%d  Projectiles: %d\n",
-        modeStr, this->currentLevelIndex + 1, displayTotal,
-        this->projectileManager ? this->projectileManager->getActiveCount() : -1);
-    append(line);
-    sprintf(line, "Blocks: %d / %d  Enemies: %d  Vehicles: %d\n",
-        this->blockManager ? this->blockManager->getActiveCount() : -1,
-        this->blockManager ? this->blockManager->getTotalCount() : -1,
-        this->enemyManager ? this->enemyManager->getActiveCount() : -1,
-        this->enemyVehicleManager ? this->enemyVehicleManager->getActiveCount() : -1);
-    append(line);
-    if (this->gameMode == MODE_CAMPAIGN) {
-        const char* profileStr = (this->campaignProfileType == NOISE_AMPLIFIED) ? "Amplified" :
-            (this->campaignProfileType == NOISE_FLAT) ? "Flat" : "Normal";
-        sprintf(line, "Terrain Profile: %s  Seed: %d\n", profileStr, this->campaignSeed);
-        append(line);
-    }
-    sprintf(line, "Aim: %.1f deg  |  Mouse: (%.0f, %.0f)\n",
-        player ? player->getAimAngle() : -1.f,
-        this->lastMouseWorld.x, this->lastMouseWorld.y);
-    append(line);
-    if (player) {
-        sf::Vector2f p = player->getPosition();
-        sprintf(line, "Player: (%.0f, %.0f)  Scroll: (%.0f, %.0f)\n",
-            p.x, p.y, this->scroll, this->scrollY);
-    }
-    else {
-        sprintf(line, "Player: NULL\n");
-    }
-    append(line);
-    sprintf(line, "X=Shoot  C=Grenade  Arrows=Move  Space=Jump  Z=Switch  H=Hitboxes");
-    append(line);
-
-    this->debugText.setString(buf);
-    RectangleShape bg(sf::Vector2f(480.f, 150.f));
-    bg.setFillColor(Color(0, 0, 0, 170));
-    bg.setPosition(5.f, 5.f);
-    window.draw(bg);
-    window.draw(this->debugText);
-}
-
-void PlayState::renderHitboxes(RenderWindow& window) {
-    PlayerSoldier* player = this->characterManager
-        ? this->characterManager->getCurrentCharacter() : nullptr;
-
-    if (player != nullptr) {
-        IntRect box = player->getBoundingBox();
-        RectangleShape rect(sf::Vector2f((float)box.width, (float)box.height));
-        rect.setPosition((float)box.left - this->scroll,
-            (float)box.top - this->scrollY);
-        rect.setFillColor(Color(0, 255, 0, 50));
-        rect.setOutlineColor(Color(0, 255, 0));
-        rect.setOutlineThickness(2.f);
-        window.draw(rect);
-    }
-
-    if (this->enemyManager != nullptr) {
-        DamagableEntity** enemies = this->enemyManager->getDamagableSlots();
-        int count = this->enemyManager->getActiveCount();
-        for (int i = 0; i < count; i++) {
-            DamagableEntity* e = enemies[i];
-            if (e == nullptr) continue;
-            IntRect box = e->getBoundingBox();
-            RectangleShape rect(sf::Vector2f((float)box.width, (float)box.height));
-            rect.setPosition((float)box.left - this->scroll,
-                (float)box.top - this->scrollY);
-            rect.setFillColor(Color(255, 50, 50, 50));
-            rect.setOutlineColor(Color(255, 50, 50));
-            rect.setOutlineThickness(2.f);
-            window.draw(rect);
-        }
-    }
-
-    if (this->enemyVehicleManager != nullptr) {
-        DamagableEntity** vehicles = this->enemyVehicleManager->getDamagableSlots();
-        int vCount = this->enemyVehicleManager->getActiveCount();
-        for (int i = 0; i < vCount; i++) {
-            DamagableEntity* v = vehicles[i];
-            if (v == nullptr) continue;
-            IntRect box = v->getBoundingBox();
-            RectangleShape rect(sf::Vector2f((float)box.width, (float)box.height));
-            rect.setPosition((float)box.left - this->scroll,
-                (float)box.top - this->scrollY);
-            rect.setFillColor(Color(255, 100, 255, 50));
-            rect.setOutlineColor(Color(255, 100, 255));
-            rect.setOutlineThickness(2.f);
-            window.draw(rect);
-        }
-    }
-
-    if (this->projectileManager != nullptr) {
-        Projectile** projs = this->projectileManager->getSlots();
-        int pCount = this->projectileManager->getActiveCount();
-        for (int i = 0; i < pCount; i++) {
-            Projectile* p = projs[i];
-            if (p == nullptr || !p->getStatus()) continue;
-
-            IntRect box = p->getBoundingBox();
-            RectangleShape rect(sf::Vector2f((float)box.width, (float)box.height));
-            rect.setPosition((float)box.left - this->scroll,
-                (float)box.top - this->scrollY);
-            rect.setFillColor(Color(255, 255, 0, 80));
-            rect.setOutlineColor(Color(255, 255, 0));
-            rect.setOutlineThickness(1.f);
-            window.draw(rect);
-        }
-    }
 }
 
 void PlayState::renderBloodOverlay(RenderWindow& window) {
@@ -1053,29 +923,20 @@ void PlayState::renderBloodOverlay(RenderWindow& window) {
 }
 
 void PlayState::handleEvent(Event& event) {
-    // Forward to CharacterManager first so gameplay keys (Space=jump, etc.)
-    // are processed before debug toggles.
-    if (this->characterManager) {
-        this->characterManager->handleInput(event);
+    if (event.type == Event::KeyPressed && event.key.code == Keyboard::Z) {
+        if (this->characterManager != nullptr) {
+            this->characterManager->switchCharacter();
+        }
     }
 
-    if (event.type == Event::KeyPressed) {
-        if (event.key.code == Keyboard::H) {
-            this->showHitboxes = !this->showHitboxes;
-        }
-        if (event.key.code == Keyboard::T) {
-            this->hudVisible = !this->hudVisible;
-            this->debugMode = this->hudVisible;
-            this->showHitboxes = this->hudVisible;
-        }
-        if (event.key.code == Keyboard::G) {
-            this->devModeActive = !this->devModeActive;
-        }
-    }
+    if (this->characterManager)
+        this->characterManager->handleInput(event);
 }
 
 void PlayState::onEnter() {}
-void PlayState::onExit() {}
 
-void PlayState::spawnTestBlocks() {}
-void PlayState::spawnTestEnemies() {}
+void PlayState::onExit() {
+    if (this->audManager != nullptr) {
+        this->audManager->stopMusic();
+    }
+}
