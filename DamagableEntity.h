@@ -1,8 +1,6 @@
 #pragma once
 #include "Entity.h"
 
-
-
 class DamagableEntity : public Entity {
 protected:
     int health;
@@ -13,7 +11,6 @@ protected:
 public:
     DamagableEntity(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~DamagableEntity();
-
     virtual void takeDamage(int amount);
     virtual void takeDamageFrom(int amount, int bulletDir);
     virtual void onDeath() = 0;
