@@ -1,16 +1,9 @@
 #include "Collectible.h"
-
-
-
-Collectible::Collectible(TextureManager* texMgr, AudioManager* audMgr)
-    : Entity(texMgr, audMgr)
-    , boundingBox(0, 0, 32, 32)
-{}
+Collectible::Collectible(TextureManager* texMgr, AudioManager* audMgr): Entity(texMgr, audMgr), boundingBox(0, 0, 32, 32){}
 
 Collectible::~Collectible() {}
 
 void Collectible::update(float scroll, void* lvl) {
-    
     (void)scroll;
     (void)lvl;
 }
@@ -25,13 +18,7 @@ IntRect Collectible::getBoundingBox() const {
     return this->boundingBox;
 }
 
-
-
-InteractableObject::InteractableObject(TextureManager* texMgr, AudioManager* audMgr)
-    : Entity(texMgr, audMgr)
-    , boundingBox(0, 0, 32, 48)
-    , interactRadius(50.f)
-{}
+InteractableObject::InteractableObject(TextureManager* texMgr, AudioManager* audMgr): Entity(texMgr, audMgr), boundingBox(0, 0, 32, 48), interactRadius(50.f){}
 
 InteractableObject::~InteractableObject() {}
 
@@ -42,7 +29,6 @@ bool InteractableObject::isInRange(sf::Vector2f pos) const {
 }
 
 void InteractableObject::update(float scroll, void* lvl) {
-    
     (void)scroll;
     (void)lvl;
 }
@@ -56,52 +42,25 @@ void InteractableObject::draw(RenderWindow& window, float scrollX, float scrollY
 IntRect InteractableObject::getBoundingBox() const {
     return this->boundingBox;
 }
-
-
-
-Food::Food(TextureManager* texMgr, AudioManager* audMgr, bool turkey)
-    : Collectible(texMgr, audMgr)
-    , isTurkey(turkey)
-    , saturation(turkey ? 3 : 2)  
-{}
+Food::Food(TextureManager* texMgr, AudioManager* audMgr, bool turkey): Collectible(texMgr, audMgr),isTurkey(turkey), saturation(turkey ? 3 : 2){}
 
 Food::~Food() {}
 
 void Food::onPickup(CharacterManager* cm) {
     if (cm == nullptr) return;
-    
-    
-    
-    
-    
     this->status = false;  
 }
 
-
-
-SupplyCrate::SupplyCrate(TextureManager* texMgr, AudioManager* audMgr)
-    : Collectible(texMgr, audMgr)
-    , containedWeapon(WEAPON_HMG)
-    , containedAmmo(50)
-    , handGrenades(2)
-    , fireBombGrenades(1)
-{}
+SupplyCrate::SupplyCrate(TextureManager* texMgr, AudioManager* audMgr): Collectible(texMgr, audMgr),containedWeapon(WEAPON_HMG),containedAmmo(50),handGrenades(2),fireBombGrenades(1){}
 
 SupplyCrate::~SupplyCrate() {}
 
 void SupplyCrate::onPickup(CharacterManager* cm) {
     if (cm == nullptr) return;
-    
-    
-    
-    
-    
-    
     this->status = false;  
 }
 
 void SupplyCrate::generateContents() {
-    
     int rand = std::rand() % 100;
     if (rand < 30) {
         this->containedWeapon = WEAPON_HMG;
@@ -121,27 +80,16 @@ void SupplyCrate::generateContents() {
     this->fireBombGrenades = std::rand() % 2;    
 }
 
-
-
-POWPrisoner::POWPrisoner(TextureManager* texMgr, AudioManager* audMgr)
-    : InteractableObject(texMgr, audMgr)
-    , freed(false)
-{}
+POWPrisoner::POWPrisoner(TextureManager* texMgr, AudioManager* audMgr): InteractableObject(texMgr, audMgr),freed(false){}
 
 POWPrisoner::~POWPrisoner() {}
 
 void POWPrisoner::onInteract(CharacterManager* cm) {
     if (this->freed || cm == nullptr) return;
-    
     this->free(cm);
 }
 
 void POWPrisoner::free(CharacterManager* cm) {
     this->freed = true;
-    
-    
-    
-    
-    
     this->status = false;  
 }

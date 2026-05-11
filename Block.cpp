@@ -70,7 +70,8 @@ void Block::onDeath() {
 void Block::update(float scroll, Level* lvl) {
     (void)scroll;
     (void)lvl;
-    if (!this->status) return;
+    if (!this->status)
+    {return;}
     if (this->destroying) {
         this->updateAnimation();
         if (this->animation.isFinished()) {

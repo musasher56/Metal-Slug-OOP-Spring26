@@ -4,20 +4,12 @@
 
 const char* CharSelectState::CHAR_NAMES[4] = { "Marco", "Eri", "Tarma", "Fio" };
 
-CharSelectState::CharSelectState(TextureManager* texMgr, AudioManager* audMgr)
-    : texManager(texMgr)
-    , audManager(audMgr)
-    , bgLoaded(false)
-    , fontLoaded(false)
-    , hoveredChar(0)
+CharSelectState::CharSelectState(TextureManager* texMgr, AudioManager* audMgr): texManager(texMgr),audManager(audMgr)
+,bgLoaded(false),fontLoaded(false),hoveredChar(0)
 {
     this->id = GSTATE_CHAR_SELECT;
     this->shouldGoBack = false;
     this->shouldExit = false;
-    
-    
-    
-
     if (this->bgTexture.loadFromFile("resources/Sprites/CharacterSelect.png")) {
         this->bgLoaded = true;
         sf::Vector2u texSize = this->bgTexture.getSize();
@@ -37,7 +29,6 @@ CharSelectState::CharSelectState(TextureManager* texMgr, AudioManager* audMgr)
     this->highlightBox.setFillColor(sf::Color(255, 255, 0, 50));
     this->highlightBox.setOutlineColor(sf::Color(255, 215, 0));
     this->highlightBox.setOutlineThickness(4.f);
-
     this->buildSlotPositions();
 }
 
@@ -135,7 +126,6 @@ void CharSelectState::render(RenderWindow& window) {
 
         sf::Text hint;
         hint.setFont(this->font);
-        hint.setString("[LEFT/RIGHT] Browse  [1/2/3/4] Select  [ENTER] Confirm  [ESC] Back");
         hint.setCharacterSize(22);
         hint.setFillColor(sf::Color(180, 180, 180));
         sf::FloatRect hb = hint.getLocalBounds();
@@ -154,10 +144,18 @@ void CharSelectState::handleEvent(sf::Event& event) {
     else if (event.key.code == sf::Keyboard::Right) {
         this->hoveredChar = (this->hoveredChar + 1) % 4;
     }
-    else if (event.key.code == sf::Keyboard::Num1) { this->hoveredChar = 0; this->selectedChar = 0; }
-    else if (event.key.code == sf::Keyboard::Num2) { this->hoveredChar = 1; this->selectedChar = 1; }
-    else if (event.key.code == sf::Keyboard::Num3) { this->hoveredChar = 2; this->selectedChar = 2; }
-    else if (event.key.code == sf::Keyboard::Num4) { this->hoveredChar = 3; this->selectedChar = 3; }
+    else if (event.key.code == sf::Keyboard::Num1) {
+        this->hoveredChar = 0; this->selectedChar = 0;
+    }
+    else if (event.key.code == sf::Keyboard::Num2) {
+        this->hoveredChar = 1; this->selectedChar = 1;
+    }
+    else if (event.key.code == sf::Keyboard::Num3) {
+        this->hoveredChar = 2; this->selectedChar = 2;
+    }
+    else if (event.key.code == sf::Keyboard::Num4) {
+        this->hoveredChar = 3; this->selectedChar = 3;
+    }
     else if (event.key.code == sf::Keyboard::Return || event.key.code == sf::Keyboard::Space) {
         this->selectedChar = this->hoveredChar;
     }
@@ -175,7 +173,6 @@ void CharSelectState::onEnter() {
 void CharSelectState::onExit() {}
 
 GameState* CharSelectState::createNextState() {
-    
     if (this->selectedChar >= 0 && this->selectedChar <= 3) {
         PlayState* play = new PlayState(this->gameMode,
             this->selectedChar,

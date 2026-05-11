@@ -2,17 +2,13 @@
 #include "Level.h"
 #include "TextureManager.h"
 
-
 const int BlockManager::heightmap[BlockManager::MOUNTAIN_HEIGHTMAP_LEN] = {
-
      1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-
       1, 1, 2, 2, 3, 3, 4, 4, 5, 5,
       6, 6, 7, 7, 8, 8, 9, 9,10,10,
      11,11,12,12,13,13,14,14,15,15,
      16,16,17,17,18,18,19,19,20,20,
      21,21,22,22,23,23,24,24,25,25,
-
      25,25,25,25,25,25,25,25,25,25,
      25,25,25,25,25,25,25,25,25,25,
      25,25,25,25,25,25,25,25,25,25,
@@ -20,24 +16,16 @@ const int BlockManager::heightmap[BlockManager::MOUNTAIN_HEIGHTMAP_LEN] = {
      25,25,25,25,25,25,25,25,25,25,
      25,25,25,25,25,25,25,25,25,25,
      25,25,25,25,25,25,25,25,25,25,
-
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
 
-BlockManager::BlockManager(TextureManager* texMgr, AudioManager* audMgr, Level* lvl)
-    : blockCount(0)
-    , texMgr(texMgr)
-    , audMgr(audMgr)
-    , level(lvl)
-    , activeCount(0)
-    , mountainBlockCount(0)
+BlockManager::BlockManager(TextureManager* texMgr, AudioManager* audMgr, Level* lvl): blockCount(0),texMgr(texMgr),audMgr(audMgr),level(lvl),activeCount(0),mountainBlockCount(0)
 {
     for (int i = 0; i < MAX_BLOCKS; i++) {
         this->blocks[i] = nullptr;
@@ -57,7 +45,6 @@ BlockManager::~BlockManager() {
     }
     this->blockCount = 0;
     this->activeCount = 0;
-
     for (int i = 0; i < this->mountainBlockCount; i++) {
         if (this->mountainBlocks[i] != nullptr) {
             delete this->mountainBlocks[i];
@@ -70,12 +57,9 @@ BlockManager::~BlockManager() {
 void BlockManager::spawnBlock(float worldX, float worldY) {
     if (this->blockCount >= MAX_BLOCKS) return;
     if (this->level == nullptr) return;
-
     int cellSize = this->level->getCellSize();
-
     int col = static_cast<int>(worldX / cellSize);
     int row = static_cast<int>(worldY / cellSize);
-
     if (col < 0 || col >= this->level->getWidth()) return;
     if (row < 0 || row >= this->level->getHeight()) return;
 
@@ -85,7 +69,6 @@ void BlockManager::spawnBlock(float worldX, float worldY) {
         int existRow = static_cast<int>(this->blocks[i]->getPosition().y / cellSize);
         if (existCol == col && existRow == row) return;
     }
-
     Block* b = new Block(this->texMgr, this->audMgr, worldX, worldY, this->level);
     if (b != nullptr) {
         this->blocks[this->blockCount++] = b;
@@ -95,15 +78,11 @@ void BlockManager::spawnBlock(float worldX, float worldY) {
 void BlockManager::spawnIndestructibleBlock(float worldX, float worldY) {
     if (this->blockCount >= MAX_BLOCKS) return;
     if (this->level == nullptr) return;
-
     int cellSize = this->level->getCellSize();
-
     int col = static_cast<int>(worldX / cellSize);
     int row = static_cast<int>(worldY / cellSize);
-
     if (col < 0 || col >= this->level->getWidth()) return;
     if (row < 0 || row >= this->level->getHeight()) return;
-
     for (int i = 0; i < this->blockCount; i++) {
         if (this->blocks[i] == nullptr || !this->blocks[i]->getStatus()) continue;
         int existCol = static_cast<int>(this->blocks[i]->getPosition().x / cellSize);
@@ -128,25 +107,19 @@ void BlockManager::spawnPlatform(float startX, float startY, int count) {
     }
 }
 
-
 void BlockManager::buildGroundTerrain(int surfaceRow, int depth) {
     if (this->level == nullptr) return;
-
     int cellSize = this->level->getCellSize();
 
     for (int rowOff = 0; rowOff < depth; rowOff++) {
         int row = surfaceRow + rowOff;
         if (row >= this->level->getHeight()) break;
-
         float wy = static_cast<float>(row) * cellSize;
-
         for (int col = 0; col < this->level->getWidth()
             && this->mountainBlockCount < MAX_MOUNTAIN_BLOCKS; col++) {
             float wx = static_cast<float>(col) * cellSize;
-
             MountainBlock* mb = new MountainBlock(this->texMgr, wx, wy);
             this->mountainBlocks[this->mountainBlockCount++] = mb;
-
             this->level->setSolid(row, col, true);
         }
     }
@@ -158,16 +131,12 @@ void BlockManager::buildMountainTerrain(float baseX, float baseY, int maxColHeig
 
     for (int col = 0; col < MOUNTAIN_HEIGHTMAP_LEN && this->mountainBlockCount < MAX_MOUNTAIN_BLOCKS; col++) {
         int colHeight = heightmap[col];
-        // Cap column height for smaller mountains (e.g. boss level with no vertical scroll)
         if (colHeight > maxColHeight) colHeight = maxColHeight;
         float wx = baseX + col * MOUNTAIN_COL_STEP;
-
         for (int row = 0; row < colHeight && this->mountainBlockCount < MAX_MOUNTAIN_BLOCKS; row++) {
             float wy = baseY - (row + 1) * bsz;
-
             MountainBlock* mb = new MountainBlock(this->texMgr, wx, wy);
             this->mountainBlocks[this->mountainBlockCount++] = mb;
-
             if (this->level != nullptr) {
                 int gc = static_cast<int>(wx + bsz * 0.5f) / cellSize;
                 int gr = static_cast<int>(wy + bsz * 0.5f) / cellSize;
@@ -177,53 +146,21 @@ void BlockManager::buildMountainTerrain(float baseX, float baseY, int maxColHeig
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// buildProceduralTerrain — build terrain from a generated heightmap
-//
-// This is the SAME as buildMountainTerrain, but instead of using the
-// hardcoded heightmap[] array, it takes a dynamically generated one.
-//
-// The heightmap is produced by FractalNoise::generateHeightMap().
-// Each entry = number of MountainBlocks to stack upward from baseY.
-//
-// HOW TO USE:
-//   1. Create PerlinNoise(seed)
-//   2. Create FractalNoise(&perlin)
-//   3. Create NoiseProfile* profile = NoiseProfile::create(NOISE_AMPLIFIED)
-//   4. fractalNoise->setProfile(profile)
-//   5. fractalNoise->generateHeightMap(levelWidth, heightmapArray)
-//   6. blockManager->buildProceduralTerrain(baseX, baseY, heightmapArray, levelWidth)
-//   7. delete profile; delete fractalNoise; delete perlin;
-//
-// That's the entire pipeline. 6 lines of code for infinite procedural terrain.
-// ─────────────────────────────────────────────────────────────────────────────
-
-void BlockManager::buildProceduralTerrain(float baseX, float baseY,
-    int* heightmap, int heightmapLen, int maxColHeight)
+void BlockManager::buildProceduralTerrain(float baseX, float baseY,int* heightmap, int heightmapLen, int maxColHeight)
 {
     if (heightmap == nullptr || heightmapLen <= 0) return;
-
-    int bsz = MountainBlock::BLOCK_SIZE;  // 48
+    int bsz = MountainBlock::BLOCK_SIZE;
     int cellSize = 48;
-
     for (int col = 0; col < heightmapLen && this->mountainBlockCount < MAX_MOUNTAIN_BLOCKS; col++) {
         int colHeight = heightmap[col];
-
-        // Cap column height if requested (for levels with limited vertical space)
         if (colHeight > maxColHeight) colHeight = maxColHeight;
-
-        // Skip columns with zero height (gaps / valleys)
         if (colHeight <= 0) continue;
-
         float wx = baseX + (float)(col * bsz);
 
         for (int row = 0; row < colHeight && this->mountainBlockCount < MAX_MOUNTAIN_BLOCKS; row++) {
             float wy = baseY - (float)((row + 1) * bsz);
-
             MountainBlock* mb = new MountainBlock(this->texMgr, wx, wy);
             this->mountainBlocks[this->mountainBlockCount++] = mb;
-
-            // Mark this cell as solid in the Level grid for collision
             if (this->level != nullptr) {
                 int gc = static_cast<int>(wx + bsz * 0.5f) / cellSize;
                 int gr = static_cast<int>(wy + bsz * 0.5f) / cellSize;

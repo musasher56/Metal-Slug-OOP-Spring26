@@ -8,11 +8,10 @@ class Level;
 class TextureManager;
 class AudioManager;
 class FusionCompanion;
-class ProjectileManager;  
-
+class ProjectileManager;
 
 class CharacterManager {
-private:
+    private:
     PlayerSoldier* characters[4];
     int currentCharacter;
     int kills;
@@ -24,18 +23,11 @@ private:
     Clock fusionCooldown;
     TextureManager* texManager;
     AudioManager* audManager;
-
-    
-    
-    
-    
-    
     ProjectileManager* pm;
 
 public:
     CharacterManager(TextureManager* texMgr, AudioManager* audMgr, int startChar = 0);
     virtual ~CharacterManager();
-
     void update(float dt, Level* lvl);
     void draw(RenderWindow& window, float scrollX, float scrollY);
     void handleInput(Event& event);
@@ -52,14 +44,6 @@ public:
     bool anyCharacterAlive();
     void saveData(float scroll);
     void loadData(float scroll);
-
-    
-    
-    
     void setProjectileManager(ProjectileManager* manager);
-
-    
-    
-    
     void initAllPositions(sf::Vector2f startPos);
 };

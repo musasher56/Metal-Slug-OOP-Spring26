@@ -1,29 +1,20 @@
 #include "DamagableEntity.h"
 
-DamagableEntity::DamagableEntity(TextureManager* texMgr, AudioManager* audMgr)
-    : Entity(texMgr, audMgr)
-    , health(3)
-    , maxHealth(3)
-    , boundingBox(0, 0, 32, 64)
-    , scoreValue(0)
-{
-}
+DamagableEntity::DamagableEntity(TextureManager* texMgr, AudioManager* audMgr): Entity(texMgr, audMgr), health(3)
+    , maxHealth(3), boundingBox(0, 0, 32, 64), scoreValue(0){}
 
 DamagableEntity::~DamagableEntity() {}
 
 void DamagableEntity::takeDamage(int amount) {
-    if (amount < 0) return;
+    if (amount < 0) {return;}
     this->health -= amount;
     if (this->health < 0) this->health = 0;
-
     if (this->health <= 0) {
         this->onDeath();
     }
 }
 
 void DamagableEntity::takeDamageFrom(int amount, int bulletDir) {
-    
-    
     (void)bulletDir;
     this->takeDamage(amount);
 }
