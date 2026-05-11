@@ -287,13 +287,12 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
         window.draw(bg);
     }
 
-    if (!this->fontLoaded) return;
+    if (!this->fontLoaded)
+        return;
 
-
-    // Draw level number keys below each slot (like character select)
     for (int i = 0; i < 4; i++) {
-        char numBuf[7];
-        numBuf[0] = 'Level1' + i;
+        char numBuf[2];
+        numBuf[0] = '1' + i;
         numBuf[1] = '\0';
 
         Text numText;
