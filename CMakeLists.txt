@@ -65,7 +65,7 @@ set(SOURCES
 
 # NOTE: MountainBlock is inside Block.h/Block.cpp, MountainManager is inside
 # BlockManager.h/BlockManager.cpp — no separate files needed
-add_executable(${PROJECT_NAME} ${SOURCES} "Block.h" "Block.cpp" "BlockManager.cpp" "EnemyVehicle.h" "EnemyVehicle.cpp" "EnemyVehicleManager.h" "EnemyVehicleManager.cpp" "LevelConfig.h"  )
+add_executable(${PROJECT_NAME} ${SOURCES} "Block.h" "Block.cpp" "BlockManager.cpp" "EnemyVehicle.h" "EnemyVehicle.cpp" "EnemyVehicleManager.h" "EnemyVehicleManager.cpp" "LevelConfig.h"   "collectibleManager.h" "collectibleManager.cpp")
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"

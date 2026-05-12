@@ -37,8 +37,8 @@ void AimController::drawAimLine(RenderWindow& window,sf::Vector2f charCenter,flo
 }
 
 float AimController::clampAngle(float raw) const {
-    if (raw < 0.f)
-    {return 0.f;}
+    if (raw < -20.f)
+    {return -20.f;}
     if (raw > 90.f)
     {return 90.f;}
     else

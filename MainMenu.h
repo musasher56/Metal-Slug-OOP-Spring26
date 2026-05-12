@@ -13,17 +13,19 @@ public:
     void update(float dt);
 
     int getSelectedMode() const {
-        return gameMode; }
+        return gameMode;
+    }
     int getSelectedLevel() const {
-        return selectedLevel; }
-    bool isReady() const;          
+        return selectedLevel;
+    }
+    bool isReady() const;
 
 private:
     char options[4][MAX_NAME_LEN];
     int selectedOption;
     int gameMode;
     int selectedLevel;
-    int menuState;  
+    int menuState;
 
     TextureManager* texManager;
     AudioManager* audManager;
@@ -35,7 +37,7 @@ private:
     RectangleShape selector;
 
     RectangleShape levelHighlightBox;
-    FloatRect levelSlotRects[4];
+    FloatRect levelSlotRects[5];
     int hoveredLevel;
 
     Texture titleScreenTex;

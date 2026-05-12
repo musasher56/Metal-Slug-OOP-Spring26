@@ -41,6 +41,8 @@ const int ENEMY_BRADLEY = 9;
 const int ENEMY_SUB = 10;
 const int ENEMY_BOSS_IRONOKAVA = 11;
 const int ENEMY_BOSS_HAIRBUSTER = 12;
+const int ENEMY_BOSS_SEASATAN = 13;
+const int ENEMY_BOSS_SHERRY = 14;
 
 const int NOISE_AMPLIFIED = 0;
 const int NOISE_FLAT = 1;
@@ -98,6 +100,7 @@ const int ENTITY_POOL_GROWTH = 100;
 
 const int HITS_PER_HEART = 3;
 const int PROJ_BOMB = 4;
+const int PROJ_MISSILE = 6;
 
 const int CELL_SIZE = 48;
 

@@ -9,7 +9,7 @@
 #include "DamagableEntity.h"
 #include "PerlinNoise.h"
 #include <cmath>
-
+#include <cstdlib>
 
 PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr, int startLvl)
     : entityManager(nullptr), enemyManager(nullptr), enemyVehicleManager(nullptr),
@@ -38,6 +38,9 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
     , campaignProfile(nullptr)
     , campaignSeed(42)
     , campaignProfileType(NOISE_NORMAL)
+    , campaignEnemyInterval(2.0f)
+    , campaignMaxAlive(12)
+    , campaignMinAlive(6)
 {
     this->id = GSTATE_PLAY;
 
@@ -49,6 +52,9 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
     this->projectileManager = new ProjectileManager(texMgr, audMgr);
     this->enemyManager = new EnemyManager(texMgr, audMgr);
     this->enemyManager->setProjectileManager(this->projectileManager);
+    this->enemyManager->setScoreManager(this->scoreManager);
+
+    this->collectibleManager = new CollectibleManager(texMgr);
 
     this->enemyVehicleManager = new EnemyVehicleManager(texMgr, audMgr);
     this->enemyVehicleManager->setProjectileManager(this->projectileManager);
@@ -72,55 +78,62 @@ PlayState::PlayState(int mode, int startChar, TextureManager* texMgr, AudioManag
         this->loadCampaignLevel();
     }
     else {
-        if (this->startLevel < 0) 
+        if (this->startLevel < 0) {
             this->startLevel = 0;
-        if (this->startLevel >= TOTAL_LEVELS)
+        }
+        if (this->startLevel >= TOTAL_LEVELS) {
             this->startLevel = TOTAL_LEVELS - 1;
+        }
         this->loadLevel(this->startLevel);
     }
 }
 
 PlayState::~PlayState() {
-    if (this->campaignProfile) { 
+    if (this->campaignProfile) {
         delete this->campaignProfile;
-        this->campaignProfile = nullptr; 
+        this->campaignProfile = nullptr;
     }
     if (this->fractalNoise) {
-        delete this->fractalNoise; 
+        delete this->fractalNoise;
         this->fractalNoise = nullptr;
     }
     if (this->enemyVehicleManager) {
-        delete this->enemyVehicleManager; 
+        delete this->enemyVehicleManager;
         this->enemyVehicleManager = nullptr;
+    }
+    if (this->collectibleManager) {
+        delete this->collectibleManager;
+        this->collectibleManager = nullptr;
     }
     if (this->enemyManager) {
         delete this->enemyManager;
         this->enemyManager = nullptr;
     }
-    if (this->blockManager) { 
-        delete this->blockManager;  
+    if (this->blockManager) {
+        delete this->blockManager;
         this->blockManager = nullptr;
     }
-    if (this->projectileManager) { 
-        delete this->projectileManager; 
+    if (this->projectileManager) {
+        delete this->projectileManager;
         this->projectileManager = nullptr;
     }
-    if (this->levelManager) { 
-        delete this->levelManager;   
+    if (this->levelManager) {
+        delete this->levelManager;
         this->levelManager = nullptr;
     }
-    if (this->characterManager) { 
+    if (this->characterManager) {
         delete this->characterManager;
         this->characterManager = nullptr;
     }
     if (this->scoreManager) {
-        delete this->scoreManager; 
-        this->scoreManager = nullptr; }
-    if (this->hud) { 
-        delete this->hud;            
-        this->hud = nullptr; }
+        delete this->scoreManager;
+        this->scoreManager = nullptr;
+    }
+    if (this->hud) {
+        delete this->hud;
+        this->hud = nullptr;
+    }
 }
-
 
 void PlayState::setCampaignProfile(int profileType) {
     if (profileType >= 0 && profileType < 3) {
@@ -128,10 +141,9 @@ void PlayState::setCampaignProfile(int profileType) {
     }
 }
 
-
 void PlayState::loadCampaignLevel() {
     this->currentLevelIndex = 0;
-    this->currentConfig = &CAMPAIGN_LEVEL;  
+    this->currentConfig = &CAMPAIGN_LEVEL;
 
     this->scroll = 0.f;
     this->scrollY = 0.f;
@@ -143,16 +155,23 @@ void PlayState::loadCampaignLevel() {
     this->bossFelledTriggered = false;
     this->bossesSpawned = 0;
     this->bossesDefeated = 0;
+    this->campaignEnemyClock.restart();
 
-    if (this->enemyManager)
+    if (this->enemyManager) {
         this->enemyManager->clearAll();
-    if (this->enemyVehicleManager)
+    }
+    if (this->enemyVehicleManager) {
         this->enemyVehicleManager->clearAll();
-    if (this->projectileManager) 
+    }
+    if (this->projectileManager) {
         this->projectileManager->clearAll();
+    }
     if (this->blockManager) {
         delete this->blockManager;
         this->blockManager = nullptr;
+    }
+    if (this->collectibleManager) {
+        this->collectibleManager->clearAll();
     }
 
     if (this->campaignProfile != nullptr) {
@@ -194,10 +213,12 @@ void PlayState::loadCampaignLevel() {
         float spawnWorldX = 200.f;
 
         int spawnCol = static_cast<int>(spawnWorldX) / cellSize - worldOffX;
-        if (spawnCol < 0)
+        if (spawnCol < 0) {
             spawnCol = 0;
-        if (spawnCol >= lvl->getWidth())
+        }
+        if (spawnCol >= lvl->getWidth()) {
             spawnCol = lvl->getWidth() - 1;
+        }
 
         int actualSurfaceRow = lvl->getSurfaceRow(spawnCol);
         float actualSurfaceY = (float)(actualSurfaceRow * cellSize);
@@ -206,12 +227,20 @@ void PlayState::loadCampaignLevel() {
         this->characterManager->initAllPositions(spawnPos);
     }
     this->scrollY = 0.f;
+
+    if (this->collectibleManager != nullptr && lvl != nullptr) {
+        float levelWidth = (float)(lvl->getWidth() * lvl->getCellSize());
+        int cellSize = lvl->getCellSize();
+        int surfaceRow = lvl->getHeight() - 3;
+        float surfaceY = (float)(surfaceRow * cellSize);
+        this->collectibleManager->spawnCollectibles(levelWidth, surfaceY, 0, false);
+    }
 }
 
-
 void PlayState::loadLevel(int levelIndex) {
-    if (levelIndex < 0 || levelIndex >= TOTAL_LEVELS)
+    if (levelIndex < 0 || levelIndex >= TOTAL_LEVELS) {
         return;
+    }
 
     this->currentLevelIndex = levelIndex;
     this->currentConfig = ALL_LEVELS[levelIndex];
@@ -229,13 +258,22 @@ void PlayState::loadLevel(int levelIndex) {
     this->bossesSpawned = 0;
     this->bossesDefeated = 0;
 
-    if (this->enemyManager) this->enemyManager->clearAll();
-    if (this->enemyVehicleManager) this->enemyVehicleManager->clearAll();
-    if (this->projectileManager) this->projectileManager->clearAll();
+    if (this->enemyManager) {
+        this->enemyManager->clearAll();
+    }
+    if (this->enemyVehicleManager) {
+        this->enemyVehicleManager->clearAll();
+    }
+    if (this->projectileManager) {
+        this->projectileManager->clearAll();
+    }
 
     if (this->blockManager) {
         delete this->blockManager;
         this->blockManager = nullptr;
+    }
+    if (this->collectibleManager) {
+        this->collectibleManager->clearAll();
     }
 
     if (this->levelManager) {
@@ -283,8 +321,9 @@ void PlayState::loadLevel(int levelIndex) {
             else {
                 for (int rowOff = 0; rowOff < 3; rowOff++) {
                     int row = surfaceRow + rowOff;
-                    if (row >= lvl->getHeight())
+                    if (row >= lvl->getHeight()) {
                         break;
+                    }
                     for (int col = 0; col < lvl->getWidth(); col++) {
                         lvl->setSolid(row, col, true);
                     }
@@ -314,12 +353,27 @@ void PlayState::loadLevel(int levelIndex) {
 
                 if (cfg->bossType == ENEMY_BOSS_IRONOKAVA) {
                     float bossX = 1500.f;
-                    this->enemyManager->spawnIronokava(bossX, surfaceY - bossFootOffset);
-                    this->bossesSpawned = 1;
+                    int result = this->enemyManager->spawnIronokava(bossX, surfaceY - bossFootOffset);
+                    if (result >= 0) {
+                        this->bossesSpawned = 1;
+                    }
+                }
+                else if (cfg->bossType == ENEMY_BOSS_SHERRY) {
+                    float bossX = 1500.f;
+                    float sherryFootOffset = 300.f;
+                    int result = this->enemyManager->spawnSherry(bossX, surfaceY - sherryFootOffset);
+                    if (result >= 0) {
+                        this->bossesSpawned = 1;
+                    }
+                    // Play menu music for Sherry boss level
+                    if (this->audManager != nullptr) {
+                        this->audManager->playMusicTrack(0);
+                    }
                 }
             }
 
-            if (cfg->isBossLevel && this->blockManager != nullptr && lvl != nullptr) {
+            if (cfg->isBossLevel && this->blockManager != nullptr && lvl != nullptr
+                && cfg->bossType == ENEMY_BOSS_IRONOKAVA) {
                 int cs = lvl->getCellSize();
                 int surfaceRow = lvl->getHeight() - 3;
                 float surfaceY = (float)(surfaceRow * cs);
@@ -374,21 +428,34 @@ void PlayState::loadLevel(int levelIndex) {
 
             if (!cfg->enableVerticalScroll) {
                 this->scrollY = surfaceY - (float)SCREEN_H * 0.85f;
-                if (this->scrollY < 0.f) this->scrollY = 0.f;
+                if (this->scrollY < 0.f) {
+                    this->scrollY = 0.f;
+                }
+            }
+
+            if (this->collectibleManager != nullptr) {
+                float lvlWidth = cfg->levelWidth > 0.f
+                    ? cfg->levelWidth
+                    : (float)(lvl->getWidth() * lvl->getCellSize());
+                this->collectibleManager->spawnCollectibles(
+                    lvlWidth, surfaceY, levelIndex, cfg->isBossLevel);
             }
         }
     }
 }
 
 void PlayState::spawnEnemiesFromConfig() {
-    if (this->enemyManager == nullptr) 
+    if (this->enemyManager == nullptr) {
         return;
-    if (this->currentConfig == nullptr)
+    }
+    if (this->currentConfig == nullptr) {
         return;
+    }
 
     Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
-    if (lvl == nullptr)
+    if (lvl == nullptr) {
         return;
+    }
 
     int cellSize = lvl->getCellSize();
     int surfaceRow = lvl->getHeight() - 3;
@@ -421,13 +488,14 @@ void PlayState::spawnEnemiesFromConfig() {
                     ex = mtBaseX + 90.f * 48.f;
                     ey = mtTop90 - rebelFootOffset;
                 }
-                else if (i % 4 == 2) { 
+                else if (i % 4 == 2) {
                     ex = mtBaseX + 65.f * 48.f;
-                    ey = mtTop65 - rebelFootOffset; 
+                    ey = mtTop65 - rebelFootOffset;
                 }
                 else {
                     ex = mtBaseX + 80.f * 48.f;
-                    ey = mtTop90 - rebelFootOffset; }
+                    ey = mtTop90 - rebelFootOffset;
+                }
             }
             else {
                 ex = (float)(15 + i * 8) * 48.f;
@@ -459,10 +527,12 @@ void PlayState::spawnEnemiesFromConfig() {
 }
 
 void PlayState::spawnPlatformsFromConfig() {
-    if (this->blockManager == nullptr) 
+    if (this->blockManager == nullptr) {
         return;
-    if (this->currentConfig == nullptr)
+    }
+    if (this->currentConfig == nullptr) {
         return;
+    }
 
     const LevelConfig* cfg = this->currentConfig;
     for (int i = 0; i < cfg->platformCount && i < 10; i++) {
@@ -473,25 +543,121 @@ void PlayState::spawnPlatformsFromConfig() {
     }
 }
 
-void PlayState::checkLevelTransition() {
- 
-    if (this->gameMode == MODE_CAMPAIGN)
+void PlayState::spawnCampaignEnemies() {
+    if (this->gameMode != MODE_CAMPAIGN) {
         return;
+    }
+    if (this->enemyManager == nullptr) {
+        return;
+    }
+    if (this->characterManager == nullptr) {
+        return;
+    }
 
-    if (this->hud != nullptr && this->hud->isFelledShowing())
+    PlayerSoldier* player = this->characterManager->getCurrentCharacter();
+    if (player == nullptr) {
         return;
+    }
+
+    Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
+    if (lvl == nullptr) {
+        return;
+    }
+
+    int alive = this->enemyManager->getActiveCount();
+    if (this->enemyManager->hasActiveBoss()) {
+        alive--;
+    }
+
+    if (alive >= this->campaignMinAlive) {
+        return;
+    }
+
+    float elapsed = this->campaignEnemyClock.getElapsedTime().asSeconds();
+    if (elapsed < this->campaignEnemyInterval && alive > 0) {
+        return;
+    }
+
+    this->campaignEnemyClock.restart();
+
+    int toSpawn = this->campaignMaxAlive - alive;
+    if (toSpawn > 4) {
+        toSpawn = 4;
+    }
+
+    float playerX = player->getPosition().x;
+    int cellSize = lvl->getCellSize();
+    int worldOffX = lvl->getWorldOffX();
+
+    for (int i = 0; i < toSpawn; i++) {
+        float offset = (float)(SCREEN_W * 2 / 3) + (float)(std::rand() % 800);
+        if (std::rand() % 10 < 3) {
+            offset = -(float)(SCREEN_W / 2) - (float)(std::rand() % 400);
+        }
+        float spawnX = playerX + offset;
+
+        int col = (int)(spawnX / cellSize) - worldOffX;
+        if (col < 0) {
+            col = 0;
+        }
+        if (col >= lvl->getWidth()) {
+            continue;
+        }
+
+        int surfRow = lvl->getSurfaceRow(col);
+        float surfaceY = (float)(surfRow * cellSize);
+        float spawnY = surfaceY - 140.f;
+
+        int type = std::rand() % 6;
+        switch (type) {
+        case 0:
+            this->enemyManager->spawnRebel(spawnX, spawnY);
+            break;
+        case 1:
+            this->enemyManager->spawnShielded(spawnX, spawnY);
+            break;
+        case 2:
+            this->enemyManager->spawnBazooka(spawnX, spawnY);
+            break;
+        case 3:
+            this->enemyManager->spawnGrenade(spawnX, spawnY);
+            break;
+        case 4:
+            this->enemyManager->spawnMartian(spawnX, spawnY);
+            break;
+        case 5:
+            this->enemyManager->spawnParatrooper(spawnX, spawnY - 500.f, spawnY);
+            break;
+        }
+    }
+}
+
+void PlayState::checkLevelTransition() {
+
+    if (this->gameMode == MODE_CAMPAIGN) {
+        return;
+    }
+
+    if (this->hud != nullptr && this->hud->isFelledShowing()) {
+        return;
+    }
 
     if (this->currentConfig != nullptr && this->currentConfig->isBossLevel) {
-        if (this->enemyManager != nullptr && this->enemyManager->hasActiveBoss())
+        if (this->enemyManager != nullptr && this->enemyManager->hasActiveBoss()) {
             return;
-        if (this->bossesSpawned < 2)
+        }
+        // Ironokava level spawns 3 bosses in sequence; Sherry level spawns only 1
+        int requiredBosses = (this->currentConfig->bossType == ENEMY_BOSS_IRONOKAVA) ? 3 : 1;
+        if (this->bossesSpawned < requiredBosses) {
             return;
+        }
     }
 
     PlayerSoldier* player = this->characterManager
         ? this->characterManager->getCurrentCharacter() : nullptr;
-    if (player == nullptr)
+    if (player == nullptr) {
         return;
+    }
 
     float levelWidth = 0.f;
     if (this->currentConfig != nullptr && this->currentConfig->levelWidth > 0.f) {
@@ -499,8 +665,9 @@ void PlayState::checkLevelTransition() {
     }
     else {
         Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
-        if (lvl == nullptr)
+        if (lvl == nullptr) {
             return;
+        }
         levelWidth = (float)(lvl->getWidth() * lvl->getCellSize());
     }
 
@@ -556,21 +723,25 @@ void PlayState::update(float dt) {
         player->updateAim(mouseWorld);
     }
 
-    if (this->characterManager)
+    if (this->characterManager) {
         this->characterManager->update(dt, lvl);
+    }
 
-    if (player != nullptr)
+    if (player != nullptr) {
         player->handleInput();
+    }
 
-    if (player != nullptr)
+    if (player != nullptr) {
         player->updateBoundingBox();
+    }
 
     if (this->blockManager) {
         this->blockManager->update(this->scroll, this->scrollY);
     }
 
-    if (this->enemyManager)
+    if (this->enemyManager) {
         this->enemyManager->update(this->scroll, this->scrollY, lvl, player);
+    }
 
     if (this->hud && this->enemyManager) {
         Boss* boss = this->enemyManager->getActiveBoss();
@@ -582,7 +753,9 @@ void PlayState::update(float dt) {
                 this->bossFelledTriggered = true;
                 this->bossesDefeated++;
                 const char* fallenName = this->enemyManager->getBossDiedName();
-                if (fallenName == nullptr) fallenName = "UNKNOWN";
+                if (fallenName == nullptr) {
+                    fallenName = "UNKNOWN";
+                }
                 this->hud->showBossFelled(fallenName);
 
                 if (this->characterManager != nullptr) {
@@ -591,25 +764,45 @@ void PlayState::update(float dt) {
                         currentPlayer->healFullAndIncreaseHP(0);
                     }
                 }
+            }
 
-                if (this->currentConfig != nullptr && this->currentConfig->isBossLevel
-                    && this->bossesDefeated == 1 && this->bossesSpawned == 1)
-                {
-                    Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
-                    if (lvl != nullptr) {
-                        int cellSize = lvl->getCellSize();
-                        int surfaceRow = lvl->getHeight() - 3;
-                        float surfaceY = (float)(surfaceRow * cellSize);
+            if (this->currentConfig != nullptr && this->currentConfig->isBossLevel
+                && this->currentConfig->bossType == ENEMY_BOSS_IRONOKAVA
+                && this->bossesDefeated == 1 && this->bossesSpawned == 1)
+            {
+                Level* lvl = this->levelManager ? this->levelManager->getLevel() : nullptr;
+                if (lvl != nullptr) {
+                    int cellSize = lvl->getCellSize();
+                    int surfaceRow = lvl->getHeight() - 3;
+                    float surfaceY = (float)(surfaceRow * cellSize);
 
-                        float flyCenterX = 7000.f;
-                        float flyCenterY = surfaceY - 400.f;
-                        float bossX = flyCenterX;
-                        float bossY = flyCenterY - 100.f;
-                        this->enemyManager->spawnHairbuster(bossX, bossY, flyCenterX, flyCenterY);
+                    float flyCenterX = 7000.f;
+                    float flyCenterY = surfaceY - 400.f;
+                    float bossX = flyCenterX;
+                    float bossY = flyCenterY - 100.f;
+                    this->enemyManager->cleanup();
+                    int result = this->enemyManager->spawnHairbuster(bossX, bossY, flyCenterX, flyCenterY);
+                    if (result >= 0) {
                         this->bossesSpawned = 2;
                     }
                 }
             }
+
+            else if (this->currentConfig != nullptr && this->currentConfig->isBossLevel
+                && this->currentConfig->bossType == ENEMY_BOSS_IRONOKAVA
+                && this->bossesDefeated == 2 && this->bossesSpawned == 2)
+            {
+                float bossX = 8350.f;
+                float bossY = 1450.f;
+                float poolCenterX = 9237.f;
+                float surfY = 1450.f;
+                this->enemyManager->cleanup();
+                int result = this->enemyManager->spawnSeaSatan(bossX, bossY, poolCenterX, 0.f, surfY);
+                if (result >= 0) {
+                    this->bossesSpawned = 3;
+                }
+            }
+
             if (!this->hud->isFelledShowing()) {
                 this->hud->clearBossInfo();
                 if (this->enemyManager != nullptr) {
@@ -620,11 +813,17 @@ void PlayState::update(float dt) {
         }
     }
 
-    if (this->enemyVehicleManager)
+    if (this->enemyVehicleManager) {
         this->enemyVehicleManager->update(this->scroll, this->scrollY, lvl, player, this->projectileManager);
+    }
 
-    if (this->projectileManager && lvl != nullptr)
+    if (this->collectibleManager && player != nullptr) {
+        this->collectibleManager->update(dt, player);
+    }
+
+    if (this->projectileManager && lvl != nullptr) {
         this->projectileManager->update(this->scroll, lvl);
+    }
 
     if (this->blockManager && this->projectileManager) {
         DamagableEntity** blocks = this->blockManager->getActiveBlocks();
@@ -662,14 +861,19 @@ void PlayState::update(float dt) {
         }
     }
 
-    if (this->projectileManager && lvl != nullptr)
+    if (this->projectileManager && lvl != nullptr) {
         this->projectileManager->postEntityUpdate(this->scroll, this->scrollY, lvl);
+    }
 
-    if (this->enemyManager)
+    if (this->enemyManager) {
         this->enemyManager->cleanup();
+    }
 
-    if (this->enemyVehicleManager)
+    this->spawnCampaignEnemies();
+
+    if (this->enemyVehicleManager) {
         this->enemyVehicleManager->cleanup();
+    }
 
     if (this->blockManager) {
         this->blockManager->cleanup();
@@ -694,8 +898,8 @@ void PlayState::update(float dt) {
         float levelWidth = 0.f;
 
         if (this->gameMode == MODE_CAMPAIGN && lvl->getCampaign()) {
-  
-            levelWidth = playerX + (float)SCREEN_W;  
+
+            levelWidth = playerX + (float)SCREEN_W;
         }
         else if (this->currentConfig != nullptr && this->currentConfig->levelWidth > 0.f) {
             levelWidth = this->currentConfig->levelWidth;
@@ -705,10 +909,16 @@ void PlayState::update(float dt) {
         }
 
         this->scroll = playerX - (float)SCREEN_W / 2.f;
-        if (this->scroll < 0.f) this->scroll = 0.f;
+        if (this->scroll < 0.f) {
+            this->scroll = 0.f;
+        }
         float maxScroll = levelWidth - (float)SCREEN_W;
-        if (maxScroll < 0.f) maxScroll = 0.f;
-        if (this->scroll > maxScroll) this->scroll = maxScroll;
+        if (maxScroll < 0.f) {
+            maxScroll = 0.f;
+        }
+        if (this->scroll > maxScroll) {
+            this->scroll = maxScroll;
+        }
     }
 
     if (player != nullptr && lvl != nullptr &&
@@ -717,18 +927,44 @@ void PlayState::update(float dt) {
         float playerY = player->getPosition().y;
         float levelHeight = (float)(lvl->getHeight() * lvl->getCellSize());
         this->scrollY = playerY - (float)SCREEN_H / 2.f;
-        if (this->scrollY < 0.f) this->scrollY = 0.f;
+        if (this->scrollY < 0.f) {
+            this->scrollY = 0.f;
+        }
         float maxScrollY = levelHeight - (float)SCREEN_H;
-        if (maxScrollY < 0.f) maxScrollY = 0.f;
-        if (this->scrollY > maxScrollY) this->scrollY = maxScrollY;
+        if (maxScrollY < 0.f) {
+            maxScrollY = 0.f;
+        }
+        if (this->scrollY > maxScrollY) {
+            this->scrollY = maxScrollY;
+        }
     }
     else if (this->currentConfig != nullptr && !this->currentConfig->enableVerticalScroll) {
         if (lvl != nullptr) {
             int surfaceRow = lvl->getHeight() - 3;
             float surfaceY = (float)(surfaceRow * lvl->getCellSize());
             this->scrollY = surfaceY - (float)SCREEN_H * 0.85f;
-            if (this->scrollY < 0.f)
+
+            if (this->currentConfig->isBossLevel && this->enemyManager != nullptr) {
+                Boss* activeBoss = this->enemyManager->getActiveBoss();
+                if (activeBoss != nullptr && activeBoss->isAlive() &&
+                    activeBoss->getEnemyType() == ENEMY_BOSS_SEASATAN && player != nullptr)
+                {
+                    float bossY = activeBoss->getPosition().y;
+                    float targetScrollY = bossY - (float)SCREEN_H * 0.5f;
+                    if (targetScrollY < this->scrollY) {
+                        this->scrollY = targetScrollY;
+                    }
+                    float waterTop = this->currentConfig->waterY1;
+                    float desiredScrollY = waterTop - (float)SCREEN_H * 0.4f;
+                    if (desiredScrollY < this->scrollY) {
+                        this->scrollY = desiredScrollY;
+                    }
+                }
+            }
+
+            if (this->scrollY < 0.f) {
                 this->scrollY = 0.f;
+            }
         }
     }
 
@@ -760,8 +996,9 @@ void PlayState::update(float dt) {
         player->setInWater(false);
     }
 
-    if (this->levelManager)
+    if (this->levelManager) {
         this->levelManager->update(dt);
+    }
 
     if (this->currentConfig != nullptr && this->enemyVehicleManager != nullptr &&
         player != nullptr && lvl != nullptr)
@@ -803,8 +1040,9 @@ void PlayState::update(float dt) {
 }
 
 void PlayState::render(RenderWindow& window) {
-    if (this->gameWindow == nullptr)
+    if (this->gameWindow == nullptr) {
         this->gameWindow = &window;
+    }
 
     float bgWidth = static_cast<float>(this->bgTex.getSize().x) * this->bgScaleY;
     float bgHeight = static_cast<float>(this->bgTex.getSize().y) * this->bgScaleY;
@@ -827,15 +1065,23 @@ void PlayState::render(RenderWindow& window) {
         bgY = groundY - groundLineInSprite - this->scrollY;
 
         float maxBgY = bgHeight - (float)SCREEN_H;
-        if (maxBgY < 0.f) maxBgY = 0.f;
-        if (bgY > 0.f) bgY = 0.f;
-        if (bgY < -maxBgY) bgY = -maxBgY;
+        if (maxBgY < 0.f) {
+            maxBgY = 0.f;
+        }
+        if (bgY > 0.f) {
+            bgY = 0.f;
+        }
+        if (bgY < -maxBgY) {
+            bgY = -maxBgY;
+        }
     }
     else if (this->currentConfig != nullptr && !this->currentConfig->enableVerticalScroll) {
         bgY = 0.f;
     }
 
-    if (bgX > 0.f) bgX = 0.f;
+    if (bgX > 0.f) {
+        bgX = 0.f;
+    }
 
     if (this->currentConfig != nullptr && this->currentConfig->tileBg) {
         float levelWidth = this->currentConfig->levelWidth > 0.f
@@ -846,12 +1092,18 @@ void PlayState::render(RenderWindow& window) {
         float viewLeft = this->scroll;
         float viewRight = this->scroll + (float)SCREEN_W;
         int firstTile = (int)(viewLeft / bgWidth);
-        if (firstTile < 0) firstTile = 0;
+        if (firstTile < 0) {
+            firstTile = 0;
+        }
 
         for (int t = firstTile; t < firstTile + totalTiles && t * bgWidth < viewRight + bgWidth; t++) {
             float tileX = (float)t * bgWidth - this->scroll;
-            if (tileX + bgWidth < 0.f) continue;
-            if (tileX > (float)SCREEN_W) break;
+            if (tileX + bgWidth < 0.f) {
+                continue;
+            }
+            if (tileX > (float)SCREEN_W) {
+                break;
+            }
 
             this->bgSprite.setPosition(tileX, bgY);
             window.draw(this->bgSprite);
@@ -859,26 +1111,38 @@ void PlayState::render(RenderWindow& window) {
     }
     else {
         float maxBgX = bgWidth - (float)SCREEN_W;
-        if (maxBgX < 0.f) maxBgX = 0.f;
-        if (bgX < -maxBgX) bgX = -maxBgX;
+        if (maxBgX < 0.f) {
+            maxBgX = 0.f;
+        }
+        if (bgX < -maxBgX) {
+            bgX = -maxBgX;
+        }
 
         this->bgSprite.setPosition(bgX, bgY);
         window.draw(this->bgSprite);
     }
 
-    if (this->levelManager)     
+    if (this->levelManager) {
         this->levelManager->draw(window, this->scroll, this->scrollY);
-    if (this->blockManager)   
+    }
+    if (this->blockManager) {
         this->blockManager->draw(window, this->scroll, this->scrollY);
-    if (this->enemyManager)   
-        
+    }
+    if (this->enemyManager) {
         this->enemyManager->draw(window, this->scroll, this->scrollY);
-    if (this->enemyVehicleManager)
+    }
+    if (this->enemyVehicleManager) {
         this->enemyVehicleManager->draw(window, this->scroll, this->scrollY);
-    if (this->characterManager) 
+    }
+    if (this->collectibleManager) {
+        this->collectibleManager->draw(window, this->scroll, this->scrollY);
+    }
+    if (this->characterManager) {
         this->characterManager->draw(window, this->scroll, this->scrollY);
-    if (this->projectileManager)
+    }
+    if (this->projectileManager) {
         this->projectileManager->draw(window, this->scroll, this->scrollY);
+    }
 
     if (this->currentConfig != nullptr && this->currentConfig->hasWater) {
         sf::ConvexShape drawWater = this->waterShape;
@@ -894,21 +1158,26 @@ void PlayState::render(RenderWindow& window) {
     if (this->levelTransitioning) {
         sf::RectangleShape overlay(sf::Vector2f((float)SCREEN_W, (float)SCREEN_H));
         float alpha = this->levelTransitionTimer / 0.5f;
-        if (alpha > 1.f) alpha = 1.f;
+        if (alpha > 1.f) {
+            alpha = 1.f;
+        }
         overlay.setFillColor(sf::Color(0, 0, 0, static_cast<sf::Uint8>(255.f * alpha)));
         overlay.setPosition(0.f, 0.f);
         window.draw(overlay);
     }
 
-    if (this->hud)            
+    if (this->hud) {
         this->hud->draw(window);
+    }
     this->renderBloodOverlay(window);
 }
 
 void PlayState::renderBloodOverlay(RenderWindow& window) {
     PlayerSoldier* player = this->characterManager
         ? this->characterManager->getCurrentCharacter() : nullptr;
-    if (player == nullptr) return;
+    if (player == nullptr) {
+        return;
+    }
     if (player->getCurrentHP() > 0 && player->getCurrentHP() <= 1) {
         window.draw(this->bloodOverlaySprite);
     }
@@ -921,8 +1190,9 @@ void PlayState::handleEvent(Event& event) {
         }
     }
 
-    if (this->characterManager)
+    if (this->characterManager) {
         this->characterManager->handleInput(event);
+    }
 }
 
 void PlayState::onEnter() {}

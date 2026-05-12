@@ -2,6 +2,7 @@
 #include "Enemy.h"
 
 class PlayerSoldier;
+class ScoreManager;
 
 class EnemyManager {
 public:
@@ -14,6 +15,8 @@ private:
     TextureManager* texMgr;
     AudioManager* audMgr;
     ProjectileManager* pm;
+    ScoreManager* scoreMgr;
+    int totalKills;
     Boss* activeBoss;
     bool bossDied;
     const char* bossDiedName;
@@ -23,6 +26,7 @@ public:
     ~EnemyManager();
 
     void setProjectileManager(ProjectileManager* p);
+    void setScoreManager(ScoreManager* sm);
 
     int spawnRebel(float x, float y);
     int spawnBazooka(float x, float y);
@@ -32,6 +36,8 @@ public:
     int spawnParatrooper(float x, float y, float landY);
     int spawnIronokava(float x, float y);
     int spawnHairbuster(float x, float y, float cx, float cy);
+    int spawnSeaSatan(float x, float y, float cx, float cy, float surfY);
+    int spawnSherry(float x, float y);
 
     void update(float scrollX, float scrollY, Level* lvl, PlayerSoldier* player);
     void draw(RenderWindow& window, float scrollX, float scrollY);

@@ -24,16 +24,16 @@ protected:
     int      enemyBulletHits;
 
     ProjectileManager* pm;
-    
-    Weapon* devWeaponPool[5];
-    int     devWeaponIdx;   
 
-    
-    
+    Weapon* devWeaponPool[5];
+    int     devWeaponIdx;
+
+
+
     bool qWasPressed;
 
-    
-    
+
+
     void cycleWeapon();
 
 public:
@@ -50,8 +50,10 @@ public:
 
     const char* getCurrentWeaponName() const;
 
-    
+
     void healFullAndIncreaseHP(int extraHP = 1);
+    void healBy(int amount);
+    void addGrenades(int count);
 
     void switchWeapon(Weapon* w);
     void throwGrenade();

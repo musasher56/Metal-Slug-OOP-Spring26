@@ -77,7 +77,7 @@ void Projectile::checkTileCollision(Level* lvl) {
 }
 
 void Projectile::checkBounds(float scrollX, float scrollY) {
-  
+
     const float MARGIN = 300.f;
 
     if (this->position.x + 8.f < scrollX - MARGIN) { this->deactivate(); return; }
@@ -193,7 +193,7 @@ void ExplosiveProjectile::draw(RenderWindow& window, float scrollX, float scroll
     float rot = std::atan2f(this->velocityY, this->velocityX) * 180.f / 3.14159f;
 
     if (this->projectileClass == PROJ_BOMB) {
-     
+
         if (this->textureManager->loadTexture("bomb_draw", "resources/Sprites/bomb.png")) {
             sf::Texture& tex = this->textureManager->getTexture("bomb_draw");
             sf::Sprite bombSprite;
@@ -215,8 +215,53 @@ void ExplosiveProjectile::draw(RenderWindow& window, float scrollX, float scroll
             window.draw(bomb);
         }
     }
+    else if (this->projectileClass == PROJ_MISSILE) {
+        // --- Missile with missile.png sprite ---
+        if (this->textureManager->loadTexture("missile_draw", "resources/Sprites/missile.png")) {
+            sf::Texture& tex = this->textureManager->getTexture("missile_draw");
+            sf::Sprite missileSprite;
+            missileSprite.setTexture(tex);
+            float texW = static_cast<float>(tex.getSize().x);
+            float texH = static_cast<float>(tex.getSize().y);
+            missileSprite.setOrigin(texW * 0.5f, texH * 0.5f);
+            missileSprite.setScale(0.3f, 0.3f);
+            missileSprite.setRotation(rot);
+            missileSprite.setPosition(this->position.x - scrollX, this->position.y - scrollY);
+            window.draw(missileSprite);
+
+            // Small exhaust trail
+            float trailOffX = -std::cosf(rot * 3.14159f / 180.f) * texW * 0.1f;
+            float trailOffY = -std::sinf(rot * 3.14159f / 180.f) * texH * 0.1f;
+            sf::CircleShape exhaust(4.f);
+            exhaust.setFillColor(sf::Color(255, 160, 30, 180));
+            exhaust.setOrigin(4.f, 4.f);
+            exhaust.setPosition(
+                this->position.x - scrollX + trailOffX,
+                this->position.y - scrollY + trailOffY);
+            window.draw(exhaust);
+        }
+        else {
+            // Fallback: rocket shape
+            sf::RectangleShape rocket(sf::Vector2f(16.f, 7.f));
+            rocket.setFillColor(sf::Color(200, 50, 50));
+            rocket.setOrigin(8.f, 3.5f);
+            rocket.setRotation(rot);
+            rocket.setPosition(this->position.x - scrollX, this->position.y - scrollY);
+            window.draw(rocket);
+
+            sf::CircleShape nose(2.5f);
+            nose.setFillColor(sf::Color(255, 200, 100));
+            nose.setOrigin(2.5f, 2.5f);
+            float noseOffX = std::cosf(rot * 3.14159f / 180.f) * 8.f;
+            float noseOffY = std::sinf(rot * 3.14159f / 180.f) * 8.f;
+            nose.setPosition(
+                (this->position.x - scrollX) + noseOffX,
+                (this->position.y - scrollY) + noseOffY);
+            window.draw(nose);
+        }
+    }
     else {
-    
+
         if (this->textureManager->loadTexture("grenade_draw", "resources/Sprites/grenade.png")) {
             sf::Texture& tex = this->textureManager->getTexture("grenade_draw");
             sf::Sprite grenadeSprite;
@@ -250,7 +295,7 @@ void ExplosiveProjectile::draw(RenderWindow& window, float scrollX, float scroll
 }
 
 void ExplosiveProjectile::onImpact(EnemyManager* em, CharacterManager* cm) {
- 
+
     (void)em; (void)cm;
 }
 
@@ -280,7 +325,7 @@ void FlameParticle::draw(RenderWindow& window, float scrollX, float scrollY) {
 
     float ratio = (float)this->lifetime / (float)this->maxLifetime;
 
-    sf::Uint8 g = static_cast<sf::Uint8>(90.f * ratio); 
+    sf::Uint8 g = static_cast<sf::Uint8>(90.f * ratio);
     sf::Uint8 alpha = static_cast<sf::Uint8>(200.f * ratio + 55.f);
 
     sf::RectangleShape halo(sf::Vector2f(12.f, 8.f));
@@ -342,7 +387,7 @@ void LaserBeam::move(float /*scroll*/) {
 }
 
 void LaserBeam::draw(RenderWindow& window, float scrollX, float scrollY) {
-    if (!this->status) 
+    if (!this->status)
         return;
     float ratio = (float)this->lifetime / 5.f;
     if (ratio > 1.f) ratio = 1.f;

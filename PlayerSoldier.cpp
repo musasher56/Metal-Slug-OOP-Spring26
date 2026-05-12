@@ -25,9 +25,9 @@ PlayerSoldier::PlayerSoldier(TextureManager* texMgr, AudioManager* audMgr)
     , devWeaponIdx(0)
     , qWasPressed(false)
 {
-    for (int i = 0; i < 3; ++i) 
+    for (int i = 0; i < 3; ++i)
         this->inventory[i] = nullptr;
-    for (int i = 0; i < 5; ++i) 
+    for (int i = 0; i < 5; ++i)
         this->devWeaponPool[i] = nullptr;
 
     this->pistol = new Pistol();
@@ -41,8 +41,8 @@ PlayerSoldier::PlayerSoldier(TextureManager* texMgr, AudioManager* audMgr)
 }
 
 PlayerSoldier::~PlayerSoldier() {
-    
-    
+
+
     this->currentWeapon = nullptr;
 
     if (this->pistol != nullptr) {
@@ -80,6 +80,21 @@ void PlayerSoldier::healFullAndIncreaseHP(int extraHP) {
     this->enemyBulletHits = 0;
 }
 
+void PlayerSoldier::healBy(int amount) {
+    if (amount <= 0) return;
+    this->currentHP += amount;
+    if (this->currentHP > this->maxHealth) {
+        this->currentHP = this->maxHealth;
+    }
+    this->health = this->currentHP;
+    this->enemyBulletHits = 0;
+}
+
+void PlayerSoldier::addGrenades(int count) {
+    if (count <= 0) return;
+    this->grenadeCount += count;
+}
+
 const char* PlayerSoldier::getCurrentWeaponName() const {
     static const char* names[5] = {
         "Pistol", "Heavy Machine Gun", "Rocket Launcher", "Flame Shot", "Laser Gun"
@@ -113,8 +128,10 @@ void PlayerSoldier::switchWeapon(Weapon* w) {
 
     bool isPoolWeapon = false;
     for (int i = 0; i < 5; ++i) {
-        if (this->currentWeapon == this->devWeaponPool[i]) { isPoolWeapon = true;
-        break; }
+        if (this->currentWeapon == this->devWeaponPool[i]) {
+            isPoolWeapon = true;
+            break;
+        }
     }
     if (!isPoolWeapon && this->currentWeapon != nullptr && this->inventorySize < 3)
         this->inventory[this->inventorySize++] = this->currentWeapon;
@@ -196,7 +213,7 @@ void PlayerSoldier::draw(RenderWindow& window, float scrollX, float scrollY) {
     if (this->velocityX != 0.f || !this->onGround)
         this->animation.update();
     else {
-        this->animation.currentFrame = 0;
+        this->animation.currentFrame = 5;
         this->animation.clock.restart();
     }
 
@@ -223,19 +240,32 @@ Marco::Marco(TextureManager* texMgr, AudioManager* audMgr)
     this->animation.setTexture(&tex);
     this->animation.setFrameCount(12);
     this->animation.setLoop(true);
-    this->animation.setDisplayCrop(0, 0, 32, 0);
+    this->animation.setFrameDelay(6);
+    // Custom walk frames from marco.png
+    this->animation.setFrameRect(0, 0, 1, 32, 40);
+    this->animation.setFrameRect(1, 37, 0, 32, 40);
+    this->animation.setFrameRect(2, 74, 1, 32, 37);
+    this->animation.setFrameRect(3, 111, 1, 27, 40);
+    this->animation.setFrameRect(4, 143, 1, 29, 40);
+    this->animation.setFrameRect(5, 177, 1, 30, 40);
+    this->animation.setFrameRect(6, 212, 1, 32, 40);
+    this->animation.setFrameRect(7, 249, 0, 35, 41);
+    this->animation.setFrameRect(8, 289, 0, 36, 37);
+    this->animation.setFrameRect(9, 330, 1, 31, 40);
+    this->animation.setFrameRect(10, 366, 0, 31, 40);
+    this->animation.setFrameRect(11, 402, 1, 31, 40);
     this->sprite.setTexture(tex);
     this->sprite.setScale(3.5f, 3.5f);
-    this->sprite.setTextureRect(IntRect(0, 0, 36, 41));
-    this->physW = 36;
-    this->physH = 41;
+    this->sprite.setTextureRect(IntRect(0, 1, 32, 40));
+    this->physW = 32;
+    this->physH = 40;
     this->position = sf::Vector2f(200.f, 300.f);
     this->updateBoundingBox();
 }
 
 Marco::~Marco() {}
 void Marco::updateSprite() {
-    this->sprite.setTextureRect(IntRect(0, 0, 36, 41)); 
+    this->sprite.setTextureRect(IntRect(0, 1, 32, 40));
 }
 void Marco::activatePowerUp() {
     this->dualFireActive = true; this->dualFireTimer.restart();
@@ -265,7 +295,8 @@ void Marco::handleInput() {
 }
 
 void Marco::meleeAttack() {
-    Soldier::meleeAttack(); }
+    Soldier::meleeAttack();
+}
 
 Tarma::Tarma(TextureManager* texMgr, AudioManager* audMgr)
     : PlayerSoldier(texMgr, audMgr)
@@ -273,22 +304,22 @@ Tarma::Tarma(TextureManager* texMgr, AudioManager* audMgr)
     , vehicleDurabilityBonus(0.20f)
     , immunityActive(false)
 {
-    
+
     Texture& tex = texMgr->loadTextureWithMask(
         "tarma-idle",
         "resources/Sprites/tarma.png",
         sf::Color::Black, 50
     );
 
-    
+
     this->animation.setTexture(&tex);
     this->animation.setFrameCount(1);
     this->animation.setFrameRect(0, 47, 64, 913, 896);
     this->animation.setLoop(true);
 
-    
-    
-    
+
+
+
     this->physW = static_cast<int>(913 * 0.6f);
     this->physH = 896;
 
@@ -302,14 +333,14 @@ Tarma::Tarma(TextureManager* texMgr, AudioManager* audMgr)
 
 Tarma::~Tarma() {}
 void Tarma::updateSprite() {}
-void Tarma::activatePowerUp() { 
+void Tarma::activatePowerUp() {
     this->immunityActive = true;
     this->immunityTimer.restart();
 }
-bool Tarma::hasVehicleSurvival() const { 
-    return true; 
+bool Tarma::hasVehicleSurvival() const {
+    return true;
 }
-void Tarma::onVehicleDestroyed() { 
+void Tarma::onVehicleDestroyed() {
     this->exitVehicle();
 }
 
@@ -367,9 +398,9 @@ void Eri::handleInput() {
 }
 
 void Eri::throwGrenade() {
-    if (this->pm == nullptr) 
+    if (this->pm == nullptr)
         return;
-    if (this->grenadeCount <= 0) 
+    if (this->grenadeCount <= 0)
         return;
     this->grenadeCount--;
 
@@ -417,7 +448,7 @@ Fio::Fio(TextureManager* texMgr, AudioManager* audMgr)
 Fio::~Fio() {}
 void Fio::updateSprite() {}
 void Fio::activatePowerUp() {
-    this->superchargedActive = true; 
+    this->superchargedActive = true;
     this->superchargedTimer.restart();
 }
 
@@ -435,7 +466,7 @@ void Fio::handleInput() {
 }
 
 void PlayerSoldier::throwGrenade() {
-    if (this->pm == nullptr)  
+    if (this->pm == nullptr)
         return;
     if (this->grenadeCount <= 0)
         return;

@@ -2,7 +2,7 @@
 #include "Constants.h"
 
 struct EnemySpawnEntry {
-    int   type;     
+    int   type;
     float x;
     float y;
     float landY;
@@ -14,33 +14,33 @@ struct PlatformSpawnEntry {
 };
 
 struct LevelConfig {
-    char bgPath[128];          
+    char bgPath[128];
 
-    
-    bool  hasMountain;             
-    bool  visibleGround;           
-    bool  enableVerticalScroll;    
-    bool  tileBg;                  
-    float levelWidth;              
 
-    bool  isBossLevel;            
-    int   bossType;              
+    bool  hasMountain;
+    bool  visibleGround;
+    bool  enableVerticalScroll;
+    bool  tileBg;
+    float levelWidth;
+
+    bool  isBossLevel;
+    int   bossType;
 
     bool  hasWater;
-    float waterX1, waterY1;      
-    float waterX2, waterY2;       
+    float waterX1, waterY1;
+    float waterX2, waterY2;
 
     bool  hasSubmarine;
     float submarineSpawnX;
     float submarineSpawnY;
     int   submarineDir;
-    float submarineTriggerX;    
-   
-    int   flyingTaraPasses;        
-    float flyingTaraTimes[4];    
+    float submarineTriggerX;
+
+    int   flyingTaraPasses;
+    float flyingTaraTimes[4];
 
     int enemyCount;
-    EnemySpawnEntry enemies[40];   
+    EnemySpawnEntry enemies[40];
 
     int platformCount;
     PlatformSpawnEntry platforms[10];
@@ -49,15 +49,15 @@ struct LevelConfig {
 static const LevelConfig CAMPAIGN_LEVEL = {
     "resources/Sprites/infinite.png",
 
-    
-    false,         
-    false,        
-    true,          
-    true,           
-    0.f,     
 
-    false,        
-    0,       
+    false,
+    false,
+    true,
+    true,
+    0.f,
+
+    false,
+    0,
 
     false,
     0.f, 0.f,
@@ -81,24 +81,24 @@ static const LevelConfig CAMPAIGN_LEVEL = {
 static const LevelConfig LEVEL_1 = {
     "resources/Sprites/background.png",
 
-    true,           
-    true,          
-    true,           
-    false,         
-    0.f,           
+    true,
+    true,
+    true,
+    false,
+    0.f,
 
-   
-    false,       
-    0,           
+
+    false,
+    0,
 
     true,
-    10242.f, 574.f,     
-    115919.f, 1776.f,  
+    10242.f, 574.f,
+    115919.f, 1776.f,
 
     true,
     11000.f, 900.f,     // spawn position
-    DIR_LEFT,          
-    9000.f,           
+    DIR_LEFT,
+    9000.f,
 
     // FlyingTara
     2,
@@ -138,13 +138,13 @@ static const LevelConfig LEVEL_2 = {
     "resources/Sprites/background2.png",
 
     true,
-    true,      
-    true,         
-    false,         
-    0.f,            
+    true,
+    true,
+    false,
+    0.f,
 
-    false,         
-    0,          
+    false,
+    0,
 
     true,
     10242.f, 574.f,
@@ -182,14 +182,14 @@ static const LevelConfig LEVEL_2 = {
 static const LevelConfig LEVEL_3 = {
     "resources/Sprites/background3.png",
 
-    false,         
-    false,        
-    false,         
-    true,           
-    11000.f,    
+    false,
+    false,
+    false,
+    true,
+    11000.f,
 
-    false,         
-    0,            
+    false,
+    0,
     false,
     0.f, 0.f,
     0.f, 0.f,
@@ -240,13 +240,13 @@ static const LevelConfig LEVEL_3 = {
 static const LevelConfig LEVEL_4 = {
     "resources/Sprites/background3.png",
 
-    false,          
-    false,        
-    false,          
-    true,           
-    11000.f,     
+    false,
+    false,
+    false,
+    true,
+    11000.f,
 
-    true,          
+    true,
     ENEMY_BOSS_IRONOKAVA,
 
     true,
@@ -268,13 +268,45 @@ static const LevelConfig LEVEL_4 = {
     { }
 };
 
-static const LevelConfig* ALL_LEVELS[4] = {
+static const LevelConfig LEVEL_5 = {
+    "resources/Sprites/background3.png",    // same bg as level 3
+
+    false,          // hasMountain
+    false,          // visibleGround
+    false,          // enableVerticalScroll
+    true,           // tileBg
+    11000.f,        // levelWidth
+
+    true,           // isBossLevel
+    ENEMY_BOSS_SHERRY,  // bossType = Sherry
+
+    false,          // hasWater
+    0.f, 0.f,
+    0.f, 0.f,
+
+    false,          // hasSubmarine
+    0.f, 0.f,
+    DIR_LEFT,
+    0.f,
+
+    0,              // flyingTaraPasses
+    { 0.f, 0.f, 0.f, 0.f },
+
+    0,              // enemyCount (no regular enemies)
+    { },
+
+    0,              // platformCount
+    { }
+};
+
+static const LevelConfig* ALL_LEVELS[5] = {
     &LEVEL_1,
     &LEVEL_2,
     &LEVEL_3,
-    &LEVEL_4
+    &LEVEL_4,
+    &LEVEL_5
 };
 
-static const int TOTAL_LEVELS = 4;
+static const int TOTAL_LEVELS = 5;
 
 static const int GSTATE_LEVEL_SELECT = 20;

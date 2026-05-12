@@ -3,11 +3,12 @@
 #include "PlayerSoldier.h"
 #include "Level.h"
 #include "ProjectileManager.h"
+#include "ScoreManager.h"
 #include <cstdio>
 
 EnemyManager::EnemyManager(TextureManager* t, AudioManager* a)
-    : activeCount(0), texMgr(t), audMgr(a), pm(nullptr), activeBoss(nullptr)
-    , bossDied(false), bossDiedName(nullptr)
+    : activeCount(0), texMgr(t), audMgr(a), pm(nullptr), scoreMgr(nullptr)
+    , totalKills(0), activeBoss(nullptr), bossDied(false), bossDiedName(nullptr)
 {
     for (int i = 0; i < MAX_ENEMIES; i++) {
         this->slots[i] = nullptr;
@@ -21,6 +22,10 @@ EnemyManager::~EnemyManager() {
 
 void EnemyManager::setProjectileManager(ProjectileManager* p) {
     this->pm = p;
+}
+
+void EnemyManager::setScoreManager(ScoreManager* sm) {
+    this->scoreMgr = sm;
 }
 
 int EnemyManager::findFreeSlot() {
@@ -40,7 +45,19 @@ int EnemyManager::findFreeSlot() {
 
 void EnemyManager::removeAt(int i) {
     if (this->slots[i] != nullptr) {
-        
+
+        if (this->scoreMgr != nullptr && !this->slots[i]->isAlive()) {
+            int eType = this->slots[i]->getEnemyType();
+            bool isBoss = (dynamic_cast<Boss*>(this->slots[i]) != nullptr);
+            if (isBoss) {
+                this->scoreMgr->addBossKill(false);
+            }
+            else {
+                this->scoreMgr->addKill(eType, false, false);
+            }
+            this->totalKills++;
+        }
+
         if (this->activeBoss != nullptr && this->slots[i] == this->activeBoss) {
             this->bossDiedName = this->activeBoss->getBossName();
             this->bossDied = true;
@@ -49,20 +66,22 @@ void EnemyManager::removeAt(int i) {
         delete this->slots[i];
         this->slots[i] = nullptr;
         this->deSlots[i] = nullptr;
-    }
-    this->activeCount--;
+        this->activeCount--;
 
-    if (i < this->activeCount) {
-        this->slots[i] = this->slots[this->activeCount];
-        this->deSlots[i] = this->deSlots[this->activeCount];
-        this->slots[this->activeCount] = nullptr;
-        this->deSlots[this->activeCount] = nullptr;
+        if (i < this->activeCount) {
+            this->slots[i] = this->slots[this->activeCount];
+            this->deSlots[i] = this->deSlots[this->activeCount];
+            this->slots[this->activeCount] = nullptr;
+            this->deSlots[this->activeCount] = nullptr;
+        }
     }
 }
 
 int EnemyManager::spawnRebel(float x, float y) {
     int slot = this->findFreeSlot();
-    if (slot < 0) return -1;
+    if (slot < 0) {
+        return -1;
+    }
 
     Enemy* enemy = new RebelSoldier(this->texMgr, this->audMgr);
     enemy->position = sf::Vector2f(x, y);
@@ -86,7 +105,9 @@ int EnemyManager::spawnRebel(float x, float y) {
 
 int EnemyManager::spawnBazooka(float x, float y) {
     int slot = this->findFreeSlot();
-    if (slot < 0) return -1;
+    if (slot < 0) {
+        return -1;
+    }
 
     Enemy* enemy = new BazookaSoldier(this->texMgr, this->audMgr);
     enemy->position = sf::Vector2f(x, y);
@@ -110,7 +131,9 @@ int EnemyManager::spawnBazooka(float x, float y) {
 
 int EnemyManager::spawnShielded(float x, float y) {
     int slot = this->findFreeSlot();
-    if (slot < 0) return -1;
+    if (slot < 0) {
+        return -1;
+    }
 
     Enemy* enemy = new ShieldedSoldier(this->texMgr, this->audMgr);
     enemy->position = sf::Vector2f(x, y);
@@ -134,7 +157,9 @@ int EnemyManager::spawnShielded(float x, float y) {
 
 int EnemyManager::spawnGrenade(float x, float y) {
     int slot = this->findFreeSlot();
-    if (slot < 0) return -1;
+    if (slot < 0) {
+        return -1;
+    }
 
     Enemy* enemy = new GrenadeSoldier(this->texMgr, this->audMgr);
     enemy->position = sf::Vector2f(x, y);
@@ -158,7 +183,9 @@ int EnemyManager::spawnGrenade(float x, float y) {
 
 int EnemyManager::spawnMartian(float x, float y) {
     int slot = this->findFreeSlot();
-    if (slot < 0) return -1;
+    if (slot < 0) {
+        return -1;
+    }
 
     Enemy* enemy = new Martian(this->texMgr, this->audMgr);
     enemy->position = sf::Vector2f(x, y);
@@ -182,7 +209,9 @@ int EnemyManager::spawnMartian(float x, float y) {
 
 int EnemyManager::spawnParatrooper(float x, float y, float landY) {
     int slot = this->findFreeSlot();
-    if (slot < 0) return -1;
+    if (slot < 0) {
+        return -1;
+    }
 
     Paratrooper* enemy = new Paratrooper(this->texMgr, this->audMgr);
     enemy->position = sf::Vector2f(x, y);
@@ -230,20 +259,22 @@ void EnemyManager::update(float scrollX, float scrollY, Level* lvl,
 void EnemyManager::draw(RenderWindow& window, float scrollX, float scrollY) {
     for (int i = 0; i < this->activeCount; i++) {
         Enemy* e = this->slots[i];
-        if (e == nullptr || !e->getStatus()) continue;
+        if (e == nullptr || !e->getStatus()) {
+            continue;
+        }
 
         float sx = e->position.x - scrollX;
         float sy = e->position.y - scrollY;
 
-        
-        
         float cullMargin = 200.f;
         if (dynamic_cast<Boss*>(e) != nullptr) {
-            cullMargin = 800.f;  
+            cullMargin = 800.f;
         }
 
         if (sx < -cullMargin || sx > SCREEN_W + cullMargin ||
-            sy < -cullMargin || sy > SCREEN_H + cullMargin) continue;
+            sy < -cullMargin || sy > SCREEN_H + cullMargin) {
+            continue;
+        }
 
         e->draw(window, scrollX, scrollY);
     }
@@ -251,7 +282,9 @@ void EnemyManager::draw(RenderWindow& window, float scrollX, float scrollY) {
 
 int EnemyManager::spawnIronokava(float x, float y) {
     int slot = this->findFreeSlot();
-    if (slot < 0) return -1;
+    if (slot < 0) {
+        return -1;
+    }
 
     Ironokava* boss = new Ironokava(this->texMgr, this->audMgr);
     boss->position = sf::Vector2f(x, y);
@@ -259,7 +292,6 @@ int EnemyManager::spawnIronokava(float x, float y) {
     boss->setProjectileManager(this->pm);
     boss->updateBoundingBox();
 
-    
     this->activeBoss = boss;
 
     if (slot < this->activeCount) {
@@ -278,16 +310,75 @@ int EnemyManager::spawnIronokava(float x, float y) {
 
 int EnemyManager::spawnHairbuster(float x, float y, float cx, float cy) {
     int slot = this->findFreeSlot();
-    if (slot < 0) return -1;
+    if (slot < 0) {
+        return -1;
+    }
 
     Hairbuster* boss = new Hairbuster(this->texMgr, this->audMgr);
     boss->position = sf::Vector2f(x, y);
-    boss->setFlyCenter(cx, cy);  
+    boss->setFlyCenter(cx, cy);
     boss->setPatrol(cx, 500.f);
     boss->setProjectileManager(this->pm);
     boss->updateBoundingBox();
 
-    
+    this->activeBoss = boss;
+
+    if (slot < this->activeCount) {
+        if (this->slots[slot] != nullptr) {
+            delete this->slots[slot];
+        }
+    }
+    else {
+        this->activeCount = slot + 1;
+    }
+
+    this->slots[slot] = boss;
+    this->deSlots[slot] = boss;
+    return slot;
+}
+
+int EnemyManager::spawnSeaSatan(float x, float y, float cx, float cy, float surfY) {
+    int slot = this->findFreeSlot();
+    if (slot < 0) {
+        return -1;
+    }
+
+    SeaSatan* boss = new SeaSatan(this->texMgr, this->audMgr);
+    boss->position = sf::Vector2f(x, y);
+    boss->setSwimCenter(cx, cy, surfY);
+    boss->setPatrol(cx, 500.f);
+    boss->setProjectileManager(this->pm);
+    boss->updateBoundingBox();
+
+    this->activeBoss = boss;
+
+    if (slot < this->activeCount) {
+        if (this->slots[slot] != nullptr) {
+            delete this->slots[slot];
+        }
+    }
+    else {
+        this->activeCount = slot + 1;
+    }
+
+    this->slots[slot] = boss;
+    this->deSlots[slot] = boss;
+    return slot;
+}
+
+int EnemyManager::spawnSherry(float x, float y) {
+    int slot = this->findFreeSlot();
+    if (slot < 0) {
+        return -1;
+    }
+
+    Sherry* boss = new Sherry(this->texMgr, this->audMgr);
+    boss->position = sf::Vector2f(x, y);
+    boss->setThronePosition(x, y);
+    boss->setPatrol(x, 400.f);
+    boss->setProjectileManager(this->pm);
+    boss->updateBoundingBox();
+
     this->activeBoss = boss;
 
     if (slot < this->activeCount) {
@@ -313,7 +404,7 @@ int EnemyManager::getActiveCount() const {
 }
 
 int EnemyManager::getTotalKills() const {
-    return 0;
+    return this->totalKills;
 }
 
 Boss* EnemyManager::getActiveBoss() const {
@@ -321,14 +412,19 @@ Boss* EnemyManager::getActiveBoss() const {
 }
 
 bool EnemyManager::hasActiveBoss() const {
-    if (this->activeBoss == nullptr)
+    if (this->activeBoss == nullptr) {
         return false;
+    }
     return this->activeBoss->isAlive() || this->activeBoss->isDying();
 }
 
 bool EnemyManager::isBossDead() const {
-    if (this->bossDied) return true;
-    if (this->activeBoss == nullptr) return false;
+    if (this->bossDied) {
+        return true;
+    }
+    if (this->activeBoss == nullptr) {
+        return false;
+    }
     return !this->activeBoss->isAlive() && !this->activeBoss->isDying();
 }
 

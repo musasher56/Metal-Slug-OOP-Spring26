@@ -6,7 +6,7 @@
 
 
 
-static const float HEART_DRAW_SCALE = 0.2f;   
+static const float HEART_DRAW_SCALE = 0.2f;
 static const float HEART_MARGIN_X = 10.f;
 static const float HEART_MARGIN_Y = 8.f;
 static const int   MAX_HP = 3;
@@ -22,7 +22,7 @@ HUD::HUD()
     , felledVisible(false), felledPhase(0), felledTimer(0.f)
     , felledAlpha(0.f), felledBossName(nullptr)
 {
-    
+
     bool fontLoaded = this->font.loadFromFile("resources/Fonts/arial.ttf");
     if (!fontLoaded) fontLoaded = this->font.loadFromFile("C:\\Windows\\Fonts\\arial.ttf");
     if (!fontLoaded) fontLoaded = this->font.loadFromFile("C:\\Windows\\Fonts\\arialunicodems.ttf");
@@ -31,7 +31,7 @@ HUD::HUD()
     if (!fontLoaded) fontLoaded = this->font.loadFromFile("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf");
     if (!fontLoaded) fontLoaded = this->font.loadFromFile("resources/font.ttf");
 
-    
+
     static const char* HEART_PATHS[4] = {
         "resources/Sprites/heart1.png",
         "resources/Sprites/heart2.png",
@@ -46,7 +46,7 @@ HUD::HUD()
             this->heartsLoaded = false;
             continue;
         }
-        
+
         img.createMaskFromColor(sf::Color::Black);
         if (!this->heartTex[i].loadFromImage(img)) {
             this->heartsLoaded = false;
@@ -64,13 +64,13 @@ void HUD::update(CharacterManager* cm, int levelNum) {
 
     this->hp = cm->getHealthPoints();
 
-    
+
     PlayerSoldier* player = cm->getCurrentCharacter();
     if (player != nullptr) {
         this->maxHp = player->getMaxHealth();
         if (this->maxHp < 1) this->maxHp = 1;
 
-        
+
         Weapon* w = player->getCurrentWeapon();
         if (w != nullptr) {
             this->ammo = w->getAmmo();
@@ -86,7 +86,7 @@ void HUD::update(CharacterManager* cm, int levelNum) {
         this->grenadeCount = player->getGrenadeCount();
     }
 
-    
+
     if (this->hp < 0) this->hp = 0;
     if (this->hp > this->maxHp) this->hp = this->maxHp;
 }
@@ -131,7 +131,8 @@ void HUD::draw(RenderWindow& window) {
     infoText.setFillColor(sf::Color(255, 200, 80));
     if (this->infiniteAmmo) {
         infoText.setString("INFINITE");
-    } else {
+    }
+    else {
         infoText.setString("x" + std::to_string(this->ammo));
     }
     infoText.setPosition(infoX, infoY);
@@ -146,7 +147,7 @@ void HUD::draw(RenderWindow& window) {
     }
 
     if (this->heartsLoaded) {
-        int texIdx = this->maxHp - this->hp;  
+        int texIdx = this->maxHp - this->hp;
         if (texIdx < 0) texIdx = 0;
         if (texIdx > 3) texIdx = 3;
 
@@ -178,18 +179,18 @@ void HUD::draw(RenderWindow& window) {
         }
     }
 
-    
+
     if (this->bossBarVisible && this->bossName != nullptr) {
-        
+
         this->bossBarAppearTimer += 1.f / 60.f;
         if (this->bossBarAlpha < 255.f) {
-            this->bossBarAlpha += 5.f;  
+            this->bossBarAlpha += 5.f;
             if (this->bossBarAlpha > 255.f) this->bossBarAlpha = 255.f;
         }
 
-        
+
         if (this->bossHealthDisplayed > this->bossHealthFraction) {
-            this->bossHealthDisplayed -= 0.004f;  
+            this->bossHealthDisplayed -= 0.004f;
             if (this->bossHealthDisplayed < this->bossHealthFraction)
                 this->bossHealthDisplayed = this->bossHealthFraction;
         }
@@ -205,13 +206,13 @@ void HUD::draw(RenderWindow& window) {
 
         sf::Uint8 alpha = static_cast<sf::Uint8>(this->bossBarAlpha);
 
-        
+
         sf::RectangleShape backing(sf::Vector2f(barW + 20.f, barH + 50.f));
         backing.setPosition(barX - 10.f, nameY - 8.f);
         backing.setFillColor(sf::Color(0, 0, 0, static_cast<sf::Uint8>(alpha * 0.5f)));
         window.draw(backing);
 
-        
+
         sf::Text bossNameText(this->bossName, this->font, 22);
         bossNameText.setFillColor(sf::Color(220, 190, 130, alpha));
         bossNameText.setStyle(sf::Text::Bold);
@@ -220,7 +221,7 @@ void HUD::draw(RenderWindow& window) {
         bossNameText.setPosition((float)SCREEN_W / 2.f, nameY);
         window.draw(bossNameText);
 
-        
+
         sf::RectangleShape border(sf::Vector2f(barW + 4.f, barH + 4.f));
         border.setPosition(barX - 2.f, barY - 2.f);
         border.setFillColor(sf::Color(0, 0, 0, 0));
@@ -228,13 +229,13 @@ void HUD::draw(RenderWindow& window) {
         border.setOutlineThickness(1.f);
         window.draw(border);
 
-        
+
         sf::RectangleShape bgBar(sf::Vector2f(barW, barH));
         bgBar.setPosition(barX, barY);
         bgBar.setFillColor(sf::Color(30, 20, 15, alpha));
         window.draw(bgBar);
 
-        
+
         if (this->bossHealthDisplayed > this->bossHealthFraction) {
             float trailW = barW * this->bossHealthDisplayed;
             sf::RectangleShape trailBar(sf::Vector2f(trailW, barH));
@@ -243,12 +244,12 @@ void HUD::draw(RenderWindow& window) {
             window.draw(trailBar);
         }
 
-        
+
         float fillW = barW * this->bossHealthFraction;
         if (fillW > 0.f) {
             sf::RectangleShape healthBar(sf::Vector2f(fillW, barH));
             healthBar.setPosition(barX, barY);
-            
+
             int r = 160 + static_cast<int>(60.f * this->bossHealthFraction);
             int g = static_cast<int>(40.f * this->bossHealthFraction);
             int b = static_cast<int>(20.f * this->bossHealthFraction);
@@ -256,14 +257,14 @@ void HUD::draw(RenderWindow& window) {
             window.draw(healthBar);
         }
 
-        
+
         sf::RectangleShape topLine(sf::Vector2f(barW, 1.f));
         topLine.setPosition(barX, barY);
         topLine.setFillColor(sf::Color(180, 150, 80, alpha));
         window.draw(topLine);
     }
 
-    
+
     this->drawBossFelled(window);
 }
 
@@ -278,7 +279,7 @@ void HUD::setBossInfo(const char* name, float healthFrac) {
         this->bossBarVisible = true;
         this->bossBarAppearTimer = 0.f;
         this->bossBarAlpha = 0.f;
-        this->bossHealthDisplayed = healthFrac;  
+        this->bossHealthDisplayed = healthFrac;
     }
 }
 
@@ -310,16 +311,16 @@ bool HUD::isFelledShowing() const {
 void HUD::drawBossFelled(RenderWindow& window) {
     if (!this->felledVisible) return;
 
-    
+
     const float FADE_IN_DUR = 1.5f;
     const float HOLD_DUR = 3.0f;
     const float FADE_OUT_DUR = 2.0f;
 
     this->felledTimer += 1.f / 60.f;
 
-    
+
     if (this->felledPhase == 0) {
-        
+
         this->felledAlpha = (this->felledTimer / FADE_IN_DUR) * 255.f;
         if (this->felledAlpha >= 255.f) {
             this->felledAlpha = 255.f;
@@ -328,7 +329,7 @@ void HUD::drawBossFelled(RenderWindow& window) {
         }
     }
     else if (this->felledPhase == 1) {
-        
+
         this->felledAlpha = 255.f;
         if (this->felledTimer >= HOLD_DUR) {
             this->felledPhase = 2;
@@ -336,7 +337,7 @@ void HUD::drawBossFelled(RenderWindow& window) {
         }
     }
     else if (this->felledPhase == 2) {
-        
+
         this->felledAlpha = 255.f * (1.f - this->felledTimer / FADE_OUT_DUR);
         if (this->felledAlpha <= 0.f) {
             this->felledAlpha = 0.f;
@@ -350,13 +351,13 @@ void HUD::drawBossFelled(RenderWindow& window) {
     float centerX = (float)SCREEN_W / 2.f;
     float centerY = (float)SCREEN_H * 0.38f;
 
-    
+
     sf::RectangleShape vignette(sf::Vector2f((float)SCREEN_W, (float)SCREEN_H));
     vignette.setPosition(0.f, 0.f);
     vignette.setFillColor(sf::Color(0, 0, 0, static_cast<sf::Uint8>(alpha * 0.35f)));
     window.draw(vignette);
 
-    
+
     float lineW = 500.f;
     float lineH = 2.f;
     sf::RectangleShape topLine(sf::Vector2f(lineW, lineH));
@@ -364,7 +365,7 @@ void HUD::drawBossFelled(RenderWindow& window) {
     topLine.setFillColor(sf::Color(180, 150, 60, alpha));
     window.draw(topLine);
 
-    
+
     sf::Text felledText("GREAT ENEMY FELLED", this->font, 36);
     felledText.setFillColor(sf::Color(255, 220, 100, alpha));
     felledText.setStyle(sf::Text::Bold);
@@ -373,7 +374,7 @@ void HUD::drawBossFelled(RenderWindow& window) {
     felledText.setPosition(centerX, centerY + 12.f);
     window.draw(felledText);
 
-    
+
     if (this->felledBossName != nullptr) {
         sf::Text nameText(this->felledBossName, this->font, 22);
         nameText.setFillColor(sf::Color(200, 170, 80, static_cast<sf::Uint8>(alpha * 0.8f)));
@@ -383,7 +384,7 @@ void HUD::drawBossFelled(RenderWindow& window) {
         window.draw(nameText);
     }
 
-    
+
     sf::RectangleShape botLine(sf::Vector2f(lineW, lineH));
     botLine.setPosition(centerX - lineW / 2.f, centerY + 72.f);
     botLine.setFillColor(sf::Color(180, 150, 60, alpha));

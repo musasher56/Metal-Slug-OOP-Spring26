@@ -1,12 +1,15 @@
 ﻿#include "MainMenu.h"
 #include <cstdio>
 
-static const char* LEVEL_NAMES[4] = {
+static const char* LEVEL_NAMES[5] = {
     "Level 1 - Ruins",
     "Level 2 - Cold Death",
     "Level 3 - Blasphemous City",
-    "Level 4 - Ironokava"
+    "Level 4 - Ironokava",
+    "Level 5 - Sir Shehryar"
 };
+
+static const int LEVEL_COUNT = 5;
 
 MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
     : selectedOption(0)
@@ -62,7 +65,7 @@ MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
         this->levelSelectBgSprite.setPosition(0.f, 0.f);
         this->levelSelectBgLoaded = true;
     }
-    this->levelHighlightBox.setSize(Vector2f(280.f, 400.f));
+    this->levelHighlightBox.setSize(Vector2f(220.f, 400.f));
     this->levelHighlightBox.setFillColor(Color(255, 255, 0, 50));
     this->levelHighlightBox.setOutlineColor(Color(255, 215, 0));
     this->levelHighlightBox.setOutlineThickness(4.f);
@@ -75,18 +78,18 @@ MainMenu::MainMenu(TextureManager* tex, AudioManager* aud)
 MainMenu::~MainMenu() {}
 
 bool MainMenu::isReady() const {
-    return (this->gameMode >= 0 && this->gameMode <= 2) && (this->selectedLevel >= 0 && this->selectedLevel <= 3);
+    return (this->gameMode >= 0 && this->gameMode <= 2) && (this->selectedLevel >= 0 && this->selectedLevel < LEVEL_COUNT);
 }
 
 void MainMenu::buildLevelSlotPositions() {
-    const float panelW = 280.f;
+    const float panelW = 220.f;
     const float panelH = 400.f;
-    const float gapX = 30.f;
-    const float totalW = 4.f * panelW + 3.f * gapX;
+    const float gapX = 16.f;
+    const float totalW = (float)LEVEL_COUNT * panelW + ((float)LEVEL_COUNT - 1.f) * gapX;
     const float startX = ((float)SCREEN_W - totalW) / 2.f;
     const float startY = 180.f;
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < LEVEL_COUNT; i++) {
         float x = startX + i * (panelW + gapX);
         this->levelSlotRects[i] = FloatRect(x, startY, panelW, panelH);
     }
@@ -124,10 +127,10 @@ void MainMenu::loadVideoFrames() {
         float sy = (float)SCREEN_H / (float)sz.y;
         this->videoSprite.setScale(sx, sy);
         this->videoLoaded = true;
-        printf("[INFO] Loaded %d video frames\n", this->totalVideoFrames);
+
     }
     else {
-        printf("[INFO] No video frames found (optional)\n");
+
     }
 }
 
@@ -178,10 +181,10 @@ int MainMenu::handleEvent(Event& event) {
     }
     if (this->menuState == 2) {
         if (event.key.code == Keyboard::Left) {
-            this->hoveredLevel = (this->hoveredLevel + 3) % 4;
+            this->hoveredLevel = (this->hoveredLevel - 1 + LEVEL_COUNT) % LEVEL_COUNT;
         }
         else if (event.key.code == Keyboard::Right) {
-            this->hoveredLevel = (this->hoveredLevel + 1) % 4;
+            this->hoveredLevel = (this->hoveredLevel + 1) % LEVEL_COUNT;
         }
         else if (event.key.code == Keyboard::Num1) {
             this->hoveredLevel = 0;
@@ -198,6 +201,10 @@ int MainMenu::handleEvent(Event& event) {
         else if (event.key.code == Keyboard::Num4) {
             this->hoveredLevel = 3;
             this->selectedLevel = 3;
+        }
+        else if (event.key.code == Keyboard::Num5) {
+            this->hoveredLevel = 4;
+            this->selectedLevel = 4;
         }
         else if (event.key.code == Keyboard::Return || event.key.code == Keyboard::Space) {
             this->selectedLevel = this->hoveredLevel;
@@ -272,7 +279,7 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
         window.draw(this->videoSprite);
     }
     else {
-      
+
         RectangleShape bg(Vector2f((float)SCREEN_W, (float)SCREEN_H));
         bg.setFillColor(Color(20, 20, 20));
         window.draw(bg);
@@ -281,7 +288,59 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
     if (!this->fontLoaded)
         return;
 
-    for (int i = 0; i < 4; i++) {
+    // Draw level name title
+    Text titleText;
+    titleText.setFont(this->font);
+    titleText.setString("SELECT MISSION");
+    titleText.setCharacterSize(32);
+    titleText.setStyle(Text::Bold);
+    titleText.setFillColor(Color(255, 215, 0));
+    FloatRect tb = titleText.getLocalBounds();
+    titleText.setOrigin(tb.width / 2.f, tb.height / 2.f);
+    titleText.setPosition((float)SCREEN_W / 2.f, 60.f);
+    window.draw(titleText);
+
+    for (int i = 0; i < LEVEL_COUNT; i++) {
+        // Highlight hovered level
+        if (i == this->hoveredLevel) {
+            this->levelHighlightBox.setPosition(
+                this->levelSlotRects[i].left,
+                this->levelSlotRects[i].top
+            );
+            window.draw(this->levelHighlightBox);
+        }
+
+        // Draw level name inside slot
+        Text nameText;
+        nameText.setFont(this->font);
+        nameText.setString(LEVEL_NAMES[i]);
+        nameText.setCharacterSize(16);
+        nameText.setStyle(Text::Bold);
+        nameText.setFillColor(i == this->hoveredLevel
+            ? Color(255, 255, 100)
+            : Color(200, 200, 200));
+        FloatRect nb = nameText.getLocalBounds();
+        nameText.setOrigin(nb.width / 2.f, nb.height / 2.f);
+        nameText.setPosition(
+            this->levelSlotRects[i].left + this->levelSlotRects[i].width / 2.f,
+            this->levelSlotRects[i].top + this->levelSlotRects[i].height / 2.f
+        );
+        window.draw(nameText);
+
+        // Draw slot border
+        RectangleShape slotBorder(Vector2f(this->levelSlotRects[i].width, this->levelSlotRects[i].height));
+        slotBorder.setPosition(this->levelSlotRects[i].left, this->levelSlotRects[i].top);
+        slotBorder.setFillColor(Color(0, 0, 0, 100));
+        slotBorder.setOutlineColor(i == this->hoveredLevel
+            ? Color(255, 215, 0)
+            : Color(100, 100, 100));
+        slotBorder.setOutlineThickness(2.f);
+        window.draw(slotBorder);
+
+        // Re-draw name on top of border
+        window.draw(nameText);
+
+        // Draw level number below slot
         char numBuf[2];
         numBuf[0] = '1' + i;
         numBuf[1] = '\0';
@@ -294,8 +353,8 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
             ? Color(255, 255, 0)
             : Color(200, 200, 200));
         numText.setStyle(Text::Bold);
-        FloatRect nb = numText.getLocalBounds();
-        numText.setOrigin(nb.width / 2.f, nb.height / 2.f);
+        FloatRect nbb = numText.getLocalBounds();
+        numText.setOrigin(nbb.width / 2.f, nbb.height / 2.f);
         numText.setPosition(
             this->levelSlotRects[i].left + this->levelSlotRects[i].width / 2.f,
             this->levelSlotRects[i].top + this->levelSlotRects[i].height + 20.f

@@ -8,17 +8,17 @@ class Level;
 
 class ProjectileManager {
 public:
-    static const int MAX_PROJ   = 64;   
-    static const int MAX_BLASTS = 16;   
+    static const int MAX_PROJ = 64;
+    static const int MAX_BLASTS = 16;
 
 private:
-    Projectile*     slots[MAX_PROJ];
+    Projectile* slots[MAX_PROJ];
     int             activeCount;
     TextureManager* texMgr;
-    AudioManager*   audMgr;
+    AudioManager* audMgr;
 
-    
-    
+
+
     struct BlastEffect {
         Animation anim;
         float     x;
@@ -32,58 +32,62 @@ public:
     ProjectileManager(TextureManager* t, AudioManager* a);
     ~ProjectileManager();
 
-    
+
     void spawnStraight(sf::Vector2f origin, int dir, float angle,
-                       int dmg, bool fromEnemy = false);
+        int dmg, bool fromEnemy = false);
 
-    
+
     void spawnExplosive(sf::Vector2f origin, int dir, float angle,
-                        int dmg, int blastRadius, bool fromEnemy = false);
+        int dmg, int blastRadius, bool fromEnemy = false);
 
-    
+
     void spawnBomb(sf::Vector2f origin, int dir, float angle,
-                   int dmg, int blastRadius, bool fromEnemy = false,
-                   float speed = 8.f);
+        int dmg, int blastRadius, bool fromEnemy = false,
+        float speed = 8.f);
 
-    
-    
+    void spawnMissile(sf::Vector2f origin, int dir, float angle,
+        int dmg, int blastRadius, bool fromEnemy = false,
+        float speed = 7.f);
+
+
+
     void spawnFlame(sf::Vector2f origin, int dir, float angle,
-                    int dmg, bool fromEnemy = false);
+        int dmg, bool fromEnemy = false);
 
-    
+
     void spawnLaser(sf::Vector2f origin, int dir, int dmg, bool fromEnemy = false);
 
-    
+
     void spawnBlast(float x, float y);
 
-    
-    static sf::Vector2f calcBarrelTip(sf::Vector2f entityPos,
-                                      int          dir,
-                                      float        spriteWidth,
-                                      float        barrelOffsetY);
 
-    
+    static sf::Vector2f calcBarrelTip(sf::Vector2f entityPos,
+        int          dir,
+        float        spriteWidth,
+        float        barrelOffsetY);
+
+
     void update(float scroll, Level* lvl);
     void postEntityUpdate(float scrollX, float scrollY, Level* lvl);
 
-    
+
     void draw(RenderWindow& window, float scrollX, float scrollY);
 
-    
+
     int  checkEntityCollisions(DamagableEntity** targets, int targetCount);
     int  checkPlayerBulletHits(DamagableEntity** targets, int targetCount);
     bool checkEnemyBulletHitPlayer(DamagableEntity* player);
 
-    
+
     int          getActiveCount() const { return this->activeCount; }
-    Projectile** getSlots()             { return this->slots;       }
+    Projectile** getSlots() { return this->slots; }
     void         clearAll();
 
 private:
-    
-    
+
+
     void removeAt(int i);
 
     static void angleToVelocity(float angle, int dir, float speed,
-                                 float& outVX, float& outVY);
+        float& outVX, float& outVY);
 };

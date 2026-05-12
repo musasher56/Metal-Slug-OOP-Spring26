@@ -6,6 +6,7 @@
 #include "BlockManager.h"
 #include "EnemyManager.h"
 #include "EnemyVehicleManager.h"
+#include "CollectibleManager.h"
 #include "LevelConfig.h"
 #include <SFML/Graphics.hpp>
 
@@ -23,7 +24,7 @@ private:
     EnemyManager* enemyManager;
     EnemyVehicleManager* enemyVehicleManager;
     ProjectileManager* projectileManager;
-    void* collectibleManager;
+    CollectibleManager* collectibleManager;
 
     TextureManager* texManager;
     AudioManager* audManager;
@@ -68,10 +69,15 @@ private:
     int  bossesSpawned;
     int  bossesDefeated;
 
-    FractalNoise* fractalNoise;       
-    NoiseProfile* campaignProfile;  
-    int  campaignSeed;               
-    int  campaignProfileType;        
+    FractalNoise* fractalNoise;
+    NoiseProfile* campaignProfile;
+    int  campaignSeed;
+    int  campaignProfileType;
+
+    Clock campaignEnemyClock;
+    float campaignEnemyInterval;
+    int   campaignMaxAlive;
+    int   campaignMinAlive;
 
 public:
     PlayState(int mode, int startChar, TextureManager* texMgr, AudioManager* audMgr, int startLvl = 0);
@@ -88,8 +94,9 @@ public:
 private:
     void renderBloodOverlay(RenderWindow& window);
     void loadLevel(int levelIndex);
-    void loadCampaignLevel();        
+    void loadCampaignLevel();
     void checkLevelTransition();
     void spawnEnemiesFromConfig();
     void spawnPlatformsFromConfig();
+    void spawnCampaignEnemies();
 };
