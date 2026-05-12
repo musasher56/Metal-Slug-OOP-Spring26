@@ -42,8 +42,6 @@ void MenuState::handleEvent(Event& event) {
         }
     }
 
-    
-    
     if (this->mainMenu != nullptr) {
         this->gameMode = this->mainMenu->getSelectedMode();
         this->selectedLevel = this->mainMenu->getSelectedLevel();

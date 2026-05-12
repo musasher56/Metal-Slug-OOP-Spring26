@@ -4,26 +4,9 @@
 #include <cmath>
 
 
-
-
-
-
-PlayerSoldier::PlayerSoldier(TextureManager* texMgr, AudioManager* audMgr)
-    : Soldier(texMgr, audMgr)
-    , currentWeapon(nullptr)
-    , pistol(nullptr)
-    , currentGrenade(nullptr)
-    , grenadeCount(10)
-    , inVehicle(false)
-    , currentVehicle(nullptr)
-    , inventorySize(0)
-    , isFat(false)
-    , fatGravRadius(0.f)
-    , aimController()
-    , pm(nullptr)
-    , enemyBulletHits(0)
-    , devWeaponIdx(0)
-    , qWasPressed(false)
+PlayerSoldier::PlayerSoldier(TextureManager* texMgr, AudioManager* audMgr): Soldier(texMgr, audMgr), currentWeapon(nullptr)
+    , pistol(nullptr), currentGrenade(nullptr), grenadeCount(10), inVehicle(false), currentVehicle(nullptr), inventorySize(0)
+    , isFat(false), fatGravRadius(0.f), aimController(), pm(nullptr), enemyBulletHits(0), devWeaponIdx(0), qWasPressed(false)
 {
     for (int i = 0; i < 3; ++i) 
         this->inventory[i] = nullptr;
@@ -41,8 +24,6 @@ PlayerSoldier::PlayerSoldier(TextureManager* texMgr, AudioManager* audMgr)
 }
 
 PlayerSoldier::~PlayerSoldier() {
-    
-    
     this->currentWeapon = nullptr;
 
     if (this->pistol != nullptr) {
@@ -98,9 +79,12 @@ void PlayerSoldier::updateAim(sf::Vector2f mousePos) {
 }
 
 void PlayerSoldier::shoot() {
-    if (this->pm == nullptr)             return;
-    if (this->currentWeapon == nullptr)  return;
-    if (!this->currentWeapon->hasAmmo()) return;
+    if (this->pm == nullptr)
+        return;
+    if (this->currentWeapon == nullptr)
+        return;
+    if (!this->currentWeapon->hasAmmo())
+        return;
 
     float angle = this->aimController.getAngle();
     sf::Vector2f origin = ProjectileManager::calcBarrelTip(
@@ -110,10 +94,10 @@ void PlayerSoldier::shoot() {
 
 void PlayerSoldier::switchWeapon(Weapon* w) {
     if (w == nullptr) return;
-
     bool isPoolWeapon = false;
     for (int i = 0; i < 5; ++i) {
-        if (this->currentWeapon == this->devWeaponPool[i]) { isPoolWeapon = true;
+        if (this->currentWeapon == this->devWeaponPool[i]) {
+            isPoolWeapon = true;
         break; }
     }
     if (!isPoolWeapon && this->currentWeapon != nullptr && this->inventorySize < 3)
@@ -138,26 +122,6 @@ void PlayerSoldier::exitVehicle() {
     this->inVehicle = false;
 }
 
-void PlayerSoldier::saveData(std::ofstream& out) {
-    if (!out.is_open()) return;
-    out.write(reinterpret_cast<const char*>(&this->lives), sizeof(int));
-    out.write(reinterpret_cast<const char*>(&this->currentHP), sizeof(int));
-    out.write(reinterpret_cast<const char*>(&this->grenadeCount), sizeof(int));
-    out.write(reinterpret_cast<const char*>(&this->inVehicle), sizeof(bool));
-    out.write(reinterpret_cast<const char*>(&this->position.x), sizeof(float));
-    out.write(reinterpret_cast<const char*>(&this->position.y), sizeof(float));
-}
-
-void PlayerSoldier::loadData(std::ifstream& in) {
-    if (!in.is_open()) return;
-    in.read(reinterpret_cast<char*>(&this->lives), sizeof(int));
-    in.read(reinterpret_cast<char*>(&this->currentHP), sizeof(int));
-    in.read(reinterpret_cast<char*>(&this->grenadeCount), sizeof(int));
-    in.read(reinterpret_cast<char*>(&this->inVehicle), sizeof(bool));
-    in.read(reinterpret_cast<char*>(&this->position.x), sizeof(float));
-    in.read(reinterpret_cast<char*>(&this->position.y), sizeof(float));
-}
-
 void PlayerSoldier::applyFannumTax(ProjectileManager* manager) {
     if (manager == nullptr || !this->isFat) return;
 }
@@ -165,12 +129,15 @@ void PlayerSoldier::applyFannumTax(ProjectileManager* manager) {
 void PlayerSoldier::onDeath() {
     this->lives--;
     this->enemyBulletHits = 0;
-    if (this->lives > 0) this->respawn();
+    if (this->lives > 0)
+        this->respawn();
 }
 
 void PlayerSoldier::takeDamage(int amount) {
-    if (amount < 0)         return;
-    if (this->isInvincible) return;
+    if (amount < 0)
+        return;
+    if (this->isInvincible)
+        return;
     if (this->transformState != nullptr) {}
 
     this->enemyBulletHits += amount;
@@ -214,10 +181,7 @@ void PlayerSoldier::draw(RenderWindow& window, float scrollX, float scrollY) {
 }
 
 
-Marco::Marco(TextureManager* texMgr, AudioManager* audMgr)
-    : PlayerSoldier(texMgr, audMgr)
-    , fireRateMultiplier(1.25f)
-    , dualFireActive(false)
+Marco::Marco(TextureManager* texMgr, AudioManager* audMgr): PlayerSoldier(texMgr, audMgr), fireRateMultiplier(1.25f), dualFireActive(false)
 {
     Texture& tex = texMgr->getTexture("resources/Sprites/marco.png");
     this->animation.setTexture(&tex);
@@ -238,12 +202,14 @@ void Marco::updateSprite() {
     this->sprite.setTextureRect(IntRect(0, 0, 36, 41)); 
 }
 void Marco::activatePowerUp() {
-    this->dualFireActive = true; this->dualFireTimer.restart();
+    this->dualFireActive = true;
+    this->dualFireTimer.restart();
 }
 
 void Marco::handleInput() {
     bool qNow = Keyboard::isKeyPressed(Keyboard::Q);
-    if (qNow && !this->qWasPressed) this->cycleWeapon();
+    if (qNow && !this->qWasPressed)
+        this->cycleWeapon();
     this->qWasPressed = qNow;
 
     if (Keyboard::isKeyPressed(Keyboard::X))
@@ -252,8 +218,7 @@ void Marco::handleInput() {
     if (this->dualFireActive && Keyboard::isKeyPressed(Keyboard::X)) {
         if (this->pm && this->currentWeapon) {
             int opp = (this->direction == DIR_RIGHT) ? DIR_LEFT : DIR_RIGHT;
-            sf::Vector2f o = ProjectileManager::calcBarrelTip(
-                this->position, opp, 36.f, 20.f);
+            sf::Vector2f o = ProjectileManager::calcBarrelTip(this->position, opp, 36.f, 20.f);
             this->currentWeapon->fire(o, opp, this->aimController.getAngle(), this->pm);
         }
         if (this->dualFireTimer.getElapsedTime().asSeconds() >= 10.f)
@@ -267,41 +232,33 @@ void Marco::handleInput() {
 void Marco::meleeAttack() {
     Soldier::meleeAttack(); }
 
-Tarma::Tarma(TextureManager* texMgr, AudioManager* audMgr)
-    : PlayerSoldier(texMgr, audMgr)
-    , vehicleFireRateBonus(0.25f)
-    , vehicleDurabilityBonus(0.20f)
-    , immunityActive(false)
+Tarma::Tarma(TextureManager* texMgr, AudioManager* audMgr): PlayerSoldier(texMgr, audMgr), vehicleFireRateBonus(0.25f), vehicleDurabilityBonus(0.20f), immunityActive(false)
 {
-    
     Texture& tex = texMgr->loadTextureWithMask(
         "tarma-idle",
         "resources/Sprites/tarma.png",
         sf::Color::Black, 50
     );
 
-    
     this->animation.setTexture(&tex);
     this->animation.setFrameCount(1);
     this->animation.setFrameRect(0, 47, 64, 913, 896);
     this->animation.setLoop(true);
 
-    
-    
-    
     this->physW = static_cast<int>(913 * 0.6f);
     this->physH = 896;
 
     this->sprite.setTexture(tex);
     this->sprite.setTextureRect(IntRect(47, 64, 913, 896));
-    this->sprite.setScale(0.2f, 0.2f);
-
+    this->sprite.setScale(0.16f, 0.16f);
     this->position = sf::Vector2f(200.f, 300.f);
     this->updateBoundingBox();
 }
 
 Tarma::~Tarma() {}
+
 void Tarma::updateSprite() {}
+
 void Tarma::activatePowerUp() { 
     this->immunityActive = true;
     this->immunityTimer.restart();
@@ -322,10 +279,7 @@ void Tarma::handleInput() {
     if (Keyboard::isKeyPressed(Keyboard::C)) this->throwGrenade();
 }
 
-Eri::Eri(TextureManager* texMgr, AudioManager* audMgr)
-    : PlayerSoldier(texMgr, audMgr)
-    , blastRadiusMultiplier(1.50f)
-    , doubleGrenadeActive(false)
+Eri::Eri(TextureManager* texMgr, AudioManager* audMgr): PlayerSoldier(texMgr, audMgr), blastRadiusMultiplier(1.50f), doubleGrenadeActive(false)
 {
     Texture& tex = texMgr->loadTextureWithMask(
         "eri-idle",
@@ -350,8 +304,11 @@ Eri::Eri(TextureManager* texMgr, AudioManager* audMgr)
 }
 
 Eri::~Eri() {}
+
 void Eri::updateSprite() {}
+
 void Eri::activatePowerUp() { this->doubleGrenadeActive = true; this->doubleGrenadeTimer.restart(); }
+
 void Eri::meleeAttack() { Soldier::meleeAttack(); }
 
 void Eri::handleInput() {
@@ -373,8 +330,7 @@ void Eri::throwGrenade() {
         return;
     this->grenadeCount--;
 
-    sf::Vector2f origin = ProjectileManager::calcBarrelTip(
-        this->position, this->direction, 36.f, 24.f);
+    sf::Vector2f origin = ProjectileManager::calcBarrelTip(this->position, this->direction, 36.f, 24.f);
     this->pm->spawnExplosive(origin, this->direction, 45.f, 20, 3, false);
 
     if (this->doubleGrenadeActive && this->grenadeCount >= 1) {
@@ -386,11 +342,7 @@ void Eri::throwGrenade() {
 }
 
 
-Fio::Fio(TextureManager* texMgr, AudioManager* audMgr)
-    : PlayerSoldier(texMgr, audMgr)
-    , ammoBonusMultiplier(1.50f)
-    , fireRateMultiplier(1.10f)
-    , superchargedActive(false)
+Fio::Fio(TextureManager* texMgr, AudioManager* audMgr): PlayerSoldier(texMgr, audMgr), ammoBonusMultiplier(1.50f), fireRateMultiplier(1.10f), superchargedActive(false)
 {
     Texture& tex = texMgr->loadTextureWithMask(
         "germi-idle",
@@ -415,7 +367,9 @@ Fio::Fio(TextureManager* texMgr, AudioManager* audMgr)
 }
 
 Fio::~Fio() {}
+
 void Fio::updateSprite() {}
+
 void Fio::activatePowerUp() {
     this->superchargedActive = true; 
     this->superchargedTimer.restart();

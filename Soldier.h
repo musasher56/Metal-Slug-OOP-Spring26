@@ -2,11 +2,7 @@
 #include "DamagableEntity.h"
 #include "TransformationState.h"
 
-
 class Level;
-
-
-
 class Soldier : public DamagableEntity {
 protected:
     float velocityX;
@@ -26,6 +22,12 @@ protected:
     bool  isInvincible;
     int physW;
     int physH;
+    virtual void applyGravity();
+    virtual void applyWaterPhysics();
+    virtual void handleCollision(Level* lvl);
+    virtual void applyMovement(float& scroll);
+    virtual void handleStateTimers();
+    virtual void onDeath() = 0;
 
 public:
     Soldier(TextureManager* texMgr, AudioManager* audMgr);
@@ -50,8 +52,6 @@ public:
     void respawn();
     void setTransformationState(TransformationState* newState);
     TransformationState* getTransformationState() const;
-
-
     float getBaseMaxVelocity() const { 
         return this->baseMaxVelocity;
     }
@@ -65,33 +65,12 @@ public:
     void setMaxVelocity(float val) {
         this->maxVelocity = val; 
     }
-
-
     void setDirectionAndVelocity(int dir);
     void decelerate();
-
-    
-    
-    
-    
     void copyPhysicsFrom(Soldier* other);
-
-
     void handleJump();
-
     bool inWater;
     void setInWater(bool val);
     bool getInWater() const;
-
-
-
     void resolveBlockCollisions(DamagableEntity** blocks, int count);
-
-protected:
-    virtual void applyGravity();
-    virtual void applyWaterPhysics();
-    virtual void handleCollision(Level* lvl);
-    virtual void applyMovement(float& scroll);
-    virtual void handleStateTimers();
-    virtual void onDeath() = 0;
 };

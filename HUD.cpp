@@ -57,14 +57,11 @@ HUD::HUD()
 HUD::~HUD() {}
 
 
-
 void HUD::update(CharacterManager* cm, int levelNum) {
     (void)levelNum;
     if (cm == nullptr) return;
 
     this->hp = cm->getHealthPoints();
-
-    
     PlayerSoldier* player = cm->getCurrentCharacter();
     if (player != nullptr) {
         this->maxHp = player->getMaxHealth();
@@ -93,10 +90,6 @@ void HUD::update(CharacterManager* cm, int levelNum) {
 
 void HUD::setScore(int s) { this->currentScore = s; }
 void HUD::setHighScore(int hs) { this->highScore = hs; }
-
-
-
-
 
 void HUD::draw(RenderWindow& window) {
 
@@ -289,10 +282,6 @@ void HUD::clearBossInfo() {
     this->bossHealthDisplayed = 0.f;
     this->bossBarAlpha = 0.f;
 }
-
-
-
-
 
 
 void HUD::showBossFelled(const char* bossName) {

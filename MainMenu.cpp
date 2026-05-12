@@ -124,10 +124,8 @@ void MainMenu::loadVideoFrames() {
         float sy = (float)SCREEN_H / (float)sz.y;
         this->videoSprite.setScale(sx, sy);
         this->videoLoaded = true;
-        printf("[INFO] Loaded %d video frames\n", this->totalVideoFrames);
     }
     else {
-        printf("[INFO] No video frames found (optional)\n");
     }
 }
 
@@ -290,9 +288,7 @@ void MainMenu::drawLevelSelect(RenderWindow& window) {
         numText.setFont(this->font);
         numText.setString(numBuf);
         numText.setCharacterSize(28);
-        numText.setFillColor(i == this->hoveredLevel
-            ? Color(255, 255, 0)
-            : Color(200, 200, 200));
+        numText.setFillColor(i == this->hoveredLevel? Color(255, 255, 0): Color(200, 200, 200));
         numText.setStyle(Text::Bold);
         FloatRect nb = numText.getLocalBounds();
         numText.setOrigin(nb.width / 2.f, nb.height / 2.f);

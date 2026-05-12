@@ -2,7 +2,6 @@
 #include "Entity.h"
 
 class ProjectileManager;
-
 class Weapon {
 protected:
     int   ammo;
@@ -10,13 +9,10 @@ protected:
     int   damage;
     int   type;
     Clock fireTimer;
-
 public:
     Weapon(int weaponType, int dmg, float rate, int amm);
     virtual ~Weapon();
-
-    virtual void fire(sf::Vector2f origin, int dir, float angle,
-                      ProjectileManager* pm) = 0;
+    virtual void fire(sf::Vector2f origin, int dir, float angle,ProjectileManager* pm) = 0;
     virtual void update() = 0;
 
     bool  hasAmmo()     const;
@@ -25,10 +21,6 @@ public:
     int   getDamage()   const;
     float getFireRate() const;
     int   getType()     const;
-
-    
-    
-    
     void  setFireRate(float r);
 };
 
@@ -38,8 +30,7 @@ protected:
 public:
     ProjectileWeapon(int weaponType, int dmg, float rate, int amm, int projClass);
     virtual ~ProjectileWeapon();
-    virtual void fire(sf::Vector2f origin, int dir, float angle,
-                      ProjectileManager* pm) = 0;
+    virtual void fire(sf::Vector2f origin, int dir, float angle,ProjectileManager* pm) = 0;
 };
 
 

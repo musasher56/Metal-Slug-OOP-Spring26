@@ -22,37 +22,22 @@ protected:
     Clock    stateTimer;
     AimController aimController;
     int      enemyBulletHits;
-
     ProjectileManager* pm;
-    
     Weapon* devWeaponPool[5];
-    int     devWeaponIdx;   
-
-    
-    
+    int     devWeaponIdx;
     bool qWasPressed;
-
-    
-    
     void cycleWeapon();
-
+    void applyFannumTax(ProjectileManager* manager);
 public:
     PlayerSoldier(TextureManager* texMgr, AudioManager* audMgr);
     virtual ~PlayerSoldier();
-
     void setProjectileManager(ProjectileManager* manager);
-
     float getAimAngle()        const { return this->aimController.getAngle(); }
     int   getEnemyBulletHits() const { return this->enemyBulletHits; }
-
     Weapon* getCurrentWeapon() const { return this->currentWeapon; }
     int     getGrenadeCount() const { return this->grenadeCount; }
-
     const char* getCurrentWeaponName() const;
-
-    
     void healFullAndIncreaseHP(int extraHP = 1);
-
     void switchWeapon(Weapon* w);
     void throwGrenade();
     void shoot();
@@ -61,20 +46,13 @@ public:
     void exitVehicle();
     void saveData(std::ofstream& out);
     void loadData(std::ifstream& in);
-
     void updateAim(sf::Vector2f mousePos);
-
-protected:
-    void applyFannumTax(ProjectileManager* manager);
-
-public:
     virtual void updateSprite() = 0;
     virtual void activatePowerUp() = 0;
     void onDeath();
     void updateBoundingBox();
     virtual void handleInput() = 0;
     virtual void takeDamage(int amount);
-
     virtual void draw(RenderWindow& window, float scrollX, float scrollY);
 };
 

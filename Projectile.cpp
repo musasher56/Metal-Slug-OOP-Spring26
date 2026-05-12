@@ -280,7 +280,7 @@ void FlameParticle::draw(RenderWindow& window, float scrollX, float scrollY) {
 
     float ratio = (float)this->lifetime / (float)this->maxLifetime;
 
-    sf::Uint8 g = static_cast<sf::Uint8>(90.f * ratio); 
+    sf::Uint8 g = static_cast<sf::Uint8>(90.f * ratio);
     sf::Uint8 alpha = static_cast<sf::Uint8>(200.f * ratio + 55.f);
 
     sf::RectangleShape halo(sf::Vector2f(12.f, 8.f));

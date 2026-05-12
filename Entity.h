@@ -5,10 +5,7 @@
 #include "AudioManager.h"
 #include "Animation.h"
 
-
 class Level;
-
-
 
 class Entity {
 public:
