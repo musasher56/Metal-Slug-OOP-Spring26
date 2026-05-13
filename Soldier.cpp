@@ -13,7 +13,7 @@ Soldier::Soldier(TextureManager* texMgr, AudioManager* audMgr)
     , lives(3)
     , currentHP(3)
     , saturation(100)
-    , meleeDamage(1.f)
+    , meleeDamage(1.0f)
     , meleeCooldown(0.5f)
     , transformState(nullptr), isInvincible(false)
     , inWater(false)
@@ -70,9 +70,7 @@ void Soldier::takeDamage(int amount) {
 
     if (amount < 0) return;
 
-    if (this->transformState != nullptr) {
-
-    }
+    if (this->transformState != nullptr) {}
 
     this->currentHP -= amount;
     if (this->currentHP < 0) 
@@ -168,8 +166,10 @@ void Soldier::applyGravity() {
 void Soldier::applyWaterPhysics() {
     this->velocityX *= 0.96f;
     this->velocityY *= 0.96f;
-    if (this->velocityX > -0.2f && this->velocityX < 0.2f) this->velocityX = 0.f;
-    if (this->velocityY > -0.2f && this->velocityY < 0.2f) this->velocityY = 0.f;
+    if (this->velocityX > -0.2f && this->velocityX < 0.2f)
+        this->velocityX = 0.f;
+    if (this->velocityY > -0.2f && this->velocityY < 0.2f)
+        this->velocityY = 0.f;
 }
 
 void Soldier::handleCollision(Level* lvl) {
@@ -214,9 +214,18 @@ void Soldier::handleCollision(Level* lvl) {
                 float minOverlap = overlapLeft;
                 int   resolveDir = 1;
 
-                if (overlapRight < minOverlap) { minOverlap = overlapRight;  resolveDir = 2; }
-                if (overlapTop < minOverlap) { minOverlap = overlapTop;    resolveDir = 3; }
-                if (overlapBottom < minOverlap) { minOverlap = overlapBottom; resolveDir = 4; }
+                if (overlapRight < minOverlap) {
+                    minOverlap = overlapRight;
+                    resolveDir = 2;
+                }
+                if (overlapTop < minOverlap) {
+                    minOverlap = overlapTop;
+                    resolveDir = 3;
+                }
+                if (overlapBottom < minOverlap) {
+                    minOverlap = overlapBottom;
+                    resolveDir = 4;
+                }
 
                 if (resolveDir == 1) {
                     this->position.x -= minOverlap;
@@ -300,11 +309,13 @@ void Soldier::setDirectionAndVelocity(int dir) {
     float maxV = this->inWater ? 3.f : this->maxVelocity;
     if (dir == DIR_LEFT) {
         this->velocityX -= accel;
-        if (this->velocityX < -maxV) this->velocityX = -maxV;
+        if (this->velocityX < -maxV)
+            this->velocityX = -maxV;
     }
     else {
         this->velocityX += accel;
-        if (this->velocityX > maxV) this->velocityX = maxV;
+        if (this->velocityX > maxV)
+            this->velocityX = maxV;
     }
 }
 
@@ -373,13 +384,16 @@ void Soldier::resolveBlockCollisions(DamagableEntity** blocks, int count) {
         int   resolveDir = 1;
 
         if (overlapRight < minOverlap) {
-            minOverlap = overlapRight;  resolveDir = 2; 
+            minOverlap = overlapRight;
+            resolveDir = 2;
         }
         if (overlapTop < minOverlap) { 
-            minOverlap = overlapTop;    resolveDir = 3;
+            minOverlap = overlapTop;
+            resolveDir = 3;
         }
         if (overlapBottom < minOverlap) {
-            minOverlap = overlapBottom; resolveDir = 4; 
+            minOverlap = overlapBottom;
+            resolveDir = 4;
         }
 
         if (movingHoriz && !movingDown) {
