@@ -4,7 +4,7 @@ A run-and-gun game built from scratch in C++ with SFML, for the CS-1004 Object O
 
 The whole thing runs on a hand-written object model — no STL containers, no `string`, and only a restricted subset of SFML was allowed. So a lot of what's normally one library call here is our own code instead.
 
-![Jungle gameplay](screenshots/gameplay_jungle.png)
+![Level select](screenshots/Gameplay_jungle.png)
 
 ## What it is
 
@@ -13,7 +13,7 @@ It's a 2D side-scroller in the spirit of the original Metal Slug. You pick one o
 - **Survival** — three fixed, hand-designed levels (Ruins, Cold Death, Blasphemous City) followed by a boss stage. Enemy positions are baked into each level.
 - **Campaign** — a single procedurally generated world. The terrain comes out of a Perlin/fractal noise generator we wrote ourselves.
 
-![Soldier select](screenshots/soldier_select.png)
+![Soldier select](screenshots/Soldier_select.png)
 
 ## The design (this is the part the project was actually about)
 
@@ -31,7 +31,7 @@ Almost every system here is a class hierarchy with a polymorphic interface, beca
 
 There's also a stack-based `GameStateManager` driving the menu / play / pause / game-over / character-select screens, and score/high-score persistence through file handling.
 
-![Damage states with screen hue](screenshots/damage_state.png)
+![Damage state](screenshots/Damage_state.png)
 
 ## Features that made it in
 
@@ -41,7 +41,7 @@ There's also a stack-based `GameStateManager` driving the menu / play / pause / 
 - Three bosses — Iron Nokana (ground), Hairbuster (aerial), and Sea Satan (aquatic), each with their own attack patterns
 - Enemy and player vehicles
 - Weapon pickups, grenades, and supply crates
-- The damage protocol from the spec: healthy → injured → critical → dead, with a translucent red screen hue on hit (visible in the snow shot above)
+- The damage protocol from the spec: healthy → injured → critical → dead, with a translucent red screen hue on hit (visible in the shot above)
 - Undead and mummy transformation states
 - Mouse aiming across the full 0–90° arc
 - Collectibles: food, POW prisoners, supply crates
