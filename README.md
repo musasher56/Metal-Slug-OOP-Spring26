@@ -4,7 +4,7 @@ A run-and-gun game built from scratch in C++ with SFML, for the CS-1004 Object O
 
 The whole thing runs on a hand-written object model — no STL containers, no `string`, and only a restricted subset of SFML was allowed. So a lot of what's normally one library call here is our own code instead.
 
-![Level select](screenshots/Gameplay%20jungle.png)
+![Level select](screenshots/Gameplay_jungle.png)
 
 ## What it is
 
@@ -31,7 +31,7 @@ Almost every system here is a class hierarchy with a polymorphic interface, beca
 
 There's also a stack-based `GameStateManager` driving the menu / play / pause / game-over / character-select screens, and score/high-score persistence through file handling.
 
-![Damage state](screenshots/Damage%20state.png)
+![Damage state](screenshots/Damage_state.png)
 
 ## Features that made it in
 
